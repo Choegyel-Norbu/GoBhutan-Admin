@@ -332,7 +332,7 @@ const AddHotel = () => {
   ];
 
   return (
-    <div className="container mx-auto p-6 max-w-4xl">
+    <div className="container mx-auto p-0 md:p-6">
       <div className="mb-6">
         <h1 className="text-3xl font-bold flex items-center gap-2">
           Add New Hotel

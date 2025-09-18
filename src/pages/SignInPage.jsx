@@ -30,13 +30,13 @@ const SignInPage = () => {
     <div className="min-h-screen bg-gray-100 flex items-center justify-center px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         {/* Logo Placeholder */}
-        <div className="text-center">
+        {/* <div className="text-center">
           <div className="mx-auto h-12 w-12 bg-indigo-600 rounded-lg flex items-center justify-center">
             <svg className="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
             </svg>
           </div>
-        </div>
+        </div> */}
 
         {/* Sign In Card */}
         <div className="bg-white py-8 px-6 shadow-xl rounded-lg sm:px-10">

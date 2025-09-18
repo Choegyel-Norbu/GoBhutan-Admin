@@ -15,7 +15,8 @@ import {
   Eye,
   Settings,
   FileText,
-  Building
+  Building,
+  Bed
 } from 'lucide-react';
 
 export const navigationItems = [
@@ -42,6 +43,12 @@ export const navigationItems = [
         path: '/dashboard/hotel/add',
         icon: Building,
         description: 'Add new hotel to system'
+      },
+      {
+        title: 'Add Rooms',
+        path: '/dashboard/hotel/add-rooms',
+        icon: Bed,
+        description: 'Add rooms to existing hotels'
       },
       {
         title: 'Book Hotel',

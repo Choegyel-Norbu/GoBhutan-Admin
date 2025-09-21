@@ -23,6 +23,18 @@ export {
   apiClient 
 } from './apiService';
 
+// Export authentication API
+export { default as authAPI } from './authAPI';
+
+// Export validation utilities
+export {
+  validateEmail,
+  validatePassword,
+  validateLoginForm,
+  sanitizeInput,
+  sanitizeFormData
+} from './validation';
+
 // Export environment configuration
 export { 
   ENV_CONFIG, 

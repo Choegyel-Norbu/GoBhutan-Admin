@@ -110,7 +110,27 @@ export const navigationItems = [
     title: 'Bus Tickets',
     path: '/dashboard/bus-ticket-booking',
     icon: Bus,
-    description: 'Bus ticket bookings'
+    description: 'Bus ticket bookings',
+    subcategories: [
+      {
+        title: 'Add Bus',
+        path: '/dashboard/bus/add',
+        icon: Plus,
+        description: 'Add new bus to system'
+      },
+      {
+        title: 'Bus Settings',
+        path: '/dashboard/bus/settings',
+        icon: Settings,
+        description: 'Configure bus preferences'
+      },
+      {
+        title: 'Booking',
+        path: '/dashboard/bus/booking',
+        icon: Calendar,
+        description: 'Create new bus bookings'
+      }
+    ]
   }
 ];
 

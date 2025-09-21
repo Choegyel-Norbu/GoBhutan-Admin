@@ -15,7 +15,11 @@ import HotelReportsPage from './pages/HotelReportsPage';
 import FlightPage from './pages/FlightPage';
 import MoviePage from './pages/MoviePage';
 import BusPage from './pages/BusPage';
+import AddBusPage from './pages/AddBusPage';
+import BusSettingsPage from './pages/BusSettingsPage';
+import BusBookingPage from './pages/BusBookingPage';
 import SignInPage from './pages/SignInPage';
+import SignUpPage from './pages/SignUpPage';
 
 function App() {
   return (
@@ -23,6 +27,7 @@ function App() {
       <Routes>
         <Route path="/" element={<Navigate to="/signin" replace />} />
         <Route path="/signin" element={<SignInPage />} />
+        <Route path="/signup" element={<SignUpPage />} />
         <Route path="/dashboard" element={<DashboardLayout />}>
           <Route index element={<DashboardPage />} />
           <Route path="taxi" element={<TaxiPage />} />
@@ -39,6 +44,9 @@ function App() {
           <Route path="flight" element={<FlightPage />} />
           <Route path="movie-ticketing" element={<MoviePage />} />
           <Route path="bus-ticket-booking" element={<BusPage />} />
+          <Route path="bus/add" element={<AddBusPage />} />
+          <Route path="bus/settings" element={<BusSettingsPage />} />
+          <Route path="bus/booking" element={<BusBookingPage />} />
         </Route>
       </Routes>
     </Router>

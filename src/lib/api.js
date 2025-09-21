@@ -1,15 +1,16 @@
 // API Configuration
 export const API_CONFIG = {
-  BASE_URL: 'http://localhost:8080/api',
+  BASE_URL: 'http://localhost:8080',
   
   // API Endpoints
   ENDPOINTS: {
     // Authentication
     AUTH: {
-      LOGIN: '/auth/login',
-      LOGOUT: '/auth/logout',
-      REFRESH: '/auth/refresh',
-      PROFILE: '/auth/profile',
+      LOGIN: '/login',
+      SIGNUP: '/signup',
+      LOGOUT: '/logout',
+      REFRESH: '/refresh',
+      PROFILE: '/profile',
     },
     
     // Dashboard

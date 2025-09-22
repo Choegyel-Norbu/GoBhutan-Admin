@@ -5,7 +5,7 @@ const getEnvVar = (key, defaultValue) => {
 
 export const ENV_CONFIG = {
   // API Configuration
-  API_BASE_URL: getEnvVar('VITE_API_BASE_URL', 'http://localhost:8080/api'),
+  API_BASE_URL: getEnvVar('VITE_API_BASE_URL', 'https://a2fa2c6258e2.ngrok-free.app'),
   
   // App Configuration
   APP_NAME: getEnvVar('VITE_APP_NAME', 'Jigme Choling Reservations'),
@@ -21,9 +21,9 @@ export const ENV_CONFIG = {
   IS_PREVIEW: import.meta.env.MODE === 'preview',
 };
 
-// API URLs for different environments
+// API URLs for environments
 export const API_URLS = {
-  DEVELOPMENT: 'http://localhost:8080/api',
+  DEVELOPMENT: 'https://a2fa2c6258e2.ngrok-free.app',
   STAGING: 'https://staging-api.jigmecholing.com/api',
   PRODUCTION: 'https://api.jigmecholing.com/api',
 };

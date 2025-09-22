@@ -47,8 +47,8 @@ apiClient.interceptors.response.use(
 // Authentication API methods
 export const authAPI = {
   /**
-   * Login user with email and password
-   * @param {object} credentials - { email, password }
+   * Login user with username and password
+   * @param {object} credentials - { username, password }
    * @returns {Promise} - Axios response
    */
   login: async (credentials) => {
@@ -67,9 +67,9 @@ export const authAPI = {
     } catch (error) {
       // Handle login errors with custom messages
       if (error.response?.status === 401) {
-        throw new Error('The email or password you entered is incorrect. Please try again.');
+        throw new Error('The username or password you entered is incorrect. Please try again.');
       } else if (error.response?.status === 422) {
-        throw new Error('Please check that your email and password are formatted correctly.');
+        throw new Error('Please check that your username and password are formatted correctly.');
       } else if (error.response?.status === 429) {
         throw new Error('Too many login attempts. Please wait a moment before trying again.');
       } else if (error.response?.status >= 500) {

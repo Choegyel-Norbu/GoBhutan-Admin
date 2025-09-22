@@ -1,16 +1,16 @@
 // API Configuration
 export const API_CONFIG = {
-  BASE_URL: 'http://localhost:8080',
+  BASE_URL: 'https://a2fa2c6258e2.ngrok-free.app',
   
   // API Endpoints
   ENDPOINTS: {
     // Authentication
     AUTH: {
-      LOGIN: '/login',
-      SIGNUP: '/signup',
-      LOGOUT: '/logout',
-      REFRESH: '/refresh',
-      PROFILE: '/profile',
+      LOGIN: '/auth/signin',
+      SIGNUP: '/auth/signup',
+      LOGOUT: '/auth/logout',
+      REFRESH: '/auth/refresh',
+      PROFILE: '/auth/profile',
     },
     
     // Dashboard

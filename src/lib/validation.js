@@ -192,35 +192,27 @@ export const validateLastName = (lastName) => {
 };
 
 /**
- * Validates Bhutanese phone number format
- * @param {string} phoneNumber - Phone number to validate
+ * Validates clients selection
+ * @param {array} clients - Clients array to validate
  * @returns {object} - Validation result with isValid and message
  */
-export const validatePhoneNumber = (phoneNumber) => {
-  if (!phoneNumber || phoneNumber.trim() === '') {
+export const validateClients = (clients) => {
+  if (!clients || !Array.isArray(clients) || clients.length === 0) {
     return {
       isValid: false,
-      message: 'Please enter your phone number'
+      message: 'Please select at least one client type'
     };
   }
 
-  // Remove all non-digit characters for validation
-  const cleanPhone = phoneNumber.replace(/\D/g, '');
+  // Valid client options
+  const validClients = ['bus', 'hotel', 'flight', 'taxi', 'movie', 'all'];
   
-  // Bhutanese phone numbers must be exactly 8 digits
-  if (cleanPhone.length !== 8) {
+  // Check if all selected clients are valid
+  const invalidClients = clients.filter(clientType => !validClients.includes(clientType));
+  if (invalidClients.length > 0) {
     return {
       isValid: false,
-      message: 'Phone number must be exactly 8 digits'
-    };
-  }
-
-  // Check if phone number starts with valid Bhutanese prefixes: 77, 16, or 17
-  const BHUTANESE_PHONE_REGEX = /^(77|16|17)\d{6}$/;
-  if (!BHUTANESE_PHONE_REGEX.test(cleanPhone)) {
-    return {
-      isValid: false,
-      message: 'Phone number must start with 77, 16, or 17 (e.g., 77123456)'
+      message: 'Please select valid client types only'
     };
   }
 
@@ -259,19 +251,19 @@ export const validateConfirmPassword = (password, confirmPassword) => {
 
 /**
  * Validates login form data
- * @param {object} formData - Form data containing email and password
+ * @param {object} formData - Form data containing username and password
  * @returns {object} - Validation result with isValid, errors, and messages
  */
 export const validateLoginForm = (formData) => {
-  const emailValidation = validateEmail(formData.email);
+  const usernameValidation = validateUsername(formData.username);
   const passwordValidation = validatePassword(formData.password);
 
   const errors = {};
   const messages = {};
 
-  if (!emailValidation.isValid) {
-    errors.email = emailValidation.message;
-    messages.email = emailValidation.message;
+  if (!usernameValidation.isValid) {
+    errors.username = usernameValidation.message;
+    messages.username = usernameValidation.message;
   }
 
   if (!passwordValidation.isValid) {
@@ -280,7 +272,7 @@ export const validateLoginForm = (formData) => {
   }
 
   return {
-    isValid: emailValidation.isValid && passwordValidation.isValid,
+    isValid: usernameValidation.isValid && passwordValidation.isValid,
     errors,
     messages
   };
@@ -288,7 +280,7 @@ export const validateLoginForm = (formData) => {
 
 /**
  * Validates sign-up form data
- * @param {object} formData - Form data containing username, email, password, firstName, lastName, phoneNumber, confirmPassword
+ * @param {object} formData - Form data containing username, email, password, firstName, lastName, clients, confirmPassword
  * @returns {object} - Validation result with isValid, errors, and messages
  */
 export const validateSignUpForm = (formData) => {
@@ -297,7 +289,7 @@ export const validateSignUpForm = (formData) => {
   const passwordValidation = validatePassword(formData.password);
   const firstNameValidation = validateFirstName(formData.firstName);
   const lastNameValidation = validateLastName(formData.lastName);
-  const phoneNumberValidation = validatePhoneNumber(formData.phoneNumber);
+  const clientsValidation = validateClients(formData.clients);
   const confirmPasswordValidation = validateConfirmPassword(formData.password, formData.confirmPassword);
 
   const errors = {};
@@ -328,9 +320,9 @@ export const validateSignUpForm = (formData) => {
     messages.lastName = lastNameValidation.message;
   }
 
-  if (!phoneNumberValidation.isValid) {
-    errors.phoneNumber = phoneNumberValidation.message;
-    messages.phoneNumber = phoneNumberValidation.message;
+  if (!clientsValidation.isValid) {
+    errors.clients = clientsValidation.message;
+    messages.clients = clientsValidation.message;
   }
 
   if (!confirmPasswordValidation.isValid) {
@@ -344,7 +336,7 @@ export const validateSignUpForm = (formData) => {
              passwordValidation.isValid && 
              firstNameValidation.isValid && 
              lastNameValidation.isValid && 
-             phoneNumberValidation.isValid && 
+             clientsValidation.isValid && 
              confirmPasswordValidation.isValid,
     errors,
     messages
@@ -373,7 +365,7 @@ export const sanitizeInput = (input) => {
  */
 export const sanitizeFormData = (formData) => {
   return {
-    email: sanitizeInput(formData.email),
+    username: sanitizeInput(formData.username),
     password: sanitizeInput(formData.password)
   };
 };
@@ -390,7 +382,7 @@ export const sanitizeSignUpFormData = (formData) => {
     password: sanitizeInput(formData.password),
     firstName: sanitizeInput(formData.firstName),
     lastName: sanitizeInput(formData.lastName),
-    phoneNumber: sanitizeInput(formData.phoneNumber)
+    clients: formData.clients // Array doesn't need sanitization, but validate it's an array
   };
 };
 
@@ -400,7 +392,7 @@ export default {
   validateUsername,
   validateFirstName,
   validateLastName,
-  validatePhoneNumber,
+  validateClients,
   validateConfirmPassword,
   validateLoginForm,
   validateSignUpForm,

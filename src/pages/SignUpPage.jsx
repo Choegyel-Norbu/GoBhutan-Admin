@@ -13,7 +13,7 @@ const SignUpPage = () => {
     confirmPassword: '',
     firstName: '',
     lastName: '',
-    phoneNumber: ''
+    clients: []
   });
 
   const [validationErrors, setValidationErrors] = useState({});
@@ -94,9 +94,7 @@ const SignUpPage = () => {
     }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    
+  const createAccount = async () => {
     // Clear previous errors
     setSubmitError('');
     setValidationErrors({});
@@ -109,7 +107,7 @@ const SignUpPage = () => {
       confirmPassword: true,
       firstName: true,
       lastName: true,
-      phoneNumber: true
+      clients: true
     });
     
     // Validate form data
@@ -129,18 +127,38 @@ const SignUpPage = () => {
       // Attempt sign up
       const response = await authAPI.signup(sanitizedData);
       
-      // Sign up successful
-      console.log('Sign up successful:', response.data);
-      
-      // Redirect to dashboard
-      navigate('/dashboard');
+      // Check if signup was successful (status 201)
+      if (response.status === 201) {
+        console.log('Account created successfully:', response.data);
+        
+        // Store credentials for auto-fill on sign-in page
+        localStorage.setItem('tempCredentials', JSON.stringify({
+          username: sanitizedData.username,
+          password: sanitizedData.password
+        }));
+        
+        // Redirect to sign-in page with success message
+        navigate('/signin', { 
+          state: { 
+            message: 'Account created successfully! Please sign in to continue.',
+            autoFill: true 
+          } 
+        });
+      } else {
+        throw new Error('Unexpected response status');
+      }
       
     } catch (error) {
-      console.error('Sign up error:', error);
-      setSubmitError(error.message || 'Sign up failed. Please try again.');
+      console.error('Account creation error:', error);
+      setSubmitError(error.message || 'Account creation failed. Please try again.');
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    await createAccount();
   };
 
   const handleGoogleSignUp = () => {
@@ -152,29 +170,25 @@ const SignUpPage = () => {
     setShowPassword(prev => !prev);
   };
 
-  const formatPhoneNumber = (value) => {
-    // Remove all non-digit characters and return only digits
-    return value.replace(/\D/g, '');
-  };
-
-  const handlePhoneChange = (e) => {
-    const { value } = e.target;
-    const formattedValue = formatPhoneNumber(value);
+  const handleClientsChange = (e) => {
+    const { value, checked } = e.target;
     
     setFormData(prev => ({
       ...prev,
-      phoneNumber: formattedValue
+      clients: checked 
+        ? [...prev.clients, value]
+        : prev.clients.filter(item => item !== value)
     }));
     
     // Clear any existing error for this field
-    if (validationErrors.phoneNumber) {
+    if (validationErrors.clients) {
       setValidationErrors(prev => ({
         ...prev,
-        phoneNumber: ''
+        clients: ''
       }));
     }
     
-    // Clear submit error when user starts typing
+    // Clear submit error when user makes changes
     if (submitError) {
       setSubmitError('');
     }
@@ -355,37 +369,6 @@ const SignUpPage = () => {
               )}
             </div>
 
-            {/* Phone Number Field */}
-            <div>
-              <label 
-                htmlFor="phoneNumber" 
-                className="block text-sm font-medium text-gray-700 mb-2"
-              >
-                Phone Number
-              </label>
-              <input
-                id="phoneNumber"
-                name="phoneNumber"
-                type="tel"
-                autoComplete="tel"
-                value={formData.phoneNumber}
-                onChange={handlePhoneChange}
-                onBlur={handleInputBlur}
-                className={`w-full px-3 py-3 border rounded-lg placeholder-gray-400 text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-200 hover:border-gray-400 ${
-                  touched.phoneNumber && validationErrors.phoneNumber 
-                    ? 'border-red-300 focus:ring-red-500 focus:border-red-500' 
-                    : 'border-gray-300'
-                }`}
-                placeholder="77123456"
-                aria-describedby="phoneNumber-error"
-                disabled={isLoading}
-              />
-              {touched.phoneNumber && validationErrors.phoneNumber && (
-                <p id="phoneNumber-error" className="mt-2 text-sm text-red-600">
-                  {validationErrors.phoneNumber}
-                </p>
-              )}
-            </div>
 
             {/* Password Field */}
             <div>
@@ -499,12 +482,123 @@ const SignUpPage = () => {
                 </p>
               )}
             </div>
+
+            {/* Clients Selection Field */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-3">
+                Client Types
+              </label>
+              <div className="space-y-2">
+                <div className="flex items-center">
+                  <input
+                    id="bus-client"
+                    name="clients"
+                    type="checkbox"
+                    value="bus"
+                    checked={formData.clients.includes('bus')}
+                    onChange={handleClientsChange}
+                    onBlur={handleInputBlur}
+                    className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded disabled:opacity-50"
+                    disabled={isLoading}
+                  />
+                  <label htmlFor="bus-client" className="ml-2 block text-sm text-gray-900">
+                    Bus Client
+                  </label>
+                </div>
+                <div className="flex items-center">
+                  <input
+                    id="hotel-client"
+                    name="clients"
+                    type="checkbox"
+                    value="hotel"
+                    checked={formData.clients.includes('hotel')}
+                    onChange={handleClientsChange}
+                    onBlur={handleInputBlur}
+                    className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded disabled:opacity-50"
+                    disabled={isLoading}
+                  />
+                  <label htmlFor="hotel-client" className="ml-2 block text-sm text-gray-900">
+                    Hotel Client
+                  </label>
+                </div>
+                <div className="flex items-center">
+                  <input
+                    id="flight-client"
+                    name="clients"
+                    type="checkbox"
+                    value="flight"
+                    checked={formData.clients.includes('flight')}
+                    onChange={handleClientsChange}
+                    onBlur={handleInputBlur}
+                    className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded disabled:opacity-50"
+                    disabled={isLoading}
+                  />
+                  <label htmlFor="flight-client" className="ml-2 block text-sm text-gray-900">
+                    Flight Client
+                  </label>
+                </div>
+                <div className="flex items-center">
+                  <input
+                    id="taxi-client"
+                    name="clients"
+                    type="checkbox"
+                    value="taxi"
+                    checked={formData.clients.includes('taxi')}
+                    onChange={handleClientsChange}
+                    onBlur={handleInputBlur}
+                    className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded disabled:opacity-50"
+                    disabled={isLoading}
+                  />
+                  <label htmlFor="taxi-client" className="ml-2 block text-sm text-gray-900">
+                    Taxi Client
+                  </label>
+                </div>
+                <div className="flex items-center">
+                  <input
+                    id="movie-client"
+                    name="clients"
+                    type="checkbox"
+                    value="movie"
+                    checked={formData.clients.includes('movie')}
+                    onChange={handleClientsChange}
+                    onBlur={handleInputBlur}
+                    className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded disabled:opacity-50"
+                    disabled={isLoading}
+                  />
+                  <label htmlFor="movie-client" className="ml-2 block text-sm text-gray-900">
+                    Movie Client
+                  </label>
+                </div>
+                <div className="flex items-center">
+                  <input
+                    id="all-client"
+                    name="clients"
+                    type="checkbox"
+                    value="all"
+                    checked={formData.clients.includes('all')}
+                    onChange={handleClientsChange}
+                    onBlur={handleInputBlur}
+                    className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded disabled:opacity-50"
+                    disabled={isLoading}
+                  />
+                  <label htmlFor="all-client" className="ml-2 block text-sm text-gray-900">
+                    All Services Client
+                  </label>
+                </div>
+              </div>
+              {touched.clients && validationErrors.clients && (
+                <p id="clients-error" className="mt-2 text-sm text-red-600">
+                  {validationErrors.clients}
+                </p>
+              )}
+            </div>
             </div>
 
             {/* Submit Button */}
             <div className="mt-6">
               <button
                 type="submit"
+                onClick={createAccount}
                 disabled={isLoading}
                 className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 active:bg-indigo-800 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
               >

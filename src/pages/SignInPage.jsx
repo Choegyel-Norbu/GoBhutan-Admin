@@ -1,21 +1,49 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { validateLoginForm, sanitizeFormData } from '../lib/validation';
 import authAPI from '../lib/authAPI';
 
 const SignInPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   
   const [formData, setFormData] = useState({
-    email: '',
+    username: '',
     password: ''
   });
 
   const [validationErrors, setValidationErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const [submitError, setSubmitError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
   const [touched, setTouched] = useState({});
   const [showPassword, setShowPassword] = useState(false);
+
+  // Auto-fill credentials if coming from signup
+  useEffect(() => {
+    const tempCredentials = localStorage.getItem('tempCredentials');
+    const state = location.state;
+    
+    if (tempCredentials && state?.autoFill) {
+      try {
+        const credentials = JSON.parse(tempCredentials);
+        setFormData({
+          username: credentials.username,
+          password: credentials.password
+        });
+        
+        // Show success message
+        if (state.message) {
+          setSuccessMessage(state.message);
+        }
+        
+        // Clear temp credentials after use
+        localStorage.removeItem('tempCredentials');
+      } catch (error) {
+        console.error('Error parsing temp credentials:', error);
+      }
+    }
+  }, [location.state]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -65,7 +93,7 @@ const SignInPage = () => {
     
     // Mark all fields as touched
     setTouched({
-      email: true,
+      username: true,
       password: true
     });
     
@@ -139,6 +167,22 @@ const SignInPage = () => {
           </div>
 
           <form className="space-y-6" onSubmit={handleSubmit}>
+            {/* Success Message Display */}
+            {successMessage && (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                <div className="flex">
+                  <div className="flex-shrink-0">
+                    <svg className="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <div className="ml-3">
+                    <p className="text-sm text-green-800">{successMessage}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Submit Error Display */}
             {submitError && (
               <div className="bg-red-50 border border-red-200 rounded-lg p-4">
@@ -155,34 +199,34 @@ const SignInPage = () => {
               </div>
             )}
 
-            {/* Email Field */}
+            {/* Username Field */}
             <div>
               <label 
-                htmlFor="email" 
+                htmlFor="username" 
                 className="block text-sm font-medium text-gray-700 mb-2"
               >
-                Email address
+                Username
               </label>
               <input
-                id="email"
-                name="email"
-                type="email"
-                autoComplete="email"
-                value={formData.email}
+                id="username"
+                name="username"
+                type="text"
+                autoComplete="username"
+                value={formData.username}
                 onChange={handleInputChange}
                 onBlur={handleInputBlur}
                 className={`w-full px-3 py-3 border rounded-lg placeholder-gray-400 text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-200 hover:border-gray-400 ${
-                  touched.email && validationErrors.email 
+                  touched.username && validationErrors.username 
                     ? 'border-red-300 focus:ring-red-500 focus:border-red-500' 
                     : 'border-gray-300'
                 }`}
-                placeholder="Enter your email"
-                aria-describedby="email-error"
+                placeholder="Enter your username"
+                aria-describedby="username-error"
                 disabled={isLoading}
               />
-              {touched.email && validationErrors.email && (
-                <p id="email-error" className="mt-2 text-sm text-red-600">
-                  {validationErrors.email}
+              {touched.username && validationErrors.username && (
+                <p id="username-error" className="mt-2 text-sm text-red-600">
+                  {validationErrors.username}
                 </p>
               )}
             </div>

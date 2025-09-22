@@ -3,7 +3,7 @@
   "short_name": "Reservations",
   "description": "Hotel, Bus, Flight and Movie booking management system",
   "start_url": "/",
-  "display": "standalone",
+  "display": "browser",
   "background_color": "#ffffff",
   "theme_color": "#ffffff",
   "orientation": "portrait-primary",
@@ -12,7 +12,7 @@
       "src": "/icon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "purpose": "any"
     }
   ],
   "categories": ["business", "productivity", "travel"],

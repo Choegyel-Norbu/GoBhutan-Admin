@@ -215,7 +215,7 @@ const SignInPage = () => {
                 value={formData.username}
                 onChange={handleInputChange}
                 onBlur={handleInputBlur}
-                className={`w-full px-3 py-3 border rounded-lg placeholder-gray-400 text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-200 hover:border-gray-400 ${
+                className={`w-full px-3 py-3 border rounded-lg placeholder-gray-400 text-gray-900 focus:outline-none focus:ring-0 focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-200 hover:border-gray-400 ${
                   touched.username && validationErrors.username 
                     ? 'border-red-300 focus:ring-red-500 focus:border-red-500' 
                     : 'border-gray-300'
@@ -248,7 +248,7 @@ const SignInPage = () => {
                   value={formData.password}
                   onChange={handleInputChange}
                   onBlur={handleInputBlur}
-                  className={`w-full px-3 py-3 pr-12 border rounded-lg placeholder-gray-400 text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-200 hover:border-gray-400 ${
+                  className={`w-full px-3 py-3 pr-12 border rounded-lg placeholder-gray-400 text-gray-900 focus:outline-none focus:ring-0 focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-200 hover:border-gray-400 ${
                     touched.password && validationErrors.password 
                       ? 'border-red-300 focus:ring-red-500 focus:border-red-500' 
                       : 'border-gray-300'

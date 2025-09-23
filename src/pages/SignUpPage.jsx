@@ -173,12 +173,47 @@ const SignUpPage = () => {
   const handleClientsChange = (e) => {
     const { value, checked } = e.target;
     
-    setFormData(prev => ({
-      ...prev,
-      clients: checked 
-        ? [...prev.clients, value]
-        : prev.clients.filter(item => item !== value)
-    }));
+    // Define all available services
+    const allServices = ['bus', 'hotel', 'flight', 'taxi', 'movie'];
+    
+    if (value === 'all') {
+      // If "All Services Client" is checked, select all services
+      if (checked) {
+        setFormData(prev => ({
+          ...prev,
+          clients: ['all', ...allServices]
+        }));
+      } else {
+        // If "All Services Client" is unchecked, deselect all
+        setFormData(prev => ({
+          ...prev,
+          clients: []
+        }));
+      }
+    } else {
+      // Handle individual service selection
+      let newClients;
+      if (checked) {
+        // Add the service to the list
+        newClients = [...formData.clients, value];
+        
+        // If all individual services are now selected, also select "all"
+        const hasAllIndividualServices = allServices.every(service => 
+          newClients.includes(service)
+        );
+        if (hasAllIndividualServices) {
+          newClients = ['all', ...allServices];
+        }
+      } else {
+        // Remove the service from the list and also remove "all" if it exists
+        newClients = formData.clients.filter(item => item !== value && item !== 'all');
+      }
+      
+      setFormData(prev => ({
+        ...prev,
+        clients: newClients
+      }));
+    }
     
     // Clear any existing error for this field
     if (validationErrors.clients) {

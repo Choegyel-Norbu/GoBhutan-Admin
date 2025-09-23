@@ -1,4 +1,6 @@
-# Jigme Choling Reservations Dashboard
+
+
+# GoBhutan Admin Dashboard
 
 A modern, scalable React dashboard for managing multiple reservation services including hotels, taxis, flights, movie tickets, and bus bookings.
 

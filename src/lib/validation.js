@@ -78,29 +78,6 @@ export const validateUsername = (username) => {
     };
   }
 
-  if (username.length < 3) {
-    return {
-      isValid: false,
-      message: 'Username must be at least 3 characters long'
-    };
-  }
-
-  if (username.length > 20) {
-    return {
-      isValid: false,
-      message: 'Username must be less than 20 characters'
-    };
-  }
-
-  // Check for valid characters (alphanumeric and underscore only)
-  const USERNAME_REGEX = /^[a-zA-Z0-9_]+$/;
-  if (!USERNAME_REGEX.test(username)) {
-    return {
-      isValid: false,
-      message: 'Username can only contain letters, numbers, and underscores'
-    };
-  }
-
   return {
     isValid: true,
     message: ''

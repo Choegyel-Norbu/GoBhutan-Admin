@@ -5,18 +5,173 @@ import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
 import { Textarea } from '@/components/ui/Textarea';
 import { Select } from '@/components/ui/Select';
-import { Building, MapPin, Phone, Mail, Star, Wifi, Car, Dumbbell, Coffee, Shield, Utensils } from 'lucide-react';
+import { Building, MapPin, Phone, Mail, Star, Wifi, Car, Dumbbell, Coffee, Shield, Utensils, Plus, Trash2 } from 'lucide-react';
+import { apiClient } from '@/lib/apiService';
 
 const AddHotel = () => {
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitMessage, setSubmitMessage] = useState({ type: '', message: '' });
+  
+  // Define amenity options first
+  const amenityOptions = [
+    { 
+      id: 1, 
+      key: 'wifi', 
+      name: 'Free WiFi', 
+      description: 'Complimentary high-speed internet access',
+      iconClass: 'wifi',
+      category: 'BASIC',
+      icon: Wifi,
+      selected: false
+    },
+    { 
+      id: 2, 
+      key: 'parking', 
+      name: 'Free Parking', 
+      description: 'Complimentary parking for guests',
+      iconClass: 'car',
+      category: 'BASIC',
+      icon: Car,
+      selected: false
+    },
+    { 
+      id: 3, 
+      key: 'pool', 
+      name: 'Swimming Pool', 
+      description: 'Outdoor swimming pool facility',
+      iconClass: 'building',
+      category: 'RECREATION',
+      icon: Building,
+      selected: false
+    },
+    { 
+      id: 4, 
+      key: 'gym', 
+      name: 'Fitness Center', 
+      description: 'Well-equipped fitness center',
+      iconClass: 'dumbbell',
+      category: 'RECREATION',
+      icon: Dumbbell,
+      selected: false
+    },
+    { 
+      id: 5, 
+      key: 'spa', 
+      name: 'Spa & Wellness', 
+      description: 'Relaxing spa and wellness services',
+      iconClass: 'building',
+      category: 'RECREATION',
+      icon: Building,
+      selected: false
+    },
+    { 
+      id: 6, 
+      key: 'restaurant', 
+      name: 'Restaurant', 
+      description: 'On-site dining restaurant',
+      iconClass: 'utensils',
+      category: 'DINING',
+      icon: Utensils,
+      selected: false
+    },
+    { 
+      id: 7, 
+      key: 'bar', 
+      name: 'Bar/Lounge', 
+      description: 'Bar and lounge area',
+      iconClass: 'coffee',
+      category: 'DINING',
+      icon: Coffee,
+      selected: false
+    },
+    { 
+      id: 8, 
+      key: 'businessCenter', 
+      name: 'Business Center', 
+      description: 'Business center with meeting facilities',
+      iconClass: 'building',
+      category: 'BUSINESS',
+      icon: Building,
+      selected: false
+    },
+    { 
+      id: 9, 
+      key: 'conferenceRoom', 
+      name: 'Conference Rooms', 
+      description: 'Conference and meeting rooms',
+      iconClass: 'building',
+      category: 'BUSINESS',
+      icon: Building,
+      selected: false
+    },
+    { 
+      id: 10, 
+      key: 'airportShuttle', 
+      name: 'Airport Shuttle', 
+      description: 'Complimentary airport shuttle service',
+      iconClass: 'car',
+      category: 'TRANSPORTATION',
+      icon: Car,
+      selected: false
+    },
+    { 
+      id: 11, 
+      key: 'roomService', 
+      name: 'Room Service', 
+      description: '24/7 room service available',
+      iconClass: 'utensils',
+      category: 'SERVICE',
+      icon: Utensils,
+      selected: false
+    },
+    { 
+      id: 12, 
+      key: 'laundry', 
+      name: 'Laundry Service', 
+      description: 'Laundry and dry cleaning services',
+      iconClass: 'building',
+      category: 'SERVICE',
+      icon: Building,
+      selected: false
+    },
+    { 
+      id: 13, 
+      key: 'concierge', 
+      name: 'Concierge', 
+      description: 'Professional concierge services',
+      iconClass: 'shield',
+      category: 'SERVICE',
+      icon: Shield,
+      selected: false
+    },
+    { 
+      id: 14, 
+      key: 'petFriendly', 
+      name: 'Pet Friendly', 
+      description: 'Pet-friendly accommodations',
+      iconClass: 'building',
+      category: 'POLICY',
+      icon: Building,
+      selected: false
+    },
+    { 
+      id: 15, 
+      key: 'smokingAllowed', 
+      name: 'Smoking Allowed', 
+      description: 'Designated smoking areas',
+      iconClass: 'building',
+      category: 'POLICY',
+      icon: Building,
+      selected: false
+    }
+  ];
+
   const [formData, setFormData] = useState({
     // Basic Information
-    hotelName: '',
-    hotelChain: '',
-    category: '',
-    starRating: '',
+    name: '',
+    description: '',
+    starRating: 0,
     
     // Location Information
     address: '',
@@ -24,83 +179,74 @@ const AddHotel = () => {
     state: '',
     country: '',
     postalCode: '',
-    latitude: '',
-    longitude: '',
     
     // Contact Information
-    phone: '',
+    phoneNumber: '',
     email: '',
     website: '',
     
     // Hotel Details
-    description: '',
-    totalRooms: '',
     checkInTime: '',
     checkOutTime: '',
+    adminUserId: '',
+    isActive: true,
     
     // Amenities
-    amenities: {
-      wifi: false,
-      parking: false,
-      pool: false,
-      gym: false,
-      spa: false,
-      restaurant: false,
-      bar: false,
-      businessCenter: false,
-      conferenceRoom: false,
-      airportShuttle: false,
-      roomService: false,
-      laundry: false,
-      concierge: false,
-      petFriendly: false,
-      smokingAllowed: false
-    },
+    amenities: amenityOptions,
     
-    // Policies
-    cancellationPolicy: '',
-    petPolicy: '',
-    smokingPolicy: '',
-    
-    // Pricing
-    basePrice: '',
-    currency: 'BTN',
-    
-    // Images
-    images: []
+    // Rooms
+    rooms: [{
+      id: 0,
+      roomNumber: '',
+      hotel: '',
+      roomType: {
+        id: 0,
+        name: '',
+        description: '',
+        bedCount: 0,
+        bedType: '',
+        roomSize: ''
+      },
+      floor: 0,
+      basePrice: 0,
+      maxOccupancy: 0,
+      status: 'AVAILABLE',
+      isActive: true,
+      description: '',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    }]
   });
 
   const validateField = (name, value) => {
     const newErrors = { ...errors };
     
     switch (name) {
-      case 'hotelName':
+      case 'name':
         if (!value.trim()) {
-          newErrors.hotelName = 'Hotel name is required';
+          newErrors.name = 'Hotel name is required';
         } else if (value.trim().length < 2) {
-          newErrors.hotelName = 'Hotel name must be at least 2 characters';
+          newErrors.name = 'Hotel name must be at least 2 characters';
+        } else if (value.trim().length > 100) {
+          newErrors.name = 'Hotel name must be less than 100 characters';
         } else {
-          delete newErrors.hotelName;
+          delete newErrors.name;
         }
         break;
         
-      case 'phone':
-        if (!value.trim()) {
-          newErrors.phone = 'Phone number is required';
-        } else if (!/^\+975\s?\d{1,2}\s?\d{6}$/.test(value.trim())) {
-          newErrors.phone = 'Please enter a valid Bhutanese phone number (e.g., +975 2 123456)';
+      case 'description':
+        if (value.trim() && value.trim().length > 1000) {
+          newErrors.description = 'Description must be less than 1000 characters';
         } else {
-          delete newErrors.phone;
+          delete newErrors.description;
         }
         break;
         
-      case 'email':
-        if (!value.trim()) {
-          newErrors.email = 'Email address is required';
-        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
-          newErrors.email = 'Please enter a valid email address';
+      case 'starRating':
+        if (value && (isNaN(value) || value < 0 || value > 5)) {
+          newErrors.starRating = 'Star rating must be between 0 and 5';
         } else {
-          delete newErrors.email;
+          delete newErrors.starRating;
         }
         break;
         
@@ -109,6 +255,8 @@ const AddHotel = () => {
           newErrors.address = 'Address is required';
         } else if (value.trim().length < 5) {
           newErrors.address = 'Address must be at least 5 characters';
+        } else if (value.trim().length > 200) {
+          newErrors.address = 'Address must be less than 200 characters';
         } else {
           delete newErrors.address;
         }
@@ -119,8 +267,18 @@ const AddHotel = () => {
           newErrors.city = 'City is required';
         } else if (value.trim().length < 2) {
           newErrors.city = 'City name must be at least 2 characters';
+        } else if (value.trim().length > 50) {
+          newErrors.city = 'City name must be less than 50 characters';
         } else {
           delete newErrors.city;
+        }
+        break;
+        
+      case 'state':
+        if (value.trim() && value.trim().length > 50) {
+          newErrors.state = 'State name must be less than 50 characters';
+        } else {
+          delete newErrors.state;
         }
         break;
         
@@ -129,48 +287,135 @@ const AddHotel = () => {
           newErrors.country = 'Country is required';
         } else if (value.trim().length < 2) {
           newErrors.country = 'Country name must be at least 2 characters';
+        } else if (value.trim().length > 50) {
+          newErrors.country = 'Country name must be less than 50 characters';
         } else {
           delete newErrors.country;
+        }
+        break;
+        
+      case 'postalCode':
+        if (value.trim() && value.trim().length > 20) {
+          newErrors.postalCode = 'Postal code must be less than 20 characters';
+        } else {
+          delete newErrors.postalCode;
+        }
+        break;
+        
+      case 'phoneNumber':
+        if (!value.trim()) {
+          newErrors.phoneNumber = 'Phone number is required';
+        } else if (!/^\+975\s?\d{1,2}\s?\d{6}$/.test(value.trim())) {
+          newErrors.phoneNumber = 'Please enter a valid Bhutanese phone number (e.g., +975 2 123456)';
+        } else {
+          delete newErrors.phoneNumber;
+        }
+        break;
+        
+      case 'email':
+        if (!value.trim()) {
+          newErrors.email = 'Email address is required';
+        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+          newErrors.email = 'Please enter a valid email address';
+        } else if (value.length > 100) {
+          newErrors.email = 'Email address must be less than 100 characters';
+        } else {
+          delete newErrors.email;
         }
         break;
         
       case 'website':
         if (value.trim() && !/^https?:\/\/.+/.test(value)) {
           newErrors.website = 'Website must start with http:// or https://';
+        } else if (value.trim() && value.length > 200) {
+          newErrors.website = 'Website URL must be less than 200 characters';
         } else {
           delete newErrors.website;
         }
         break;
         
-      case 'latitude':
-        if (value && (isNaN(value) || value < -90 || value > 90)) {
-          newErrors.latitude = 'Latitude must be between -90 and 90';
+      case 'checkInTime':
+        if (value.trim() && !/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(value)) {
+          newErrors.checkInTime = 'Please enter a valid time format (HH:MM)';
         } else {
-          delete newErrors.latitude;
+          delete newErrors.checkInTime;
         }
         break;
         
-      case 'longitude':
-        if (value && (isNaN(value) || value < -180 || value > 180)) {
-          newErrors.longitude = 'Longitude must be between -180 and 180';
+      case 'checkOutTime':
+        if (value.trim() && !/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(value)) {
+          newErrors.checkOutTime = 'Please enter a valid time format (HH:MM)';
         } else {
-          delete newErrors.longitude;
+          delete newErrors.checkOutTime;
         }
         break;
         
-      case 'totalRooms':
-        if (value && (isNaN(value) || value < 1 || value > 10000)) {
-          newErrors.totalRooms = 'Total rooms must be between 1 and 10,000';
+      case 'adminUserId':
+        if (value.trim() && value.trim().length > 50) {
+          newErrors.adminUserId = 'Admin User ID must be less than 50 characters';
         } else {
-          delete newErrors.totalRooms;
+          delete newErrors.adminUserId;
         }
         break;
         
+      case 'isActive':
+        if (typeof value !== 'boolean') {
+          newErrors.isActive = 'Hotel status must be a valid selection';
+        } else {
+          delete newErrors.isActive;
+        }
+        break;
+
+      // Room validation
+      case 'roomNumber':
+        if (!value.trim()) {
+          newErrors[name] = 'Room number is required';
+        } else if (value.trim().length > 20) {
+          newErrors[name] = 'Room number must be less than 20 characters';
+        } else {
+          delete newErrors[name];
+        }
+        break;
+
       case 'basePrice':
-        if (value && (isNaN(value) || value < 0)) {
-          newErrors.basePrice = 'Base price must be a positive number';
+        if (!value || isNaN(value) || parseFloat(value) <= 0) {
+          newErrors[name] = 'Base price must be a positive number';
         } else {
-          delete newErrors.basePrice;
+          delete newErrors[name];
+        }
+        break;
+
+      case 'maxOccupancy':
+        if (!value || isNaN(value) || parseInt(value) <= 0) {
+          newErrors[name] = 'Max occupancy must be a positive number';
+        } else {
+          delete newErrors[name];
+        }
+        break;
+
+      case 'roomTypeName':
+        if (!value.trim()) {
+          newErrors[name] = 'Room type name is required';
+        } else if (value.trim().length > 50) {
+          newErrors[name] = 'Room type name must be less than 50 characters';
+        } else {
+          delete newErrors[name];
+        }
+        break;
+
+      case 'bedCount':
+        if (!value || isNaN(value) || parseInt(value) <= 0) {
+          newErrors[name] = 'Bed count must be a positive number';
+        } else {
+          delete newErrors[name];
+        }
+        break;
+
+      case 'bedType':
+        if (!value.trim()) {
+          newErrors[name] = 'Bed type is required';
+        } else {
+          delete newErrors[name];
         }
         break;
         
@@ -185,14 +430,47 @@ const AddHotel = () => {
     const { name, value, type, checked } = e.target;
     
     if (name.startsWith('amenities.')) {
-      const amenity = name.split('.')[1];
+      const amenityKey = name.split('.')[1];
       setFormData(prev => ({
         ...prev,
-        amenities: {
-          ...prev.amenities,
-          [amenity]: checked
-        }
+        amenities: prev.amenities.map(amenity => 
+          amenity.key === amenityKey 
+            ? { ...amenity, selected: checked }
+            : amenity
+        )
       }));
+    } else if (name.startsWith('rooms.')) {
+      const parts = name.split('.');
+      const roomIndex = parseInt(parts[1]);
+      const fieldPath = parts.slice(2);
+      
+      setFormData(prev => ({
+        ...prev,
+        rooms: prev.rooms.map((room, index) => {
+          if (index === roomIndex) {
+            const newRoom = { ...room };
+            if (fieldPath.length === 1) {
+              // Direct room field
+              newRoom[fieldPath[0]] = type === 'checkbox' ? checked : value;
+            } else if (fieldPath.length === 2 && fieldPath[0] === 'roomType') {
+              // Room type field
+              newRoom.roomType = {
+                ...newRoom.roomType,
+                [fieldPath[1]]: type === 'checkbox' ? checked : value
+              };
+            }
+            return newRoom;
+          }
+          return room;
+        })
+      }));
+      
+      // Validate room fields
+      if (fieldPath.length === 1) {
+        validateField(fieldPath[0], type === 'checkbox' ? checked : value);
+      } else if (fieldPath.length === 2 && fieldPath[0] === 'roomType') {
+        validateField(`roomType${fieldPath[1].charAt(0).toUpperCase() + fieldPath[1].slice(1)}`, type === 'checkbox' ? checked : value);
+      }
     } else {
       setFormData(prev => ({
         ...prev,
@@ -204,32 +482,191 @@ const AddHotel = () => {
     }
   };
 
-  const handleImageUpload = (e) => {
-    const files = Array.from(e.target.files);
+  const addRoom = () => {
+    const newRoom = {
+      id: 0,
+      roomNumber: '',
+      hotel: '',
+      roomType: {
+        id: 0,
+        name: '',
+        description: '',
+        bedCount: 0,
+        bedType: '',
+        roomSize: ''
+      },
+      floor: 0,
+      basePrice: 0,
+      maxOccupancy: 0,
+      status: 'AVAILABLE',
+      isActive: true,
+      description: '',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    
     setFormData(prev => ({
       ...prev,
-      images: [...prev.images, ...files]
+      rooms: [...prev.rooms, newRoom]
     }));
   };
 
+  const removeRoom = (roomIndex) => {
+    if (formData.rooms.length > 1) {
+      setFormData(prev => ({
+        ...prev,
+        rooms: prev.rooms.filter((_, index) => index !== roomIndex)
+      }));
+    }
+  };
+
   const validateForm = () => {
-    const requiredFields = ['hotelName', 'phone', 'email', 'address', 'city', 'country'];
-    const newErrors = {};
+    const requiredFields = ['name', 'phoneNumber', 'email', 'address', 'city', 'country'];
+    const allErrors = {};
     
-    requiredFields.forEach(field => {
-      if (!formData[field] || !formData[field].trim()) {
-        newErrors[field] = `${field.charAt(0).toUpperCase() + field.slice(1)} is required`;
-      }
-    });
-    
-    // Validate all fields
+    // Validate all fields and collect errors
     Object.keys(formData).forEach(key => {
-      if (key !== 'amenities' && key !== 'images') {
-        validateField(key, formData[key]);
+      if (key !== 'amenities') {
+        const fieldErrors = validateFieldSync(key, formData[key]);
+        if (fieldErrors) {
+          allErrors[key] = fieldErrors;
+        }
       }
     });
     
-    return Object.keys(newErrors).length === 0 && Object.keys(errors).length === 0;
+    // Check required fields and add errors if they're empty
+    requiredFields.forEach(field => {
+      if (!formData[field] || !formData[field].toString().trim()) {
+        allErrors[field] = `${field.charAt(0).toUpperCase() + field.slice(1)} is required`;
+      }
+    });
+    
+    // Update errors state with all validation errors
+    setErrors(allErrors);
+    
+    return Object.keys(allErrors).length === 0;
+  };
+
+  const validateFieldSync = (name, value) => {
+    switch (name) {
+      case 'name':
+        if (!value.trim()) {
+          return 'Hotel name is required';
+        } else if (value.trim().length < 2) {
+          return 'Hotel name must be at least 2 characters';
+        } else if (value.trim().length > 100) {
+          return 'Hotel name must be less than 100 characters';
+        }
+        break;
+        
+      case 'description':
+        if (value.trim() && value.trim().length > 1000) {
+          return 'Description must be less than 1000 characters';
+        }
+        break;
+        
+      case 'starRating':
+        if (value && (isNaN(value) || value < 0 || value > 5)) {
+          return 'Star rating must be between 0 and 5';
+        }
+        break;
+        
+      case 'address':
+        if (!value.trim()) {
+          return 'Address is required';
+        } else if (value.trim().length < 5) {
+          return 'Address must be at least 5 characters';
+        } else if (value.trim().length > 200) {
+          return 'Address must be less than 200 characters';
+        }
+        break;
+        
+      case 'city':
+        if (!value.trim()) {
+          return 'City is required';
+        } else if (value.trim().length < 2) {
+          return 'City name must be at least 2 characters';
+        } else if (value.trim().length > 50) {
+          return 'City name must be less than 50 characters';
+        }
+        break;
+        
+      case 'state':
+        if (value.trim() && value.trim().length > 50) {
+          return 'State name must be less than 50 characters';
+        }
+        break;
+        
+      case 'country':
+        if (!value.trim()) {
+          return 'Country is required';
+        } else if (value.trim().length < 2) {
+          return 'Country name must be at least 2 characters';
+        } else if (value.trim().length > 50) {
+          return 'Country name must be less than 50 characters';
+        }
+        break;
+        
+      case 'postalCode':
+        if (value.trim() && value.trim().length > 20) {
+          return 'Postal code must be less than 20 characters';
+        }
+        break;
+        
+      case 'phoneNumber':
+        if (!value.trim()) {
+          return 'Phone number is required';
+        } else if (!/^\+975\s?\d{1,2}\s?\d{6}$/.test(value.trim())) {
+          return 'Please enter a valid Bhutanese phone number (e.g., +975 2 123456)';
+        }
+        break;
+        
+      case 'email':
+        if (!value.trim()) {
+          return 'Email address is required';
+        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+          return 'Please enter a valid email address';
+        } else if (value.length > 100) {
+          return 'Email address must be less than 100 characters';
+        }
+        break;
+        
+      case 'website':
+        if (value.trim() && !/^https?:\/\/.+/.test(value)) {
+          return 'Website must start with http:// or https://';
+        } else if (value.trim() && value.length > 200) {
+          return 'Website URL must be less than 200 characters';
+        }
+        break;
+        
+      case 'checkInTime':
+        if (value.trim() && !/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(value)) {
+          return 'Please enter a valid time format (HH:MM)';
+        }
+        break;
+        
+      case 'checkOutTime':
+        if (value.trim() && !/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(value)) {
+          return 'Please enter a valid time format (HH:MM)';
+        }
+        break;
+        
+      case 'adminUserId':
+        if (value.trim() && value.trim().length > 50) {
+          return 'Admin User ID must be less than 50 characters';
+        }
+        break;
+        
+      case 'isActive':
+        if (typeof value !== 'boolean') {
+          return 'Hotel status must be a valid selection';
+        }
+        break;
+        
+      default:
+        break;
+    }
+    return null;
   };
 
   const handleSubmit = async (e) => {
@@ -239,12 +676,58 @@ const AddHotel = () => {
     
     if (validateForm()) {
       try {
-        console.log('Hotel data:', formData);
-        // Here you would typically send the data to your API
-        // const response = await api.addHotel(formData);
+        // Format the data according to the payload structure
+        const payload = {
+          name: formData.name,
+          description: formData.description,
+          address: formData.address,
+          city: formData.city,
+          state: formData.state,
+          country: formData.country,
+          postalCode: formData.postalCode,
+          phoneNumber: formData.phoneNumber,
+          email: formData.email,
+          website: formData.website,
+          starRating: parseInt(formData.starRating) || 0,
+          checkInTime: formData.checkInTime,
+          checkOutTime: formData.checkOutTime,
+          adminUserId: formData.adminUserId,
+          isActive: formData.isActive,
+          createdAt: new Date().toISOString(),
+          rooms: formData.rooms.map((room, index) => ({
+            id: index, // Will be assigned by backend
+            roomNumber: room.roomNumber,
+            hotel: formData.name, // Hotel reference
+            roomType: {
+              id: 0, // Will be assigned by backend
+              name: room.roomType.name,
+              description: room.roomType.description,
+              bedCount: parseInt(room.roomType.bedCount) || 0,
+              bedType: room.roomType.bedType,
+              roomSize: room.roomType.roomSize
+            },
+            floor: parseInt(room.floor) || 0,
+            basePrice: parseFloat(room.basePrice) || 0,
+            maxOccupancy: parseInt(room.maxOccupancy) || 0,
+            status: room.status,
+            isActive: room.isActive,
+            description: room.description,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          })),
+          amenities: formData.amenities.filter(amenity => amenity.selected).map(amenity => ({
+            id: amenity.id,
+            name: amenity.name,
+            description: amenity.description,
+            iconClass: amenity.iconClass,
+            category: amenity.category
+          }))
+        };
+
+        console.log('Hotel payload:', payload);
         
-        // Simulate API call delay
-        await new Promise(resolve => setTimeout(resolve, 1500));
+        // Make API call to POST /api/v1/hotels
+        const response = await apiClient.post('/api/v1/hotels', payload);
         
         setSubmitMessage({ 
           type: 'success', 
@@ -253,51 +736,48 @@ const AddHotel = () => {
         
         // Reset form after successful submission
         setFormData({
-          hotelName: '',
-          hotelChain: '',
-          category: '',
-          starRating: '',
+          name: '',
+          description: '',
+          starRating: 0,
           address: '',
           city: '',
           state: '',
           country: '',
           postalCode: '',
-          latitude: '',
-          longitude: '',
-          phone: '',
+          phoneNumber: '',
           email: '',
           website: '',
-          description: '',
-          totalRooms: '',
           checkInTime: '',
           checkOutTime: '',
-          amenities: {
-            wifi: false,
-            parking: false,
-            pool: false,
-            gym: false,
-            spa: false,
-            restaurant: false,
-            bar: false,
-            businessCenter: false,
-            conferenceRoom: false,
-            airportShuttle: false,
-            roomService: false,
-            laundry: false,
-            concierge: false,
-            petFriendly: false,
-            smokingAllowed: false
-          },
-          cancellationPolicy: '',
-          petPolicy: '',
-          smokingPolicy: '',
-          basePrice: '',
-          currency: 'BTN',
-          images: []
+          adminUserId: '',
+          isActive: true,
+          amenities: amenityOptions,
+          rooms: [{
+            id: 0,
+            roomNumber: '',
+            hotel: '',
+            roomType: {
+              id: 0,
+              name: '',
+              description: '',
+              bedCount: 0,
+              bedType: '',
+              roomSize: ''
+            },
+            floor: 0,
+            basePrice: 0,
+            maxOccupancy: 0,
+            status: 'AVAILABLE',
+            isActive: true,
+            description: '',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          }]
         });
         setErrors({});
         
       } catch (error) {
+        console.error('Error adding hotel:', error);
         setSubmitMessage({ 
           type: 'error', 
           message: 'Failed to add hotel. Please try again or contact support.' 
@@ -312,24 +792,6 @@ const AddHotel = () => {
     
     setIsSubmitting(false);
   };
-
-  const amenityOptions = [
-    { key: 'wifi', label: 'Free WiFi', icon: Wifi },
-    { key: 'parking', label: 'Free Parking', icon: Car },
-    { key: 'pool', label: 'Swimming Pool', icon: Building },
-    { key: 'gym', label: 'Fitness Center', icon: Dumbbell },
-    { key: 'spa', label: 'Spa & Wellness', icon: Building },
-    { key: 'restaurant', label: 'Restaurant', icon: Utensils },
-    { key: 'bar', label: 'Bar/Lounge', icon: Coffee },
-    { key: 'businessCenter', label: 'Business Center', icon: Building },
-    { key: 'conferenceRoom', label: 'Conference Rooms', icon: Building },
-    { key: 'airportShuttle', label: 'Airport Shuttle', icon: Car },
-    { key: 'roomService', label: 'Room Service', icon: Utensils },
-    { key: 'laundry', label: 'Laundry Service', icon: Building },
-    { key: 'concierge', label: 'Concierge', icon: Shield },
-    { key: 'petFriendly', label: 'Pet Friendly', icon: Building },
-    { key: 'smokingAllowed', label: 'Smoking Allowed', icon: Building }
-  ];
 
   return (
     <div className="container mx-auto p-0 md:p-6">
@@ -379,45 +841,18 @@ const AddHotel = () => {
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="hotelName">Hotel Name *</Label>
+                <Label htmlFor="name">Hotel Name *</Label>
                 <Input
-                  id="hotelName"
-                  name="hotelName"
-                  value={formData.hotelName}
+                  id="name"
+                  name="name"
+                  value={formData.name}
                   onChange={handleInputChange}
                   placeholder="Enter hotel name"
-                  className={errors.hotelName ? 'border-red-500' : ''}
+                  className={errors.name ? 'border-red-500' : ''}
                 />
-                {errors.hotelName && (
-                  <p className="text-sm text-red-500">{errors.hotelName}</p>
+                {errors.name && (
+                  <p className="text-sm text-red-500">{errors.name}</p>
                 )}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="hotelChain">Hotel Chain</Label>
-                <Input
-                  id="hotelChain"
-                  name="hotelChain"
-                  value={formData.hotelChain}
-                  onChange={handleInputChange}
-                  placeholder="e.g., Taj, Le Meridien, Aman"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="category">Category</Label>
-                <Select
-                  id="category"
-                  name="category"
-                  value={formData.category}
-                  onChange={handleInputChange}
-                >
-                  <option value="">Select category</option>
-                  <option value="luxury">Luxury</option>
-                  <option value="business">Business</option>
-                  <option value="boutique">Boutique</option>
-                  <option value="budget">Budget</option>
-                  <option value="resort">Resort</option>
-                  <option value="airport">Airport</option>
-                </Select>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="starRating">Star Rating</Label>
@@ -426,15 +861,34 @@ const AddHotel = () => {
                   name="starRating"
                   value={formData.starRating}
                   onChange={handleInputChange}
+                  className={errors.starRating ? 'border-red-500' : ''}
                 >
-                  <option value="">Select rating</option>
-                  <option value="1">1 Star</option>
-                  <option value="2">2 Stars</option>
-                  <option value="3">3 Stars</option>
-                  <option value="4">4 Stars</option>
-                  <option value="5">5 Stars</option>
+                  <option value={0}>Select rating</option>
+                  <option value={1}>1 Star</option>
+                  <option value={2}>2 Stars</option>
+                  <option value={3}>3 Stars</option>
+                  <option value={4}>4 Stars</option>
+                  <option value={5}>5 Stars</option>
                 </Select>
+                {errors.starRating && (
+                  <p className="text-sm text-red-500">{errors.starRating}</p>
+                )}
               </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                name="description"
+                value={formData.description}
+                onChange={handleInputChange}
+                placeholder="Describe the hotel, its unique Bhutanese features, traditional architecture, and what makes it special in the Land of the Thunder Dragon..."
+                rows={4}
+                className={errors.description ? 'border-red-500' : ''}
+              />
+              {errors.description && (
+                <p className="text-sm text-red-500">{errors.description}</p>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -488,7 +942,11 @@ const AddHotel = () => {
                   value={formData.state}
                   onChange={handleInputChange}
                   placeholder="State or province"
+                  className={errors.state ? 'border-red-500' : ''}
                 />
+                {errors.state && (
+                  <p className="text-sm text-red-500">{errors.state}</p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="country">Country *</Label>
@@ -512,40 +970,10 @@ const AddHotel = () => {
                   value={formData.postalCode}
                   onChange={handleInputChange}
                   placeholder="Postal/ZIP code"
+                  className={errors.postalCode ? 'border-red-500' : ''}
                 />
-              </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="latitude">Latitude</Label>
-                <Input
-                  id="latitude"
-                  name="latitude"
-                  type="number"
-                  step="any"
-                  value={formData.latitude}
-                  onChange={handleInputChange}
-                  placeholder="e.g., 27.4728"
-                  className={errors.latitude ? 'border-red-500' : ''}
-                />
-                {errors.latitude && (
-                  <p className="text-sm text-red-500">{errors.latitude}</p>
-                )}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="longitude">Longitude</Label>
-                <Input
-                  id="longitude"
-                  name="longitude"
-                  type="number"
-                  step="any"
-                  value={formData.longitude}
-                  onChange={handleInputChange}
-                  placeholder="e.g., 89.6390"
-                  className={errors.longitude ? 'border-red-500' : ''}
-                />
-                {errors.longitude && (
-                  <p className="text-sm text-red-500">{errors.longitude}</p>
+                {errors.postalCode && (
+                  <p className="text-sm text-red-500">{errors.postalCode}</p>
                 )}
               </div>
             </div>
@@ -566,18 +994,18 @@ const AddHotel = () => {
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="phone">Phone Number *</Label>
+                <Label htmlFor="phoneNumber">Phone Number *</Label>
                 <Input
-                  id="phone"
-                  name="phone"
+                  id="phoneNumber"
+                  name="phoneNumber"
                   type="tel"
-                  value={formData.phone}
+                  value={formData.phoneNumber}
                   onChange={handleInputChange}
                   placeholder="+975 2 123456"
-                  className={errors.phone ? 'border-red-500' : ''}
+                  className={errors.phoneNumber ? 'border-red-500' : ''}
                 />
-                {errors.phone && (
-                  <p className="text-sm text-red-500">{errors.phone}</p>
+                {errors.phoneNumber && (
+                  <p className="text-sm text-red-500">{errors.phoneNumber}</p>
                 )}
               </div>
               <div className="space-y-2">
@@ -623,33 +1051,7 @@ const AddHotel = () => {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
-              <Textarea
-                id="description"
-                name="description"
-                value={formData.description}
-                onChange={handleInputChange}
-                placeholder="Describe the hotel, its unique Bhutanese features, traditional architecture, and what makes it special in the Land of the Thunder Dragon..."
-                rows={4}
-              />
-            </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="totalRooms">Total Rooms</Label>
-                <Input
-                  id="totalRooms"
-                  name="totalRooms"
-                  type="number"
-                  value={formData.totalRooms}
-                  onChange={handleInputChange}
-                  placeholder="Number of rooms"
-                  className={errors.totalRooms ? 'border-red-500' : ''}
-                />
-                {errors.totalRooms && (
-                  <p className="text-sm text-red-500">{errors.totalRooms}</p>
-                )}
-              </div>
               <div className="space-y-2">
                 <Label htmlFor="checkInTime">Check-in Time</Label>
                 <Input
@@ -658,7 +1060,11 @@ const AddHotel = () => {
                   type="time"
                   value={formData.checkInTime}
                   onChange={handleInputChange}
+                  className={errors.checkInTime ? 'border-red-500' : ''}
                 />
+                {errors.checkInTime && (
+                  <p className="text-sm text-red-500">{errors.checkInTime}</p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="checkOutTime">Check-out Time</Label>
@@ -668,8 +1074,42 @@ const AddHotel = () => {
                   type="time"
                   value={formData.checkOutTime}
                   onChange={handleInputChange}
+                  className={errors.checkOutTime ? 'border-red-500' : ''}
                 />
+                {errors.checkOutTime && (
+                  <p className="text-sm text-red-500">{errors.checkOutTime}</p>
+                )}
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="adminUserId">Admin User ID</Label>
+                <Input
+                  id="adminUserId"
+                  name="adminUserId"
+                  value={formData.adminUserId}
+                  onChange={handleInputChange}
+                  placeholder="Enter admin user ID"
+                  className={errors.adminUserId ? 'border-red-500' : ''}
+                />
+                {errors.adminUserId && (
+                  <p className="text-sm text-red-500">{errors.adminUserId}</p>
+                )}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="isActive">Hotel Status</Label>
+              <Select
+                id="isActive"
+                name="isActive"
+                value={formData.isActive}
+                onChange={handleInputChange}
+                className={errors.isActive ? 'border-red-500' : ''}
+              >
+                <option value={true}>Active</option>
+                <option value={false}>Inactive</option>
+              </Select>
+              {errors.isActive && (
+                <p className="text-sm text-red-500">{errors.isActive}</p>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -684,7 +1124,7 @@ const AddHotel = () => {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {amenityOptions.map((amenity) => {
+              {formData.amenities.map((amenity) => {
                 const IconComponent = amenity.icon;
                 return (
                   <div key={amenity.key} className="flex items-center space-x-2">
@@ -692,13 +1132,13 @@ const AddHotel = () => {
                       type="checkbox"
                       id={amenity.key}
                       name={`amenities.${amenity.key}`}
-                      checked={formData.amenities[amenity.key]}
+                      checked={amenity.selected}
                       onChange={handleInputChange}
                       className="rounded border-gray-300"
                     />
                     <Label htmlFor={amenity.key} className="flex items-center gap-2 text-sm">
                       <IconComponent className="h-4 w-4" />
-                      {amenity.label}
+                      {amenity.name}
                     </Label>
                   </div>
                 );
@@ -707,133 +1147,213 @@ const AddHotel = () => {
           </CardContent>
         </Card>
 
-        {/* Policies */}
+        {/* Rooms */}
         <Card>
           <CardHeader>
-            <CardTitle>Hotel Policies</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <Building className="h-5 w-5" />
+              Rooms Management
+            </CardTitle>
             <CardDescription>
-              Define hotel policies and rules
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="cancellationPolicy">Cancellation Policy</Label>
-              <Textarea
-                id="cancellationPolicy"
-                name="cancellationPolicy"
-                value={formData.cancellationPolicy}
-                onChange={handleInputChange}
-                placeholder="Describe the hotel's cancellation policy (e.g., Free cancellation up to 24 hours before check-in, 50% refund for same-day cancellations)..."
-                rows={3}
-              />
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="petPolicy">Pet Policy</Label>
-                <Textarea
-                  id="petPolicy"
-                  name="petPolicy"
-                  value={formData.petPolicy}
-                  onChange={handleInputChange}
-                  placeholder="Pet policy details (e.g., Pets allowed with additional fee of Nu 500 per night, maximum 2 pets per room)..."
-                  rows={3}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="smokingPolicy">Smoking Policy</Label>
-                <Textarea
-                  id="smokingPolicy"
-                  name="smokingPolicy"
-                  value={formData.smokingPolicy}
-                  onChange={handleInputChange}
-                  placeholder="Smoking policy details (e.g., Non-smoking hotel, designated smoking areas available, fine of Nu 2000 for smoking in rooms)..."
-                  rows={3}
-                />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Pricing */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Pricing Information</CardTitle>
-            <CardDescription>
-              Set base pricing for the hotel
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="basePrice">Base Price (per night)</Label>
-                <Input
-                  id="basePrice"
-                  name="basePrice"
-                  type="number"
-                  step="0.01"
-                  value={formData.basePrice}
-                  onChange={handleInputChange}
-                  placeholder="e.g., 5000"
-                  className={errors.basePrice ? 'border-red-500' : ''}
-                />
-                {errors.basePrice && (
-                  <p className="text-sm text-red-500">{errors.basePrice}</p>
-                )}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="currency">Currency</Label>
-                <Select
-                  id="currency"
-                  name="currency"
-                  value={formData.currency}
-                  onChange={handleInputChange}
-                >
-                  <option value="BTN">BTN (Nu)</option>
-                  <option value="USD">USD ($)</option>
-                  <option value="EUR">EUR (€)</option>
-                  <option value="GBP">GBP (£)</option>
-                  <option value="INR">INR (₹)</option>
-                </Select>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Images */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Hotel Images</CardTitle>
-            <CardDescription>
-              Upload images of the hotel (facade, rooms, amenities, etc.)
+              Add and manage hotel rooms. At least one room is required.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="images">Upload Images</Label>
-                <Input
-                  id="images"
-                  name="images"
-                  type="file"
-                  multiple
-                  accept="image/*"
-                  onChange={handleImageUpload}
-                  className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/80"
-                />
-              </div>
-              {formData.images.length > 0 && (
-                <div className="space-y-2">
-                  <Label>Selected Images:</Label>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                    {formData.images.map((file, index) => (
-                      <div key={index} className="text-sm text-muted-foreground">
-                        {file.name}
-                      </div>
-                    ))}
+            {formData.rooms.map((room, roomIndex) => (
+              <div key={roomIndex} className="border rounded-lg p-4 mb-4 relative">
+                <div className="flex justify-between items-center mb-4">
+                  <h4 className="text-lg font-semibold">Room {roomIndex + 1}</h4>
+                  {formData.rooms.length > 1 && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => removeRoom(roomIndex)}
+                      className="text-red-600 hover:text-red-700"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      Remove
+                    </Button>
+                  )}
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* Basic Room Details */}
+                  <div className="space-y-2">
+                    <Label htmlFor={`room-${roomIndex}-roomNumber`}>Room Number *</Label>
+                    <Input
+                      id={`room-${roomIndex}-roomNumber`}
+                      name={`rooms.${roomIndex}.roomNumber`}
+                      value={room.roomNumber}
+                      onChange={handleInputChange}
+                      placeholder="e.g., 101, A1, Suite-1"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor={`room-${roomIndex}-floor`}>Floor</Label>
+                    <Input
+                      id={`room-${roomIndex}-floor`}
+                      name={`rooms.${roomIndex}.floor`}
+                      type="number"
+                      min="0"
+                      value={room.floor}
+                      onChange={handleInputChange}
+                      placeholder="Floor number"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor={`room-${roomIndex}-maxOccupancy`}>Max Occupancy *</Label>
+                    <Input
+                      id={`room-${roomIndex}-maxOccupancy`}
+                      name={`rooms.${roomIndex}.maxOccupancy`}
+                      type="number"
+                      min="1"
+                      value={room.maxOccupancy}
+                      onChange={handleInputChange}
+                      placeholder="Maximum guests"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor={`room-${roomIndex}-basePrice`}>Base Price *</Label>
+                    <Input
+                      id={`room-${roomIndex}-basePrice`}
+                      name={`rooms.${roomIndex}.basePrice`}
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={room.basePrice}
+                      onChange={handleInputChange}
+                      placeholder="Price per night"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor={`room-${roomIndex}-status`}>Room Status</Label>
+                    <Select
+                      id={`room-${roomIndex}-status`}
+                      name={`rooms.${roomIndex}.status`}
+                      value={room.status}
+                      onChange={handleInputChange}
+                    >
+                      <option value="AVAILABLE">Available</option>
+                      <option value="OCCUPIED">Occupied</option>
+                      <option value="MAINTENANCE">Maintenance</option>
+                      <option value="OUT_OF_ORDER">Out of Order</option>
+                    </Select>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor={`room-${roomIndex}-isActive`}>Active Status</Label>
+                    <Select
+                      id={`room-${roomIndex}-isActive`}
+                      name={`rooms.${roomIndex}.isActive`}
+                      value={room.isActive}
+                      onChange={handleInputChange}
+                    >
+                      <option value={true}>Active</option>
+                      <option value={false}>Inactive</option>
+                    </Select>
                   </div>
                 </div>
-              )}
-            </div>
+                
+                {/* Room Type Details */}
+                <div className="mt-4">
+                  <h5 className="text-md font-medium mb-3">Room Type Details</h5>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor={`room-${roomIndex}-roomType-name`}>Room Type Name *</Label>
+                      <Input
+                        id={`room-${roomIndex}-roomType-name`}
+                        name={`rooms.${roomIndex}.roomType.name`}
+                        value={room.roomType.name}
+                        onChange={handleInputChange}
+                        placeholder="e.g., Deluxe, Suite, Standard"
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor={`room-${roomIndex}-roomType-bedCount`}>Bed Count *</Label>
+                      <Input
+                        id={`room-${roomIndex}-roomType-bedCount`}
+                        name={`rooms.${roomIndex}.roomType.bedCount`}
+                        type="number"
+                        min="1"
+                        value={room.roomType.bedCount}
+                        onChange={handleInputChange}
+                        placeholder="Number of beds"
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor={`room-${roomIndex}-roomType-bedType`}>Bed Type *</Label>
+                      <Select
+                        id={`room-${roomIndex}-roomType-bedType`}
+                        name={`rooms.${roomIndex}.roomType.bedType`}
+                        value={room.roomType.bedType}
+                        onChange={handleInputChange}
+                      >
+                        <option value="">Select bed type</option>
+                        <option value="SINGLE">Single</option>
+                        <option value="DOUBLE">Double</option>
+                        <option value="QUEEN">Queen</option>
+                        <option value="KING">King</option>
+                        <option value="TWIN">Twin</option>
+                        <option value="SOFA_BED">Sofa Bed</option>
+                      </Select>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor={`room-${roomIndex}-roomType-roomSize`}>Room Size</Label>
+                      <Input
+                        id={`room-${roomIndex}-roomType-roomSize`}
+                        name={`rooms.${roomIndex}.roomType.roomSize`}
+                        value={room.roomType.roomSize}
+                        onChange={handleInputChange}
+                        placeholder="e.g., 25 sqm, 400 sq ft"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="mt-4 space-y-2">
+                    <Label htmlFor={`room-${roomIndex}-roomType-description`}>Room Type Description</Label>
+                    <Textarea
+                      id={`room-${roomIndex}-roomType-description`}
+                      name={`rooms.${roomIndex}.roomType.description`}
+                      value={room.roomType.description}
+                      onChange={handleInputChange}
+                      placeholder="Describe the room type features and amenities..."
+                      rows={2}
+                    />
+                  </div>
+                </div>
+                
+                {/* Room Description */}
+                <div className="mt-4 space-y-2">
+                  <Label htmlFor={`room-${roomIndex}-description`}>Room Description</Label>
+                  <Textarea
+                    id={`room-${roomIndex}-description`}
+                    name={`rooms.${roomIndex}.description`}
+                    value={room.description}
+                    onChange={handleInputChange}
+                    placeholder="Specific details about this particular room..."
+                    rows={2}
+                  />
+                </div>
+              </div>
+            ))}
+            
+            <Button
+              type="button"
+              variant="outline"
+              onClick={addRoom}
+              className="w-full mt-4"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add More Room
+            </Button>
           </CardContent>
         </Card>
 

@@ -127,6 +127,10 @@ export const api = {
     deleteBooking: (id) => apiClient.delete(`${API_CONFIG.ENDPOINTS.HOTEL.BOOKINGS}/${id}`),
     getRooms: () => apiClient.get(API_CONFIG.ENDPOINTS.HOTEL.ROOMS),
     getGuests: () => apiClient.get(API_CONFIG.ENDPOINTS.HOTEL.GUESTS),
+    createHotel: (hotelData) => apiClient.post(API_CONFIG.ENDPOINTS.HOTEL.HOTELS, hotelData),
+    getHotels: () => apiClient.get(API_CONFIG.ENDPOINTS.HOTEL.HOTELS),
+    updateHotel: (id, hotelData) => apiClient.put(`${API_CONFIG.ENDPOINTS.HOTEL.HOTELS}/${id}`, hotelData),
+    deleteHotel: (id) => apiClient.delete(`${API_CONFIG.ENDPOINTS.HOTEL.HOTELS}/${id}`),
   },
 
   // Flight Service

@@ -5,10 +5,10 @@ const getEnvVar = (key, defaultValue) => {
 
 export const ENV_CONFIG = {
   // API Configuration
-  API_BASE_URL: getEnvVar('VITE_API_BASE_URL', 'https://a2fa2c6258e2.ngrok-free.app'),
+  API_BASE_URL: getEnvVar('VITE_API_BASE_URL', 'https://fa0ad9203ee3.ngrok-free.app'),
   
   // App Configuration
-  APP_NAME: getEnvVar('VITE_APP_NAME', 'Jigme Choling Reservations'),
+  APP_NAME: getEnvVar('VITE_APP_NAME', 'GoBhutan'),
   APP_VERSION: getEnvVar('VITE_APP_VERSION', '1.0.0'),
   
   // Development Settings
@@ -23,9 +23,9 @@ export const ENV_CONFIG = {
 
 // API URLs for environments
 export const API_URLS = {
-  DEVELOPMENT: 'https://a2fa2c6258e2.ngrok-free.app',
-  STAGING: 'https://staging-api.jigmecholing.com/api',
-  PRODUCTION: 'https://api.jigmecholing.com/api',
+  DEVELOPMENT: 'https://fa0ad9203ee3.ngrok-free.app',
+  STAGING: 'https://staging-api.gobhutan.com/api',
+  PRODUCTION: 'https://api.gobhutan.com/api',
 };
 
 // Get the appropriate API URL based on environment

@@ -12,7 +12,7 @@ function DashboardPage() {
   return (
     <PageWrapper 
       title="Dashboard" 
-      description="Welcome to Jigme Choling Reservations. Monitor your bookings and manage all services from here."
+      description="Welcome to GoBhutan admin panel. Monitor your bookings and manage all services from here."
     >
       {/* Stats Grid */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">

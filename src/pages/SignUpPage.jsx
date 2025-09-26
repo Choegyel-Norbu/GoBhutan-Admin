@@ -682,7 +682,7 @@ const SignUpPage = () => {
 
         {/* Footer */}
         <div className="text-center text-xs text-gray-500">
-          <p>© 2024 JigmeCholing Reservations. All rights reserved.</p>
+          <p>© 2024 GoBhutan Reservations. All rights reserved.</p>
         </div>
       </div>
     </div>

@@ -182,7 +182,7 @@ function Sidebar() {
           {!isCollapsed && (
             <div className="p-4 border-t border-border">
               <div className="text-xs text-muted-foreground">
-                © 2024 Jigme Choling
+                © 2024 GoBhutan
               </div>
             </div>
           )}

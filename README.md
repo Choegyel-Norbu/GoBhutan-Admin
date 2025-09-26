@@ -93,4 +93,4 @@ npm run lint
 
 ## 📄 License
 
-© 2024 Jigme Choling. All rights reserved.
+© 2024 GoBhutan. All rights reserved.

@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { validateLoginForm, sanitizeFormData } from '../lib/validation';
-import authAPI from '../lib/authAPI';
+import { useAuth } from '../contexts/AuthContext';
 
 const SignInPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { login, isAuthenticated } = useAuth();
   
   const [formData, setFormData] = useState({
     username: '',
@@ -18,6 +19,13 @@ const SignInPage = () => {
   const [successMessage, setSuccessMessage] = useState('');
   const [touched, setTouched] = useState({});
   const [showPassword, setShowPassword] = useState(false);
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/dashboard');
+    }
+  }, [isAuthenticated, navigate]);
 
   // Auto-fill credentials if coming from signup
   useEffect(() => {
@@ -111,14 +119,19 @@ const SignInPage = () => {
     setIsLoading(true);
     
     try {
-      // Attempt login
-      const response = await authAPI.login(sanitizedData);
+      // Attempt login using auth context
+      const response = await login(sanitizedData);
       
       // Login successful
       console.log('Login successful:', response.data);
       
-      // Redirect to dashboard
-      navigate('/dashboard');
+      // Show success message
+      setSuccessMessage('Login successful! Redirecting to dashboard...');
+      
+      // Redirect to dashboard after a brief delay
+      setTimeout(() => {
+        navigate('/dashboard');
+      }, 1000);
       
     } catch (error) {
       console.error('Login error:', error);
@@ -340,7 +353,7 @@ const SignInPage = () => {
 
         {/* Footer */}
         <div className="text-center text-xs text-gray-500">
-          <p>© 2024 JigmeCholing Reservations. All rights reserved.</p>
+          <p>© 2024 GoBhutan Reservations. All rights reserved.</p>
         </div>
       </div>
     </div>

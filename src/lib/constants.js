@@ -1,4 +1,4 @@
-export const APP_NAME = "Jigme Choling Reservations";
+export const APP_NAME = "GoBhutan Admin";
 
 export const ROUTES = {
   DASHBOARD: "/dashboard",
@@ -37,7 +37,7 @@ export const STAT_CARDS = [
 ];
 
 // API Configuration
-export const API_BASE_URL = 'http://localhost:8080/api';
+export const API_BASE_URL = 'https://fa0ad9203ee3.ngrok-free.app';
 
 // Environment Configuration
 export const ENV = {
@@ -49,6 +49,6 @@ export const ENV = {
 // App Configuration
 export const APP_CONFIG = {
   VERSION: '1.0.0',
-  AUTHOR: 'Jigme Choling',
+  AUTHOR: 'GoBhutan',
   DESCRIPTION: 'Comprehensive reservation management system',
 };

@@ -11,7 +11,7 @@ import { Textarea } from '@/components/ui/Textarea';
 function BusSettingsPage() {
   const [settings, setSettings] = useState({
     // General Settings
-    companyName: 'Jigme Choling Transport',
+    companyName: 'GoBhutan Transport',
     timezone: 'Asia/Thimphu',
     currency: 'BTN',
     language: 'en',
@@ -77,7 +77,7 @@ function BusSettingsPage() {
     if (confirm('Are you sure you want to reset all settings to default values?')) {
       // Reset to default values
       setSettings({
-        companyName: 'Jigme Choling Transport',
+        companyName: 'GoBhutan Transport',
         timezone: 'Asia/Thimphu',
         currency: 'BTN',
         language: 'en',

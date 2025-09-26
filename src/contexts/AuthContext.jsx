@@ -13,8 +13,8 @@ export const useAuth = () => {
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(true); // Temporarily disabled auth
-  const [isLoading, setIsLoading] = useState(false); // Skip loading for now
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Initialize auth state on mount
   useEffect(() => {

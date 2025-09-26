@@ -338,16 +338,6 @@ const SignInPage = () => {
               </p>
             </div>
 
-            {/* Temporary Dashboard Link */}
-            <div className="text-center pt-4 border-t border-gray-200">
-              <p className="text-xs text-gray-500 mb-2">Development Mode</p>
-              <Link 
-                to="/dashboard" 
-                className="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 rounded"
-              >
-                Skip to Dashboard →
-              </Link>
-            </div>
           </form>
         </div>
 

@@ -24,8 +24,8 @@ export const ENV_CONFIG = {
 // API URLs for environments
 export const API_URLS = {
   DEVELOPMENT: 'https://3caccc6d78b3.ngrok-free.app',
-  STAGING: 'https://staging-api.gobhutan.com/api',
-  PRODUCTION: 'https://api.gobhutan.com/api',
+  STAGING: 'https://3caccc6d78b3.ngrok-free.app',
+  PRODUCTION: 'https://3caccc6d78b3.ngrok-free.app',
 };
 
 // Get the appropriate API URL based on environment

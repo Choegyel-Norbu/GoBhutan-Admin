@@ -7,12 +7,80 @@ import { Textarea } from '@/components/ui/Textarea';
 import { Select } from '@/components/ui/Select';
 import { Building, MapPin, Phone, Mail, Star, Wifi, Car, Dumbbell, Coffee, Shield, Utensils, Plus, Trash2 } from 'lucide-react';
 import { apiClient } from '@/lib/apiService';
+import { API_CONFIG } from '@/lib/api';
+import authAPI from '@/lib/authAPI';
 
 const AddHotel = () => {
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitMessage, setSubmitMessage] = useState({ type: '', message: '' });
+  const [toast, setToast] = useState({ show: false, type: '', message: '', title: '' });
   
+  // Function to show toast notification
+  const showToast = (type, title, message) => {
+    setToast({ show: true, type, title, message });
+    
+    // Auto-hide toast after 5 seconds
+    setTimeout(() => {
+      setToast(prev => ({ ...prev, show: false }));
+    }, 5000);
+  };
+
+  // Function to clear all form fields
+  const clearForm = () => {
+    setFormData({
+      name: '',
+      description: '',
+      starRating: 0,
+      address: '',
+      city: '',
+      state: '',
+      country: '',
+      postalCode: '',
+      phoneNumber: '',
+      email: '',
+      website: '',
+      checkInTime: '',
+      checkOutTime: '',
+      amenities: amenityOptions,
+      rooms: [{
+        id: 0,
+        roomNumber: '',
+        hotel: '',
+        roomType: {
+          id: 0,
+          name: '',
+          description: '',
+          bedCount: 0,
+          bedType: '',
+          roomSize: ''
+        },
+        floor: 0,
+        basePrice: 0,
+        maxOccupancy: 0,
+        status: 'AVAILABLE',
+        isActive: true,
+        description: '',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }]
+    });
+    setErrors({});
+    setSubmitMessage({ type: '', message: '' });
+  };
+  
+  // Define room type options
+  const roomTypeOptions = [
+    { value: 'STANDARD', label: 'Standard Room', description: 'Basic room with essential amenities', bedCount: 1, bedType: 'SINGLE', roomSize: '20-25 sqm' },
+    { value: 'DELUXE', label: 'Deluxe Room', description: 'Upgraded room with modern amenities', bedCount: 1, bedType: 'QUEEN', roomSize: '30-35 sqm' },
+    { value: 'SUPERIOR', label: 'Superior Room', description: 'Premium room with enhanced services', bedCount: 1, bedType: 'KING', roomSize: '35-40 sqm' },
+    { value: 'SUITE', label: 'Suite', description: 'Spacious suite with separate living area', bedCount: 1, bedType: 'KING', roomSize: '50+ sqm' },
+    { value: 'FAMILY', label: 'Family Room', description: 'Large room suitable for families', bedCount: 2, bedType: 'DOUBLE', roomSize: '40-45 sqm' },
+    { value: 'TWIN', label: 'Twin Room', description: 'Room with two separate beds', bedCount: 2, bedType: 'TWIN', roomSize: '25-30 sqm' },
+    { value: 'APARTMENT', label: 'Apartment', description: 'Self-contained apartment-style room', bedCount: 1, bedType: 'QUEEN', roomSize: '60+ sqm' },
+    { value: 'VILLA', label: 'Villa', description: 'Private villa with exclusive facilities', bedCount: 2, bedType: 'KING', roomSize: '100+ sqm' }
+  ];
+
   // Define amenity options first
   const amenityOptions = [
     { 
@@ -111,7 +179,7 @@ const AddHotel = () => {
       name: 'Airport Shuttle', 
       description: 'Complimentary airport shuttle service',
       iconClass: 'car',
-      category: 'TRANSPORTATION',
+      category: 'BASIC',
       icon: Car,
       selected: false
     },
@@ -121,7 +189,7 @@ const AddHotel = () => {
       name: 'Room Service', 
       description: '24/7 room service available',
       iconClass: 'utensils',
-      category: 'SERVICE',
+      category: 'BASIC',
       icon: Utensils,
       selected: false
     },
@@ -131,7 +199,7 @@ const AddHotel = () => {
       name: 'Laundry Service', 
       description: 'Laundry and dry cleaning services',
       iconClass: 'building',
-      category: 'SERVICE',
+      category: 'BASIC',
       icon: Building,
       selected: false
     },
@@ -141,7 +209,7 @@ const AddHotel = () => {
       name: 'Concierge', 
       description: 'Professional concierge services',
       iconClass: 'shield',
-      category: 'SERVICE',
+      category: 'BASIC',
       icon: Shield,
       selected: false
     },
@@ -151,7 +219,7 @@ const AddHotel = () => {
       name: 'Pet Friendly', 
       description: 'Pet-friendly accommodations',
       iconClass: 'building',
-      category: 'POLICY',
+      category: 'BASIC',
       icon: Building,
       selected: false
     },
@@ -161,7 +229,7 @@ const AddHotel = () => {
       name: 'Smoking Allowed', 
       description: 'Designated smoking areas',
       iconClass: 'building',
-      category: 'POLICY',
+      category: 'BASIC',
       icon: Building,
       selected: false
     }
@@ -188,8 +256,6 @@ const AddHotel = () => {
     // Hotel Details
     checkInTime: '',
     checkOutTime: '',
-    adminUserId: '',
-    isActive: true,
     
     // Amenities
     amenities: amenityOptions,
@@ -350,21 +416,6 @@ const AddHotel = () => {
         }
         break;
         
-      case 'adminUserId':
-        if (value.trim() && value.trim().length > 50) {
-          newErrors.adminUserId = 'Admin User ID must be less than 50 characters';
-        } else {
-          delete newErrors.adminUserId;
-        }
-        break;
-        
-      case 'isActive':
-        if (typeof value !== 'boolean') {
-          newErrors.isActive = 'Hotel status must be a valid selection';
-        } else {
-          delete newErrors.isActive;
-        }
-        break;
 
       // Room validation
       case 'roomNumber':
@@ -388,6 +439,14 @@ const AddHotel = () => {
       case 'maxOccupancy':
         if (!value || isNaN(value) || parseInt(value) <= 0) {
           newErrors[name] = 'Max occupancy must be a positive number';
+        } else {
+          delete newErrors[name];
+        }
+        break;
+
+      case 'roomType':
+        if (!value || value === '') {
+          newErrors[name] = 'Room type is required';
         } else {
           delete newErrors[name];
         }
@@ -516,6 +575,32 @@ const AddHotel = () => {
       setFormData(prev => ({
         ...prev,
         rooms: prev.rooms.filter((_, index) => index !== roomIndex)
+      }));
+    }
+  };
+
+  const handleRoomTypeChange = (roomIndex, roomTypeValue) => {
+    const selectedRoomType = roomTypeOptions.find(option => option.value === roomTypeValue);
+    
+    if (selectedRoomType) {
+      setFormData(prev => ({
+        ...prev,
+        rooms: prev.rooms.map((room, index) => {
+          if (index === roomIndex) {
+            return {
+              ...room,
+              roomType: {
+                ...room.roomType,
+                name: selectedRoomType.value,
+                description: selectedRoomType.description,
+                bedCount: selectedRoomType.bedCount,
+                bedType: selectedRoomType.bedType,
+                roomSize: selectedRoomType.roomSize
+              }
+            };
+          }
+          return room;
+        })
       }));
     }
   };
@@ -651,17 +736,6 @@ const AddHotel = () => {
         }
         break;
         
-      case 'adminUserId':
-        if (value.trim() && value.trim().length > 50) {
-          return 'Admin User ID must be less than 50 characters';
-        }
-        break;
-        
-      case 'isActive':
-        if (typeof value !== 'boolean') {
-          return 'Hotel status must be a valid selection';
-        }
-        break;
         
       default:
         break;
@@ -676,7 +750,7 @@ const AddHotel = () => {
     
     if (validateForm()) {
       try {
-        // Format the data according to the payload structure
+        // Format the data according to the API schema
         const payload = {
           name: formData.name,
           description: formData.description,
@@ -691,15 +765,9 @@ const AddHotel = () => {
           starRating: parseInt(formData.starRating) || 0,
           checkInTime: formData.checkInTime,
           checkOutTime: formData.checkOutTime,
-          adminUserId: formData.adminUserId,
-          isActive: formData.isActive,
-          createdAt: new Date().toISOString(),
-          rooms: formData.rooms.map((room, index) => ({
-            id: index, // Will be assigned by backend
+          rooms: formData.rooms.map((room) => ({
             roomNumber: room.roomNumber,
-            hotel: formData.name, // Hotel reference
             roomType: {
-              id: 0, // Will be assigned by backend
               name: room.roomType.name,
               description: room.roomType.description,
               bedCount: parseInt(room.roomType.bedCount) || 0,
@@ -711,12 +779,9 @@ const AddHotel = () => {
             maxOccupancy: parseInt(room.maxOccupancy) || 0,
             status: room.status,
             isActive: room.isActive,
-            description: room.description,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
+            description: room.description
           })),
           amenities: formData.amenities.filter(amenity => amenity.selected).map(amenity => ({
-            id: amenity.id,
             name: amenity.name,
             description: amenity.description,
             iconClass: amenity.iconClass,
@@ -726,61 +791,64 @@ const AddHotel = () => {
 
         console.log('Hotel payload:', payload);
         
+        // Get stored token and set it on the API client
+        const token = authAPI.getStoredToken();
+        if (token) {
+          apiClient.setAuthToken(token);
+        }
+        
         // Make API call to POST /api/v1/hotels
-        const response = await apiClient.post('/api/v1/hotels', payload);
+        console.log('Making API call to:', API_CONFIG.ENDPOINTS.HOTEL.HOTELS);
+        console.log('Request payload:', payload);
         
-        setSubmitMessage({ 
-          type: 'success', 
-          message: 'Hotel added successfully! You can now view it in the hotel listings.' 
-        });
+        const response = await apiClient.post(API_CONFIG.ENDPOINTS.HOTEL.HOTELS, payload);
         
-        // Reset form after successful submission
-        setFormData({
-          name: '',
-          description: '',
-          starRating: 0,
-          address: '',
-          city: '',
-          state: '',
-          country: '',
-          postalCode: '',
-          phoneNumber: '',
-          email: '',
-          website: '',
-          checkInTime: '',
-          checkOutTime: '',
-          adminUserId: '',
-          isActive: true,
-          amenities: amenityOptions,
-          rooms: [{
-            id: 0,
-            roomNumber: '',
-            hotel: '',
-            roomType: {
-              id: 0,
-              name: '',
-              description: '',
-              bedCount: 0,
-              bedType: '',
-              roomSize: ''
-            },
-            floor: 0,
-            basePrice: 0,
-            maxOccupancy: 0,
-            status: 'AVAILABLE',
-            isActive: true,
-            description: '',
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-          }]
-        });
-        setErrors({});
+        console.log('API Response Status:', response.status);
+        console.log('API Response Data:', response);
+        
+        // Handle successful response (status 200 or 201)
+        if (response.status === 200 || response.status === 201) {
+          // Show success toast notification
+          showToast(
+            'success',
+            'Hotel Added Successfully! 🎉',
+            `${formData.name} has been added to your hotel listings. You can now manage rooms and bookings.`
+          );
+          
+          // Clear all form fields
+          clearForm();
+        } else {
+          throw new Error('Unexpected response status');
+        }
         
       } catch (error) {
         console.error('Error adding hotel:', error);
+        console.error('Error details:', {
+          message: error.message,
+          status: error.status,
+          response: error.response,
+          stack: error.stack
+        });
+        
+        let errorMessage = 'Failed to add hotel. Please try again or contact support.';
+        
+        if (error.response) {
+          // Server responded with error status
+          console.error('Server response:', error.response);
+          errorMessage = `Server error (${error.response.status}): ${error.response.data?.message || error.message}`;
+        } else if (error.request) {
+          // Request was made but no response received
+          console.error('No response received:', error.request);
+          errorMessage = 'No response from server. Please check your connection.';
+        } else {
+          // Something else happened
+          console.error('Request setup error:', error.message);
+          errorMessage = `Request error: ${error.message}`;
+        }
+        
         setSubmitMessage({ 
           type: 'error', 
-          message: 'Failed to add hotel. Please try again or contact support.' 
+          message: errorMessage
         });
       }
     } else {
@@ -795,6 +863,56 @@ const AddHotel = () => {
 
   return (
     <div className="container mx-auto p-0 md:p-6">
+      {/* Toast Notification */}
+      {toast.show && (
+        <div className={`fixed top-4 right-4 z-50 max-w-md transform transition-all duration-300 ease-in-out ${
+          toast.show ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0'
+        }`}>
+          <div className={`rounded-lg shadow-lg border-l-4 p-4 ${
+            toast.type === 'success' 
+              ? 'bg-green-50 border-green-400 text-green-800' 
+              : toast.type === 'error'
+              ? 'bg-red-50 border-red-400 text-red-800'
+              : 'bg-blue-50 border-blue-400 text-blue-800'
+          }`}>
+            <div className="flex items-start">
+              <div className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center ${
+                toast.type === 'success' 
+                  ? 'bg-green-100 text-green-600' 
+                  : toast.type === 'error'
+                  ? 'bg-red-100 text-red-600'
+                  : 'bg-blue-100 text-blue-600'
+              }`}>
+                {toast.type === 'success' ? (
+                  <span className="text-sm font-bold">✓</span>
+                ) : toast.type === 'error' ? (
+                  <span className="text-sm font-bold">✕</span>
+                ) : (
+                  <span className="text-sm font-bold">i</span>
+                )}
+              </div>
+              <div className="ml-3 flex-1">
+                <h3 className="text-sm font-semibold">{toast.title}</h3>
+                <p className="text-sm mt-1">{toast.message}</p>
+              </div>
+              <button
+                onClick={() => setToast(prev => ({ ...prev, show: false }))}
+                className={`ml-4 flex-shrink-0 ${
+                  toast.type === 'success' 
+                    ? 'text-green-400 hover:text-green-600' 
+                    : toast.type === 'error'
+                    ? 'text-red-400 hover:text-red-600'
+                    : 'text-blue-400 hover:text-blue-600'
+                }`}
+              >
+                <span className="sr-only">Close</span>
+                <span className="text-lg font-bold">&times;</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="mb-6">
         <h1 className="text-3xl font-bold flex items-center gap-2">
           Add New Hotel
@@ -1080,36 +1198,6 @@ const AddHotel = () => {
                   <p className="text-sm text-red-500">{errors.checkOutTime}</p>
                 )}
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="adminUserId">Admin User ID</Label>
-                <Input
-                  id="adminUserId"
-                  name="adminUserId"
-                  value={formData.adminUserId}
-                  onChange={handleInputChange}
-                  placeholder="Enter admin user ID"
-                  className={errors.adminUserId ? 'border-red-500' : ''}
-                />
-                {errors.adminUserId && (
-                  <p className="text-sm text-red-500">{errors.adminUserId}</p>
-                )}
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="isActive">Hotel Status</Label>
-              <Select
-                id="isActive"
-                name="isActive"
-                value={formData.isActive}
-                onChange={handleInputChange}
-                className={errors.isActive ? 'border-red-500' : ''}
-              >
-                <option value={true}>Active</option>
-                <option value={false}>Inactive</option>
-              </Select>
-              {errors.isActive && (
-                <p className="text-sm text-red-500">{errors.isActive}</p>
-              )}
             </div>
           </CardContent>
         </Card>
@@ -1264,14 +1352,19 @@ const AddHotel = () => {
                   <h5 className="text-md font-medium mb-3">Room Type Details</h5>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor={`room-${roomIndex}-roomType-name`}>Room Type Name *</Label>
-                      <Input
-                        id={`room-${roomIndex}-roomType-name`}
-                        name={`rooms.${roomIndex}.roomType.name`}
+                      <Label htmlFor={`room-${roomIndex}-roomType`}>Room Type *</Label>
+                      <Select
+                        id={`room-${roomIndex}-roomType`}
                         value={room.roomType.name}
-                        onChange={handleInputChange}
-                        placeholder="e.g., Deluxe, Suite, Standard"
-                      />
+                        onChange={(e) => handleRoomTypeChange(roomIndex, e.target.value)}
+                      >
+                        <option value="">Select room type</option>
+                        {roomTypeOptions.map((roomType) => (
+                          <option key={roomType.value} value={roomType.value}>
+                            {roomType.label}
+                          </option>
+                        ))}
+                      </Select>
                     </div>
                     
                     <div className="space-y-2">

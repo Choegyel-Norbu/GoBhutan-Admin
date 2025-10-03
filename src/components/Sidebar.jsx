@@ -94,7 +94,6 @@ function Sidebar() {
                       <button
                         onClick={() => {
                           toggleExpanded(item.path);
-                          setIsMobileOpen(false);
                         }}
                         className={cn(
                           "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
@@ -120,9 +119,10 @@ function Sidebar() {
                       <NavLink
                         to={item.path}
                         onClick={() => {
-                          setIsMobileOpen(false);
                           // Close any expanded subcategories when clicking other menu items
                           setExpandedItems(new Set());
+                          // Close sidebar on mobile for main navigation items without subcategories
+                          setIsMobileOpen(false);
                         }}
                         className={({ isActive }) =>
                           cn(
@@ -153,9 +153,10 @@ function Sidebar() {
                             key={subItem.path}
                             to={subItem.path}
                             onClick={() => {
-                              setIsMobileOpen(false);
                               // Close any expanded subcategories when clicking subcategory items
                               setExpandedItems(new Set());
+                              // Close sidebar on mobile when subcategory is clicked
+                              setIsMobileOpen(false);
                             }}
                             className={({ isActive }) =>
                               cn(

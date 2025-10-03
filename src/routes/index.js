@@ -39,16 +39,16 @@ export const navigationItems = [
     description: 'Hotel management',
     subcategories: [
       {
-        title: 'Add Hotel',
+        title: 'Register Hotel',
         path: '/dashboard/hotel/add',
         icon: Building,
-        description: 'Add new hotel to system'
+        description: 'Register new hotel to system'
       },
       {
-        title: 'Add Rooms',
+        title: 'Room Management',
         path: '/dashboard/hotel/add-rooms',
         icon: Bed,
-        description: 'Add rooms to existing hotels'
+        description: 'Manage rooms for existing hotels'
       },
       {
         title: 'Book Hotel',

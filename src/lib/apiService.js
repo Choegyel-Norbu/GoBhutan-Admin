@@ -6,6 +6,7 @@ import { getApiUrl } from './env';
 const defaultHeaders = {
   'Content-Type': 'application/json',
   'Accept': 'application/json',
+  'ngrok-skip-browser-warning': 'true',
 };
 
 // Create a simple HTTP client
@@ -26,6 +27,9 @@ class ApiClient {
       },
       ...options,
     };
+
+    // Add ngrok header for all requests
+    config.headers['ngrok-skip-browser-warning'] = 'true';
 
     try {
       const response = await fetch(url, config);

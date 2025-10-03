@@ -6,7 +6,7 @@ import DashboardPage from './pages/DashboardPage';
 import TaxiPage from './pages/TaxiPage';
 import HotelPage from './pages/HotelPage';
 import AddHotelPage from './pages/AddHotelPage';
-import AddRoomsPage from './pages/AddRoomsPage';
+import RoomManager from './pages/RoomManager';
 import BookHotelPage from './pages/BookHotelPage';
 import SearchHotelsPage from './pages/SearchHotelsPage';
 import ViewBookingsPage from './pages/ViewBookingsPage';
@@ -40,7 +40,7 @@ function App() {
             <Route path="taxi" element={<TaxiPage />} />
             <Route path="hotel" element={<HotelPage />} />
           <Route path="hotel/add" element={<AddHotelPage />} />
-            <Route path="hotel/add-rooms" element={<AddRoomsPage />} />
+            <Route path="hotel/add-rooms" element={<RoomManager />} />
             <Route path="hotel/book" element={<BookHotelPage />} />
             <Route path="hotel/search" element={<SearchHotelsPage />} />
             <Route path="hotel/bookings" element={<ViewBookingsPage />} />

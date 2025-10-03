@@ -37,7 +37,7 @@ export const STAT_CARDS = [
 ];
 
 // API Configuration
-export const API_BASE_URL = 'https://fa0ad9203ee3.ngrok-free.app';
+export const API_BASE_URL = 'https://3caccc6d78b3.ngrok-free.app';
 
 // Environment Configuration
 export const ENV = {

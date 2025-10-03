@@ -1,6 +1,6 @@
 // API Configuration
 export const API_CONFIG = {
-  BASE_URL: 'https://3ec2ebd08f2f.ngrok-free.app',
+  BASE_URL: 'https://3caccc6d78b3.ngrok-free.app',
   
   // API Endpoints
   ENDPOINTS: {
@@ -31,6 +31,7 @@ export const API_CONFIG = {
       ROOMS: '/hotel/rooms',
       GUESTS: '/hotel/guests',
       HOTELS: '/api/v1/hotels',
+      ALL_ROOMS: '/rooms',
     },
     
     FLIGHT: {

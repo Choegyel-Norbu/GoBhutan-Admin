@@ -9,22 +9,11 @@ import { Building, MapPin, Phone, Mail, Star, Wifi, Car, Dumbbell, Coffee, Shiel
 import { apiClient } from '@/lib/apiService';
 import { API_CONFIG } from '@/lib/api';
 import authAPI from '@/lib/authAPI';
+import Swal from 'sweetalert2';
 
 const AddHotel = () => {
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitMessage, setSubmitMessage] = useState({ type: '', message: '' });
-  const [toast, setToast] = useState({ show: false, type: '', message: '', title: '' });
-  
-  // Function to show toast notification
-  const showToast = (type, title, message) => {
-    setToast({ show: true, type, title, message });
-    
-    // Auto-hide toast after 5 seconds
-    setTimeout(() => {
-      setToast(prev => ({ ...prev, show: false }));
-    }, 5000);
-  };
 
   // Function to clear all form fields
   const clearForm = () => {
@@ -51,13 +40,13 @@ const AddHotel = () => {
           id: 0,
           name: '',
           description: '',
-          bedCount: 0,
+          bedCount: '',
           bedType: '',
           roomSize: ''
         },
-        floor: 0,
-        basePrice: 0,
-        maxOccupancy: 0,
+        floor: '',
+        basePrice: '',
+        maxOccupancy: '',
         status: 'AVAILABLE',
         isActive: true,
         description: '',
@@ -66,19 +55,18 @@ const AddHotel = () => {
       }]
     });
     setErrors({});
-    setSubmitMessage({ type: '', message: '' });
   };
   
   // Define room type options
   const roomTypeOptions = [
-    { value: 'STANDARD', label: 'Standard Room', description: 'Basic room with essential amenities', bedCount: 1, bedType: 'SINGLE', roomSize: '20-25 sqm' },
-    { value: 'DELUXE', label: 'Deluxe Room', description: 'Upgraded room with modern amenities', bedCount: 1, bedType: 'QUEEN', roomSize: '30-35 sqm' },
-    { value: 'SUPERIOR', label: 'Superior Room', description: 'Premium room with enhanced services', bedCount: 1, bedType: 'KING', roomSize: '35-40 sqm' },
-    { value: 'SUITE', label: 'Suite', description: 'Spacious suite with separate living area', bedCount: 1, bedType: 'KING', roomSize: '50+ sqm' },
-    { value: 'FAMILY', label: 'Family Room', description: 'Large room suitable for families', bedCount: 2, bedType: 'DOUBLE', roomSize: '40-45 sqm' },
-    { value: 'TWIN', label: 'Twin Room', description: 'Room with two separate beds', bedCount: 2, bedType: 'TWIN', roomSize: '25-30 sqm' },
-    { value: 'APARTMENT', label: 'Apartment', description: 'Self-contained apartment-style room', bedCount: 1, bedType: 'QUEEN', roomSize: '60+ sqm' },
-    { value: 'VILLA', label: 'Villa', description: 'Private villa with exclusive facilities', bedCount: 2, bedType: 'KING', roomSize: '100+ sqm' }
+    { value: 'STANDARD', label: 'Standard Room', bedCount: 1, bedType: 'SINGLE', roomSize: '20-25 sqm' },
+    { value: 'DELUXE', label: 'Deluxe Room', bedCount: 1, bedType: 'QUEEN', roomSize: '30-35 sqm' },
+    { value: 'SUPERIOR', label: 'Superior Room', bedCount: 1, bedType: 'KING', roomSize: '35-40 sqm' },
+    { value: 'SUITE', label: 'Suite', bedCount: 1, bedType: 'KING', roomSize: '50+ sqm' },
+    { value: 'FAMILY', label: 'Family Room', bedCount: 2, bedType: 'DOUBLE', roomSize: '40-45 sqm' },
+    { value: 'TWIN', label: 'Twin Room', bedCount: 2, bedType: 'TWIN', roomSize: '25-30 sqm' },
+    { value: 'APARTMENT', label: 'Apartment', bedCount: 1, bedType: 'QUEEN', roomSize: '60+ sqm' },
+    { value: 'VILLA', label: 'Villa', bedCount: 2, bedType: 'KING', roomSize: '100+ sqm' }
   ];
 
   // Define amenity options first
@@ -268,14 +256,13 @@ const AddHotel = () => {
       roomType: {
         id: 0,
         name: '',
-        description: '',
-        bedCount: 0,
+        bedCount: '',
         bedType: '',
         roomSize: ''
       },
-      floor: 0,
-      basePrice: 0,
-      maxOccupancy: 0,
+      floor: '',
+      basePrice: '',
+      maxOccupancy: '',
       status: 'AVAILABLE',
       isActive: true,
       description: '',
@@ -527,8 +514,24 @@ const AddHotel = () => {
       // Validate room fields
       if (fieldPath.length === 1) {
         validateField(fieldPath[0], type === 'checkbox' ? checked : value);
+        // Clear room validation error for this field
+        const newErrors = { ...errors };
+        delete newErrors[`rooms_${roomIndex}_${fieldPath[0]}`];
+        
+        // For optional fields like floor, validate if value exists
+        if (fieldPath[0] === 'floor' && value) {
+          if (isNaN(value) || parseInt(value) < 0 ) {
+            newErrors[`rooms_${roomIndex}_${fieldPath[0]}`] = 'Floor must be zero or a positive number';
+          }
+        }
+        
+        setErrors(newErrors);
       } else if (fieldPath.length === 2 && fieldPath[0] === 'roomType') {
         validateField(`roomType${fieldPath[1].charAt(0).toUpperCase() + fieldPath[1].slice(1)}`, type === 'checkbox' ? checked : value);
+        // Clear room type validation error for this field
+        const newErrors = { ...errors };
+        delete newErrors[`rooms_${roomIndex}_roomType_${fieldPath[1]}`];
+        setErrors(newErrors);
       }
     } else {
       setFormData(prev => ({
@@ -549,14 +552,13 @@ const AddHotel = () => {
       roomType: {
         id: 0,
         name: '',
-        description: '',
-        bedCount: 0,
+        bedCount: '',
         bedType: '',
         roomSize: ''
       },
-      floor: 0,
-      basePrice: 0,
-      maxOccupancy: 0,
+      floor: '',
+      basePrice: '',
+      maxOccupancy: '',
       status: 'AVAILABLE',
       isActive: true,
       description: '',
@@ -576,6 +578,37 @@ const AddHotel = () => {
         ...prev,
         rooms: prev.rooms.filter((_, index) => index !== roomIndex)
       }));
+      
+      // Clear validation errors for the removed room
+      const newErrors = { ...errors };
+      Object.keys(newErrors).forEach(key => {
+        if (key.includes(`rooms_${roomIndex}_`)) {
+          delete newErrors[key];
+        }
+      });
+      
+      // Adjust room indices for remaining rooms' errors
+      const adjustedErrors = {};
+      Object.keys(newErrors).forEach(key => {
+        if (key.includes('rooms_')) {
+          const parts = key.split('_');
+          const roomIdx = parseInt(parts[1]);
+          if (roomIdx > roomIndex) {
+            // Shift room index down by 1
+            const newKey = key.replace(`rooms_${roomIdx}_`, `rooms_${roomIdx - 1}_`);
+            adjustedErrors[newKey] = newErrors[key];
+          } else if (roomIdx < roomIndex) {
+            // Keep existing validation errors for rooms before removed room
+            adjustedErrors[key] = newErrors[key];
+          }
+          // Skip errors for the removed room (roomIdx === roomIndex)
+        } else {
+          // Keep non-room errors
+          adjustedErrors[key] = newErrors[key];
+        }
+      });
+      
+      setErrors(adjustedErrors);
     }
   };
 
@@ -592,7 +625,6 @@ const AddHotel = () => {
               roomType: {
                 ...room.roomType,
                 name: selectedRoomType.value,
-                description: selectedRoomType.description,
                 bedCount: selectedRoomType.bedCount,
                 bedType: selectedRoomType.bedType,
                 roomSize: selectedRoomType.roomSize
@@ -602,16 +634,22 @@ const AddHotel = () => {
           return room;
         })
       }));
+      
+      // Clear validation errors for room type fields
+      const newErrors = { ...errors };
+      delete newErrors[`rooms_${roomIndex}_roomType_name`];
+      delete newErrors[`rooms_${roomIndex}_roomType_bedCount`];
+      delete newErrors[`rooms_${roomIndex}_roomType_bedType`];
+      setErrors(newErrors);
     }
   };
 
   const validateForm = () => {
-    const requiredFields = ['name', 'phoneNumber', 'email', 'address', 'city', 'country'];
     const allErrors = {};
     
-    // Validate all fields and collect errors
+    // Validate all basic fields
     Object.keys(formData).forEach(key => {
-      if (key !== 'amenities') {
+      if (key !== 'amenities' && key !== 'rooms') {
         const fieldErrors = validateFieldSync(key, formData[key]);
         if (fieldErrors) {
           allErrors[key] = fieldErrors;
@@ -619,17 +657,154 @@ const AddHotel = () => {
       }
     });
     
-    // Check required fields and add errors if they're empty
-    requiredFields.forEach(field => {
-      if (!formData[field] || !formData[field].toString().trim()) {
-        allErrors[field] = `${field.charAt(0).toUpperCase() + field.slice(1)} is required`;
-      }
+    // Validate rooms
+    const roomFieldPrefix = 'rooms_';
+    formData.rooms.forEach((room, roomIndex) => {
+      // Required room fields
+      const requiredRoomFields = ['roomNumber', 'basePrice', 'maxOccupancy'];
+      const optionalRoomFields = ['floor'];
+      const requiredRoomTypeFields = ['name', 'bedCount', 'bedType'];
+      
+      // Validate required room fields
+      requiredRoomFields.forEach(fieldName => {
+        const value = room[fieldName];
+        const errorKey = `${roomFieldPrefix}${roomIndex}_${fieldName}`;
+        
+        if (!value || (typeof value === 'string' && !value.trim())) {
+          allErrors[errorKey] = `${fieldName === 'roomNumber' ? 'Room number' : 
+                                fieldName === 'basePrice' ? 'Base price' : 
+                                'Max occupancy'} is required`;
+        } else if (fieldName === 'basePrice' && (isNaN(value) || parseFloat(value) <= 0)) {
+          allErrors[errorKey] = 'Base price must be a positive number';
+        } else if (fieldName === 'maxOccupancy' && (isNaN(value) || parseInt(value) <= 0)) {
+          allErrors[errorKey] = 'Max occupancy must be a positive number';
+        }
+      });
+      
+      // Validate optional room fields
+      optionalRoomFields.forEach(fieldName => {
+        const value = room[fieldName];
+        const errorKey = `${roomFieldPrefix}${roomIndex}_${fieldName}`;
+        
+        if (fieldName === 'floor' && value && (isNaN(value) || parseInt(value) < 0)) {
+          allErrors[errorKey] = 'Floor must be zero or a positive number';
+        }
+      });
+      
+      // Validate required room type fields
+      requiredRoomTypeFields.forEach(fieldName => {
+        const value = room.roomType[fieldName];
+        const errorKey = `${roomFieldPrefix}${roomIndex}_roomType_${fieldName}`;
+        
+        if (!value || (typeof value === 'string' && !value.trim())) {
+          allErrors[errorKey] = `${fieldName === 'name' ? 'Room type' : 
+                                fieldName === 'bedCount' ? 'Bed count' : 
+                                'Bed type'} is required`;
+        } else if (fieldName === 'bedCount' && (isNaN(value) || parseInt(value) <= 0)) {
+          allErrors[errorKey] = 'Bed count must be a positive number';
+        }
+      });
     });
     
     // Update errors state with all validation errors
     setErrors(allErrors);
     
+    // If there are errors, scroll to the first error field
+    if (Object.keys(allErrors).length > 0) {
+      scrollToFirstError(allErrors);
+    }
+    
     return Object.keys(allErrors).length === 0;
+  };
+
+  // Function to scroll to the first field with validation error
+  const scrollToFirstError = (errors) => {
+    const errorKeys = Object.keys(errors);
+    if (errorKeys.length === 0) return;
+    
+    // Sort error keys to prioritize field order
+    const sortedErrorKeys = errorKeys.sort((a, b) => {
+      // Define field priority order
+      const fieldOrder = ['name', 'description', 'starRating', 'address', 'city', 'state', 'country', 'postalCode', 'phoneNumber', 'email', 'website', 'checkInTime', 'checkOutTime'];
+      
+      // Extract field name from error key
+      let fieldA = a.includes('rooms_') ? a.split('_')[0] : a;
+      let fieldB = b.includes('rooms_') ? b.split('_')[0] : b;
+      
+      const indexA = fieldOrder.indexOf(fieldA);
+      const indexB = fieldOrder.indexOf(fieldB);
+      
+      // If both fields are in the order, sort by that order
+      if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+      
+      // Basic fields come before room fields
+      if (!a.includes('rooms_') && b.includes('rooms_')) return -1;
+      if (a.includes('rooms_') && !b.includes('rooms_')) return 1;
+      
+      // Within room fields, sort by room index
+      if (a.includes('rooms_') && b.includes('rooms_')) {
+        const roomIndexA = parseInt(a.split('_')[1]);
+        const roomIndexB = parseInt(b.split('_')[1]);
+        if (roomIndexA !== roomIndexB) return roomIndexA - roomIndexB;
+        
+        // Within same room, sort by field type
+        const fieldOrderInRoom = ['roomNumber', 'basePrice', 'maxOccupancy', 'roomType_name', 'roomType_bedCount', 'roomType_bedType'];
+        const fieldA = a.split('_').pop();
+        const fieldB = b.split('_').pop();
+        const indexA = fieldOrderInRoom.indexOf(fieldA);
+        const indexB = fieldOrderInRoom.indexOf(fieldB);
+        if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+      }
+      
+      return a.localeCompare(b);
+    });
+    
+    const firstErrorKey = sortedErrorKeys[0];
+    let elementToScroll = null;
+    
+    if (firstErrorKey.includes('rooms_')) {
+      // Room field error
+      const parts = firstErrorKey.split('_');
+      const roomIndex = parts[1];
+      const fieldName = parts[2] ? parts[2] : parts.slice(2).join('_');
+      
+      // Map field names to IDs
+      const fieldIdMap = {
+        'roomNumber': `room-${roomIndex}-roomNumber`,
+        'basePrice': `room-${roomIndex}-basePrice`,
+        'maxOccupancy': `room-${roomIndex}-maxOccupancy`,
+        'roomType_name': `room-${roomIndex}-roomType`,
+        'roomType_bedCount': `room-${roomIndex}-roomType-bedCount`,
+        'roomType_bedType': `room-${roomIndex}-roomType-bedType`,
+      };
+      
+      const elementId = fieldIdMap[firstErrorKey.replace(`${roomFieldPrefix}${roomIndex}_`, '')];
+      elementToScroll = document.getElementById(elementId);
+      
+      // If direct ID doesn't work, try the parent room container
+      if (!elementToScroll) {
+        const roomContainer = document.querySelector(`input[name="rooms.${roomIndex}.roomNumber"]`)?.closest('.border.rounded-lg.p-4.mb-4');
+        elementToScroll = roomContainer;
+      }
+    } else {
+      // Basic field error
+      elementToScroll = document.getElementById(firstErrorKey);
+    }
+    
+    if (elementToScroll) {
+      elementToScroll.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center'
+      });
+      
+      // Focus the field after scrolling
+      setTimeout(() => {
+        const inputElement = elementToScroll.querySelector('input, select, textarea');
+        if (inputElement) {
+          inputElement.focus();
+        }
+      }, 300);
+    }
   };
 
   const validateFieldSync = (name, value) => {
@@ -746,8 +921,8 @@ const AddHotel = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
-    setSubmitMessage({ type: '', message: '' });
     
+    // Validate form - this will also handle scrolling to first error
     if (validateForm()) {
       try {
         // Format the data according to the API schema
@@ -769,14 +944,13 @@ const AddHotel = () => {
             roomNumber: room.roomNumber,
             roomType: {
               name: room.roomType.name,
-              description: room.roomType.description,
-              bedCount: parseInt(room.roomType.bedCount) || 0,
+              bedCount: room.roomType.bedCount ? parseInt(room.roomType.bedCount) : 0,
               bedType: room.roomType.bedType,
               roomSize: room.roomType.roomSize
             },
-            floor: parseInt(room.floor) || 0,
-            basePrice: parseFloat(room.basePrice) || 0,
-            maxOccupancy: parseInt(room.maxOccupancy) || 0,
+            floor: room.floor ? parseInt(room.floor) : 0,
+            basePrice: room.basePrice ? parseFloat(room.basePrice) : 0,
+            maxOccupancy: room.maxOccupancy ? parseInt(room.maxOccupancy) : 0,
             status: room.status,
             isActive: room.isActive,
             description: room.description
@@ -803,22 +977,25 @@ const AddHotel = () => {
         
         const response = await apiClient.post(API_CONFIG.ENDPOINTS.HOTEL.HOTELS, payload);
         
-        console.log('API Response Status:', response.status);
-        console.log('API Response Data:', response);
+        console.log('API Response:', response);
         
-        // Handle successful response (status 200 or 201)
-        if (response.status === 200 || response.status === 201) {
-          // Show success toast notification
-          showToast(
-            'success',
-            'Hotel Added Successfully! 🎉',
-            `${formData.name} has been added to your hotel listings. You can now manage rooms and bookings.`
-          );
+        // Handle response - apiClient returns the JSON directly
+        // Your API returns: { success: true, message: "...", data: {...} }
+        if (response && response.success === true) {
+          // Show success SweetAlert notification
+          await Swal.fire({
+            icon: 'success',
+            title: 'Hotel Added Successfully!',
+            text: response.message || `${formData.name} has been added to your hotel listings successfully.`,
+            confirmButtonText: 'OK',
+            confirmButtonColor: '#10b981'
+          });
           
           // Clear all form fields
           clearForm();
         } else {
-          throw new Error('Unexpected response status');
+          // Throw error for unsuccessful responses
+          throw new Error(response?.message || 'Failed to create hotel');
         }
         
       } catch (error) {
@@ -846,16 +1023,18 @@ const AddHotel = () => {
           errorMessage = `Request error: ${error.message}`;
         }
         
-        setSubmitMessage({ 
-          type: 'error', 
-          message: errorMessage
+        // Show error SweetAlert notification
+        await Swal.fire({
+          icon: 'error',
+          title: 'Failed to Add Hotel',
+          text: errorMessage,
+          confirmButtonText: 'OK',
+          confirmButtonColor: '#ef4444'
         });
       }
     } else {
-      setSubmitMessage({ 
-        type: 'error', 
-        message: 'Please fix the errors in the form before submitting.' 
-      });
+      // Validation failed - scrollToFirstError was already called in validateForm()
+      // Validation errors are already displayed inline with the form fields
     }
     
     setIsSubmitting(false);
@@ -863,55 +1042,6 @@ const AddHotel = () => {
 
   return (
     <div className="container mx-auto p-0 md:p-6">
-      {/* Toast Notification */}
-      {toast.show && (
-        <div className={`fixed top-4 right-4 z-50 max-w-md transform transition-all duration-300 ease-in-out ${
-          toast.show ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0'
-        }`}>
-          <div className={`rounded-lg shadow-lg border-l-4 p-4 ${
-            toast.type === 'success' 
-              ? 'bg-green-50 border-green-400 text-green-800' 
-              : toast.type === 'error'
-              ? 'bg-red-50 border-red-400 text-red-800'
-              : 'bg-blue-50 border-blue-400 text-blue-800'
-          }`}>
-            <div className="flex items-start">
-              <div className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center ${
-                toast.type === 'success' 
-                  ? 'bg-green-100 text-green-600' 
-                  : toast.type === 'error'
-                  ? 'bg-red-100 text-red-600'
-                  : 'bg-blue-100 text-blue-600'
-              }`}>
-                {toast.type === 'success' ? (
-                  <span className="text-sm font-bold">✓</span>
-                ) : toast.type === 'error' ? (
-                  <span className="text-sm font-bold">✕</span>
-                ) : (
-                  <span className="text-sm font-bold">i</span>
-                )}
-              </div>
-              <div className="ml-3 flex-1">
-                <h3 className="text-sm font-semibold">{toast.title}</h3>
-                <p className="text-sm mt-1">{toast.message}</p>
-              </div>
-              <button
-                onClick={() => setToast(prev => ({ ...prev, show: false }))}
-                className={`ml-4 flex-shrink-0 ${
-                  toast.type === 'success' 
-                    ? 'text-green-400 hover:text-green-600' 
-                    : toast.type === 'error'
-                    ? 'text-red-400 hover:text-red-600'
-                    : 'text-blue-400 hover:text-blue-600'
-                }`}
-              >
-                <span className="sr-only">Close</span>
-                <span className="text-lg font-bold">&times;</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       <div className="mb-6">
         <h1 className="text-3xl font-bold flex items-center gap-2">
@@ -922,30 +1052,6 @@ const AddHotel = () => {
         </p>
       </div>
 
-      {/* Notification Message */}
-      {submitMessage.message && (
-        <div className={`mb-6 p-4 rounded-lg border ${
-          submitMessage.type === 'success' 
-            ? 'bg-green-50 border-green-200 text-green-800' 
-            : 'bg-red-50 border-red-200 text-red-800'
-        }`}>
-          <div className="flex items-center gap-2">
-            {submitMessage.type === 'success' ? (
-              <div className="w-5 h-5 rounded-full bg-green-500 flex items-center justify-center">
-                <span className="text-white text-xs">✓</span>
-              </div>
-            ) : (
-              <div className="w-5 h-5 rounded-full bg-red-500 flex items-center justify-center">
-                <span className="text-white text-xs">✕</span>
-              </div>
-            )}
-            <span className="font-medium">
-              {submitMessage.type === 'success' ? 'Success!' : 'Error!'}
-            </span>
-          </div>
-          <p className="mt-1 text-sm">{submitMessage.message}</p>
-        </div>
-      )}
 
       <form onSubmit={handleSubmit} className="space-y-8">
         {/* Basic Information */}
@@ -1275,7 +1381,11 @@ const AddHotel = () => {
                       value={room.roomNumber}
                       onChange={handleInputChange}
                       placeholder="e.g., 101, A1, Suite-1"
+                      className={errors[`rooms_${roomIndex}_roomNumber`] ? 'border-red-500' : ''}
                     />
+                    {errors[`rooms_${roomIndex}_roomNumber`] && (
+                      <p className="text-sm text-red-500">{errors[`rooms_${roomIndex}_roomNumber`]}</p>
+                    )}
                   </div>
                   
                   <div className="space-y-2">
@@ -1287,8 +1397,12 @@ const AddHotel = () => {
                       min="0"
                       value={room.floor}
                       onChange={handleInputChange}
-                      placeholder="Floor number"
+                      placeholder="Floor number (optional)"
+                      className={errors[`rooms_${roomIndex}_floor`] ? 'border-red-500' : ''}
                     />
+                    {errors[`rooms_${roomIndex}_floor`] && (
+                      <p className="text-sm text-red-500">{errors[`rooms_${roomIndex}_floor`]}</p>
+                    )}
                   </div>
                   
                   <div className="space-y-2">
@@ -1301,7 +1415,11 @@ const AddHotel = () => {
                       value={room.maxOccupancy}
                       onChange={handleInputChange}
                       placeholder="Maximum guests"
+                      className={errors[`rooms_${roomIndex}_maxOccupancy`] ? 'border-red-500' : ''}
                     />
+                    {errors[`rooms_${roomIndex}_maxOccupancy`] && (
+                      <p className="text-sm text-red-500">{errors[`rooms_${roomIndex}_maxOccupancy`]}</p>
+                    )}
                   </div>
                   
                   <div className="space-y-2">
@@ -1315,7 +1433,11 @@ const AddHotel = () => {
                       value={room.basePrice}
                       onChange={handleInputChange}
                       placeholder="Price per night"
+                      className={errors[`rooms_${roomIndex}_basePrice`] ? 'border-red-500' : ''}
                     />
+                    {errors[`rooms_${roomIndex}_basePrice`] && (
+                      <p className="text-sm text-red-500">{errors[`rooms_${roomIndex}_basePrice`]}</p>
+                    )}
                   </div>
                   
                   <div className="space-y-2">
@@ -1357,6 +1479,7 @@ const AddHotel = () => {
                         id={`room-${roomIndex}-roomType`}
                         value={room.roomType.name}
                         onChange={(e) => handleRoomTypeChange(roomIndex, e.target.value)}
+                        className={errors[`rooms_${roomIndex}_roomType_name`] ? 'border-red-500' : ''}
                       >
                         <option value="">Select room type</option>
                         {roomTypeOptions.map((roomType) => (
@@ -1365,6 +1488,9 @@ const AddHotel = () => {
                           </option>
                         ))}
                       </Select>
+                      {errors[`rooms_${roomIndex}_roomType_name`] && (
+                        <p className="text-sm text-red-500">{errors[`rooms_${roomIndex}_roomType_name`]}</p>
+                      )}
                     </div>
                     
                     <div className="space-y-2">
@@ -1377,7 +1503,11 @@ const AddHotel = () => {
                         value={room.roomType.bedCount}
                         onChange={handleInputChange}
                         placeholder="Number of beds"
+                        className={errors[`rooms_${roomIndex}_roomType_bedCount`] ? 'border-red-500' : ''}
                       />
+                      {errors[`rooms_${roomIndex}_roomType_bedCount`] && (
+                        <p className="text-sm text-red-500">{errors[`rooms_${roomIndex}_roomType_bedCount`]}</p>
+                      )}
                     </div>
                     
                     <div className="space-y-2">
@@ -1387,6 +1517,7 @@ const AddHotel = () => {
                         name={`rooms.${roomIndex}.roomType.bedType`}
                         value={room.roomType.bedType}
                         onChange={handleInputChange}
+                        className={errors[`rooms_${roomIndex}_roomType_bedType`] ? 'border-red-500' : ''}
                       >
                         <option value="">Select bed type</option>
                         <option value="SINGLE">Single</option>
@@ -1396,6 +1527,9 @@ const AddHotel = () => {
                         <option value="TWIN">Twin</option>
                         <option value="SOFA_BED">Sofa Bed</option>
                       </Select>
+                      {errors[`rooms_${roomIndex}_roomType_bedType`] && (
+                        <p className="text-sm text-red-500">{errors[`rooms_${roomIndex}_roomType_bedType`]}</p>
+                      )}
                     </div>
                     
                     <div className="space-y-2">
@@ -1408,18 +1542,6 @@ const AddHotel = () => {
                         placeholder="e.g., 25 sqm, 400 sq ft"
                       />
                     </div>
-                  </div>
-                  
-                  <div className="mt-4 space-y-2">
-                    <Label htmlFor={`room-${roomIndex}-roomType-description`}>Room Type Description</Label>
-                    <Textarea
-                      id={`room-${roomIndex}-roomType-description`}
-                      name={`rooms.${roomIndex}.roomType.description`}
-                      value={room.roomType.description}
-                      onChange={handleInputChange}
-                      placeholder="Describe the room type features and amenities..."
-                      rows={2}
-                    />
                   </div>
                 </div>
                 

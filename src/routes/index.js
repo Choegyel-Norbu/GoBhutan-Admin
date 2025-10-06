@@ -9,8 +9,6 @@ import {
   Users,
   BarChart3,
   Plus,
-  Settings,
-  FileText,
   Building,
   Bed
 } from 'lucide-react';
@@ -51,18 +49,6 @@ export const navigationItems = [
         path: '/dashboard/hotel/book',
         icon: Plus,
         description: 'Manage hotel bookings and reservations'
-      },
-      {
-        title: 'Hotel Settings',
-        path: '/dashboard/hotel/settings',
-        icon: Settings,
-        description: 'Configure hotel preferences'
-      },
-      {
-        title: 'Reports',
-        path: '/dashboard/hotel/reports',
-        icon: FileText,
-        description: 'Generate booking reports'
       }
     ]
   },

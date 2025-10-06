@@ -9,6 +9,7 @@ import {
   Users,
   BarChart3,
   Plus,
+  Settings,
   Building,
   Bed
 } from 'lucide-react';

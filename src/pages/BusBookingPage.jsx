@@ -9,6 +9,8 @@ import { Select } from '@/components/ui/Select';
 import { Badge } from '@/components/ui/Badge';
 
 function BusBookingPage() {
+  const [activeView, setActiveView] = useState('create'); // 'create' or 'action'
+  
   const [searchForm, setSearchForm] = useState({
     from: '',
     to: '',
@@ -178,8 +180,32 @@ function BusBookingPage() {
       description="Search and book bus tickets for your journey."
     >
       <div className="max-w-6xl mx-auto space-y-6">
-        {/* Search Form */}
+        {/* Toggle Buttons */}
         <Card>
+          <CardContent className="p-4">
+            <div className="flex gap-2">
+              <Button
+                variant={activeView === 'create' ? 'default' : 'outline'}
+                onClick={() => setActiveView('create')}
+                className="flex-1"
+              >
+                Create Booking
+              </Button>
+              <Button
+                variant={activeView === 'action' ? 'default' : 'outline'}
+                onClick={() => setActiveView('action')}
+                className="flex-1"
+              >
+                Booking Action
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+        {/* Create Booking View */}
+        {activeView === 'create' && (
+          <>
+            {/* Search Form */}
+            <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Search className="h-5 w-5" />
@@ -470,6 +496,40 @@ function BusBookingPage() {
                 >
                   Cancel
                 </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+          </>
+        )}
+
+        {/* Booking Action View */}
+        {activeView === 'action' && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Calendar className="h-5 w-5" />
+                Booking Management
+              </CardTitle>
+              <CardDescription>
+                Manage existing bookings - view, edit, cancel, or process refunds.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center py-12">
+                <div className="text-muted-foreground mb-4">
+                  <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <h3 className="text-lg font-semibold mb-2">Booking Action Panel</h3>
+                  <p>This section will contain functionality to manage existing bookings.</p>
+                  <p className="text-sm mt-2">Features coming soon:</p>
+                  <ul className="text-sm mt-2 space-y-1">
+                    <li>• View all bookings</li>
+                    <li>• Edit booking details</li>
+                    <li>• Cancel bookings</li>
+                    <li>• Process refunds</li>
+                    <li>• Generate booking reports</li>
+                  </ul>
+                </div>
               </div>
             </CardContent>
           </Card>

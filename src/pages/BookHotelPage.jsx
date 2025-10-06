@@ -5,13 +5,17 @@ import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
 import { Textarea } from '@/components/ui/Textarea';
 import { Select } from '@/components/ui/Select';
-import { Plus, Calendar, Users, MapPin, Clock, Building2, Bed, Loader2, ArrowLeft } from 'lucide-react';
+import { Badge } from '@/components/ui/Badge';
+import { Plus, Calendar, Users, MapPin, Clock, Building2, Bed, Loader2, ArrowLeft, MoreHorizontal, CheckCircle, XCircle, LogIn, LogOut } from 'lucide-react';
 import { apiClient, api } from '@/lib/apiService';
 import { API_CONFIG } from '@/lib/api';
 import authAPI from '@/lib/authAPI';
 import Swal from 'sweetalert2';
 
 const BookHotelPage = () => {
+  // Main toggle states: 'create' | 'action'
+  const [activeView, setActiveView] = useState('create');
+  
   // View states: 'hotels' | 'rooms' | 'booking'
   const [currentView, setCurrentView] = useState('hotels');
   const [selectedHotel, setSelectedHotel] = useState(null);
@@ -20,30 +24,67 @@ const BookHotelPage = () => {
   // Data states
   const [hotels, setHotels] = useState([]);
   const [rooms, setRooms] = useState([]);
+  const [bookings, setBookings] = useState([]);
+  const [selectedHotelForBookings, setSelectedHotelForBookings] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingBookings, setIsLoadingBookings] = useState(false);
   const [error, setError] = useState(null);
+  const [bookingsError, setBookingsError] = useState(null);
+  const [openActionMenu, setOpenActionMenu] = useState(null);
   
   // Booking form states
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitMessage, setSubmitMessage] = useState({ type: '', message: '' });
   const [formData, setFormData] = useState({
-    // Customer Information
-    customerName: '',
-    customerEmail: '',
-    customerPhone: '',
-    
     // Booking Details
     checkInDate: '',
     checkOutDate: '',
     guestCount: 1,
-    totalAmount: ''
+    totalAmount: '',
+    
+    // Guest Information
+    guests: [
+      {
+        cid: '',
+        name: '',
+        age: '',
+        gender: '',
+        countryOfOrigin: '',
+        phoneNumber: '',
+        email: ''
+      }
+    ]
   });
 
   // Fetch hotels on component mount
   useEffect(() => {
     fetchHotels();
   }, []);
+
+  // Fetch bookings when action tab is clicked
+  useEffect(() => {
+    console.log('useEffect triggered - activeView:', activeView, 'hotels.length:', hotels.length);
+    if (activeView === 'action' && hotels.length > 0) {
+      // Use the first hotel if no hotel is selected, or use the selected hotel
+      const hotelToUse = selectedHotelForBookings || hotels[0];
+      console.log('Calling fetchBookings with hotel ID:', hotelToUse.id);
+      setSelectedHotelForBookings(hotelToUse);
+      fetchBookings(hotelToUse.id);
+    }
+  }, [activeView, hotels]);
+
+  // Close action menu when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (openActionMenu && !event.target.closest('.action-menu-container')) {
+        setOpenActionMenu(null);
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [openActionMenu]);
 
   const fetchHotels = async () => {
     try {
@@ -95,6 +136,45 @@ const BookHotelPage = () => {
     }
   };
 
+  const fetchBookings = async (hotelId = null) => {
+    try {
+      console.log('fetchBookings called with hotelId:', hotelId);
+      setIsLoadingBookings(true);
+      setBookingsError(null);
+      
+      const token = authAPI.getStoredToken();
+      if (token) {
+        apiClient.setAuthToken(token);
+      }
+      
+      // Use hotel-specific endpoint if hotelId is provided, otherwise use generic endpoint
+      const endpoint = hotelId ? `/bookings/hotel/${hotelId}` : '/bookings';
+      console.log('Making API call to:', endpoint);
+      
+      const response = await apiClient.get(endpoint);
+      console.log('API response:', response);
+      
+      const responseData = response.data || response;
+      
+      let bookingsData = [];
+      if (responseData.success && Array.isArray(responseData.data)) {
+        bookingsData = responseData.data;
+      } else if (Array.isArray(responseData)) {
+        bookingsData = responseData;
+      } else if (Array.isArray(responseData.bookings)) {
+        bookingsData = responseData.bookings;
+      }
+      
+      console.log('Processed bookings data:', bookingsData);
+      setBookings(bookingsData);
+    } catch (err) {
+      console.error('Error fetching bookings:', err);
+      setBookingsError('Failed to load bookings. Please try again.');
+    } finally {
+      setIsLoadingBookings(false);
+    }
+  };
+
   const handleHotelClick = (hotel) => {
     setSelectedHotel(hotel);
     setCurrentView('rooms');
@@ -131,14 +211,37 @@ const BookHotelPage = () => {
     }
   };
 
+  const handleGuestChange = (guestIndex, field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      guests: prev.guests.map((guest, index) => 
+        index === guestIndex ? { ...guest, [field]: value } : guest
+      )
+    }));
+    
+    const errorKey = `guest_${guestIndex}_${field}`;
+    if (errors[errorKey]) {
+      setErrors(prev => ({
+        ...prev,
+        [errorKey]: ''
+      }));
+    }
+  };
+
   const validateForm = () => {
     const newErrors = {};
     const today = new Date();
     today.setHours(0, 0, 0, 0); // Reset time to start of day
     
-    if (!formData.customerName) newErrors.customerName = 'Customer name is required';
-    if (!formData.customerEmail) newErrors.customerEmail = 'Email is required';
-    if (!formData.customerPhone) newErrors.customerPhone = 'Phone number is required';
+    // Validate guest information
+    formData.guests.forEach((guest, index) => {
+      if (!guest.name) newErrors[`guest_${index}_name`] = 'Guest name is required';
+      if (!guest.email) newErrors[`guest_${index}_email`] = 'Guest email is required';
+      if (!guest.phoneNumber) newErrors[`guest_${index}_phoneNumber`] = 'Guest phone number is required';
+      if (!guest.age || guest.age < 1) newErrors[`guest_${index}_age`] = 'Guest age is required';
+      if (!guest.gender) newErrors[`guest_${index}_gender`] = 'Guest gender is required';
+      if (!guest.countryOfOrigin) newErrors[`guest_${index}_countryOfOrigin`] = 'Guest country of origin is required';
+    });
     if (!formData.checkInDate) newErrors.checkInDate = 'Check-in date is required';
     if (!formData.checkOutDate) newErrors.checkOutDate = 'Check-out date is required';
     if (!formData.guestCount || formData.guestCount < 1) newErrors.guestCount = 'Guest count must be at least 1';
@@ -235,13 +338,21 @@ const BookHotelPage = () => {
       const bookingData = {
         hotelId: selectedHotel.id,
         roomId: selectedRoom.id,
-        customerName: formData.customerName,
-        customerEmail: formData.customerEmail,
-        customerPhone: formData.customerPhone,
         checkInDate: formData.checkInDate,
         checkOutDate: formData.checkOutDate,
         guestCount: formData.guestCount,
-        totalAmount: formData.totalAmount
+        totalAmount: formData.totalAmount,
+        guests: formData.guests.map(guest => ({
+          cid: guest.cid,
+          name: guest.name,
+          age: parseInt(guest.age) || 0,
+          gender: guest.gender,
+          countryOfOrigin: guest.countryOfOrigin,
+          phoneNumber: guest.phoneNumber,
+          email: guest.email,
+          createdDate: new Date().toISOString(),
+          updatedDate: new Date().toISOString()
+        }))
       };
       
       // Show loading alert
@@ -262,7 +373,7 @@ const BookHotelPage = () => {
       await Swal.fire({
         icon: 'success',
         title: 'Booking Created Successfully!',
-        text: `Your booking for ${selectedHotel?.name} - Room ${selectedRoom?.roomNumber} has been confirmed.`,
+        text: `Your booking for ${selectedHotel?.name} - Room ${selectedRoom?.roomNumber} has been submitted.`,
         confirmButtonText: 'OK',
         confirmButtonColor: '#10b981'
       });
@@ -272,13 +383,21 @@ const BookHotelPage = () => {
       setSelectedHotel(null);
       setSelectedRoom(null);
         setFormData({
-          customerName: '',
-          customerEmail: '',
-          customerPhone: '',
           checkInDate: '',
           checkOutDate: '',
           guestCount: 1,
-          totalAmount: ''
+          totalAmount: '',
+          guests: [
+            {
+              cid: '',
+              name: '',
+              age: '',
+              gender: '',
+              countryOfOrigin: '',
+              phoneNumber: '',
+              email: ''
+            }
+          ]
       });
       
     } catch (error) {
@@ -631,58 +750,121 @@ const BookHotelPage = () => {
           </CardContent>
         </Card>
 
-        {/* Customer Information */}
+        {/* Guest Information */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-md">
-              Customer Information
+              Guest Information
             </CardTitle>
             <CardDescription>
-              Primary customer details
+              Primary guest details
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="customerName">Customer Name *</Label>
-                <Input
-                  id="customerName"
-                  value={formData.customerName}
-                  onChange={(e) => handleInputChange('customerName', e.target.value)}
-                  placeholder="Full name"
-                />
-                {errors.customerName && (
-                  <p className="text-sm text-destructive">{errors.customerName}</p>
-                )}
-              </div>
+            {formData.guests.map((guest, index) => (
+              <div key={index} className="space-y-4 border rounded-lg p-4">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-medium">Guest {index + 1}</h4>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor={`guest_${index}_name`}>Full Name *</Label>
+                    <Input
+                      id={`guest_${index}_name`}
+                      value={guest.name}
+                      onChange={(e) => handleGuestChange(index, 'name', e.target.value)}
+                      placeholder="Full name"
+                    />
+                    {errors[`guest_${index}_name`] && (
+                      <p className="text-sm text-destructive">{errors[`guest_${index}_name`]}</p>
+                    )}
+                  </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="customerEmail">Email *</Label>
-                <Input
-                  id="customerEmail"
-                  type="email"
-                  value={formData.customerEmail}
-                  onChange={(e) => handleInputChange('customerEmail', e.target.value)}
-                  placeholder="email@example.com"
-                />
-                {errors.customerEmail && (
-                  <p className="text-sm text-destructive">{errors.customerEmail}</p>
-                )}
-              </div>
+                  <div className="space-y-2">
+                    <Label htmlFor={`guest_${index}_email`}>Email *</Label>
+                    <Input
+                      id={`guest_${index}_email`}
+                      type="email"
+                      value={guest.email}
+                      onChange={(e) => handleGuestChange(index, 'email', e.target.value)}
+                      placeholder="email@example.com"
+                    />
+                    {errors[`guest_${index}_email`] && (
+                      <p className="text-sm text-destructive">{errors[`guest_${index}_email`]}</p>
+                    )}
+                  </div>
 
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="customerPhone">Phone *</Label>
-                <Input
-                  id="customerPhone"
-                  value={formData.customerPhone}
-                  onChange={(e) => handleInputChange('customerPhone', e.target.value)}
-                  placeholder="+975 12345678"
-                />
-                {errors.customerPhone && (
-                  <p className="text-sm text-destructive">{errors.customerPhone}</p>
-                )}
+                  <div className="space-y-2">
+                    <Label htmlFor={`guest_${index}_phoneNumber`}>Phone Number *</Label>
+                    <Input
+                      id={`guest_${index}_phoneNumber`}
+                      value={guest.phoneNumber}
+                      onChange={(e) => handleGuestChange(index, 'phoneNumber', e.target.value)}
+                      placeholder="+975 12345678"
+                    />
+                    {errors[`guest_${index}_phoneNumber`] && (
+                      <p className="text-sm text-destructive">{errors[`guest_${index}_phoneNumber`]}</p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor={`guest_${index}_age`}>Age *</Label>
+                    <Input
+                      id={`guest_${index}_age`}
+                      type="number"
+                      min="1"
+                      max="120"
+                      value={guest.age}
+                      onChange={(e) => handleGuestChange(index, 'age', e.target.value)}
+                      placeholder="Age"
+                    />
+                    {errors[`guest_${index}_age`] && (
+                      <p className="text-sm text-destructive">{errors[`guest_${index}_age`]}</p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor={`guest_${index}_gender`}>Gender *</Label>
+                    <Select
+                      value={guest.gender}
+                      onChange={(e) => handleGuestChange(index, 'gender', e.target.value)}
+                    >
+                      <option value="">Select gender</option>
+                      <option value="Male">Male</option>
+                      <option value="Female">Female</option>
+                      <option value="Other">Other</option>
+                    </Select>
+                    {errors[`guest_${index}_gender`] && (
+                      <p className="text-sm text-destructive">{errors[`guest_${index}_gender`]}</p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor={`guest_${index}_countryOfOrigin`}>Country of Origin *</Label>
+                    <Input
+                      id={`guest_${index}_countryOfOrigin`}
+                      value={guest.countryOfOrigin}
+                      onChange={(e) => handleGuestChange(index, 'countryOfOrigin', e.target.value)}
+                      placeholder="Country"
+                    />
+                    {errors[`guest_${index}_countryOfOrigin`] && (
+                      <p className="text-sm text-destructive">{errors[`guest_${index}_countryOfOrigin`]}</p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor={`guest_${index}_cid`}>CID (Optional)</Label>
+                    <Input
+                      id={`guest_${index}_cid`}
+                      value={guest.cid}
+                      onChange={(e) => handleGuestChange(index, 'cid', e.target.value)}
+                      placeholder="Citizen ID"
+                    />
+                  </div>
+                </div>
               </div>
-            </div>
+            ))}
           </CardContent>
         </Card>
 
@@ -702,9 +884,289 @@ const BookHotelPage = () => {
 
   return (
     <div className="container mx-auto p-0 md:p-6">
-      {currentView === 'hotels' && renderHotelsView()}
-      {currentView === 'rooms' && renderRoomsView()}
-      {currentView === 'booking' && renderBookingView()}
+      {/* Toggle Buttons */}
+      <div className="mb-6">
+        <div className="flex gap-2">
+          <Button
+            variant={activeView === 'create' ? 'default' : 'outline'}
+            onClick={() => setActiveView('create')}
+            className="flex-1"
+          >
+            Create Booking
+          </Button>
+          <Button
+            variant={activeView === 'action' ? 'default' : 'outline'}
+            onClick={() => setActiveView('action')}
+            className="flex-1"
+          >
+            Booking Action
+          </Button>
+        </div>
+      </div>
+
+      {/* Create Booking View */}
+      {activeView === 'create' && (
+        <>
+          {currentView === 'hotels' && renderHotelsView()}
+          {currentView === 'rooms' && renderRoomsView()}
+          {currentView === 'booking' && renderBookingView()}
+        </>
+      )}
+
+      {/* Booking Action View */}
+      {activeView === 'action' && (
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-xl font-bold">Booking Management</h1>
+              <p className="text-muted-foreground">Manage hotel bookings and reservations</p>
+            </div>
+          </div>
+
+          {/* Hotel Selector */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-md">Select Hotel</CardTitle>
+              <CardDescription>Choose a hotel to view its bookings</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                <Label htmlFor="hotel-selector">Hotel</Label>
+                <Select
+                  value={selectedHotelForBookings?.id || ''}
+                  onChange={(e) => {
+                    const hotelId = e.target.value;
+                    console.log('Hotel selected:', hotelId);
+                    const hotel = hotels.find(h => h.id.toString() === hotelId);
+                    console.log('Found hotel:', hotel);
+                    if (hotel) {
+                      setSelectedHotelForBookings(hotel);
+                      fetchBookings(hotel.id);
+                    }
+                  }}
+                >
+                  <option value="">Select a hotel</option>
+                  {hotels.map((hotel) => (
+                    <option key={hotel.id} value={hotel.id}>
+                      {hotel.name}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Loading State */}
+          {isLoadingBookings && (
+            <Card>
+              <CardContent className="flex items-center justify-center py-8">
+                <div className="flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>Loading bookings...</span>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Error State */}
+          {bookingsError && (
+            <Card>
+              <CardContent className="py-8">
+                <div className="text-center text-red-600">
+                  <p className="font-medium">Error loading bookings</p>
+                  <p className="text-sm mt-1">{bookingsError}</p>
+                  <Button 
+                    onClick={() => selectedHotelForBookings && fetchBookings(selectedHotelForBookings.id)} 
+                    className="mt-4"
+                    disabled={!selectedHotelForBookings}
+                  >
+                    Try Again
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Bookings Table */}
+          {!isLoadingBookings && !bookingsError && bookings.length > 0 && selectedHotelForBookings && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Bookings for {selectedHotelForBookings.name} ({bookings.length})</CardTitle>
+                <CardDescription>Manage hotel bookings and operations</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse text-sm">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left p-3 font-medium">Reference</th>
+                        <th className="text-left p-3 font-medium">Room</th>
+                        <th className="text-left p-3 font-medium">Guest Name</th>
+                        <th className="text-left p-3 font-medium">CID</th>
+                        <th className="text-left p-3 font-medium">Status</th>
+                        <th className="text-left p-3 font-medium">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {bookings.map((booking) => (
+                        <tr key={booking.id} className="border-b hover:bg-muted/50">
+                          <td className="p-3 font-medium">{booking.bookingReference}</td>
+                          <td className="p-3">Room {booking.roomNumber}</td>
+                          <td className="p-3">{booking.guestName || 'N/A'}</td>
+                          <td className="p-3">{booking.cid || 'N/A'}</td>
+                          <td className="p-3">
+                            <Badge 
+                              variant={
+                                booking.status === 'CONFIRMED' ? 'default' :
+                                booking.status === 'PENDING' ? 'secondary' :
+                                booking.status === 'CANCELLED' ? 'destructive' :
+                                booking.status === 'CHECKED_IN' ? 'default' :
+                                booking.status === 'CHECKED_OUT' ? 'outline' :
+                                'secondary'
+                              }
+                            >
+                              {booking.status}
+                            </Badge>
+                          </td>
+                          <td className="p-3">
+                            <div className="relative action-menu-container">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setOpenActionMenu(openActionMenu === booking.id ? null : booking.id)}
+                                className="h-8 w-8 p-0"
+                              >
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                              
+                              {openActionMenu === booking.id && (
+                                <div className="absolute right-0 top-8 z-50 w-48 bg-popover border border-border rounded-lg shadow-lg">
+                                  <div className="p-1">
+                                    <button 
+                                      className="flex items-center gap-2 w-full px-3 py-2 text-sm text-left hover:bg-accent rounded-md transition-colors"
+                                      onClick={async () => {
+                                        setOpenActionMenu(null);
+                                        try {
+                                          const response = await apiClient.put(`/bookings/${booking.id}/confirm`);
+                                          if (response.success) {
+                                            // Refresh bookings after successful action
+                                            if (selectedHotelForBookings) {
+                                              fetchBookings(selectedHotelForBookings.id);
+                                            }
+                                            console.log('Booking confirmed successfully');
+                                          }
+                                        } catch (error) {
+                                          console.error('Error confirming booking:', error);
+                                        }
+                                      }}
+                                    >
+                                      <CheckCircle className="h-4 w-4" />
+                                      Confirm
+                                    </button>
+                                    <button 
+                                      className="flex items-center gap-2 w-full px-3 py-2 text-sm text-left hover:bg-accent rounded-md transition-colors"
+                                      onClick={async () => {
+                                        setOpenActionMenu(null);
+                                        try {
+                                          const response = await apiClient.put(`/bookings/${booking.id}/checkin`);
+                                          if (response.success) {
+                                            // Refresh bookings after successful action
+                                            if (selectedHotelForBookings) {
+                                              fetchBookings(selectedHotelForBookings.id);
+                                            }
+                                            console.log('Booking checked-in successfully');
+                                          }
+                                        } catch (error) {
+                                          console.error('Error checking-in booking:', error);
+                                        }
+                                      }}
+                                    >
+                                      <LogIn className="h-4 w-4" />
+                                      Check-in
+                                    </button>
+                                    <button 
+                                      className="flex items-center gap-2 w-full px-3 py-2 text-sm text-left hover:bg-accent rounded-md transition-colors"
+                                      onClick={async () => {
+                                        setOpenActionMenu(null);
+                                        try {
+                                          const response = await apiClient.put(`/bookings/${booking.id}/checkout`);
+                                          if (response.success) {
+                                            // Refresh bookings after successful action
+                                            if (selectedHotelForBookings) {
+                                              fetchBookings(selectedHotelForBookings.id);
+                                            }
+                                            console.log('Booking checked-out successfully');
+                                          }
+                                        } catch (error) {
+                                          console.error('Error checking-out booking:', error);
+                                        }
+                                      }}
+                                    >
+                                      <LogOut className="h-4 w-4" />
+                                      Check-out
+                                    </button>
+                                    <button 
+                                      className="flex items-center gap-2 w-full px-3 py-2 text-sm text-left hover:bg-destructive hover:text-destructive-foreground rounded-md transition-colors"
+                                      onClick={async () => {
+                                        setOpenActionMenu(null);
+                                        try {
+                                          const response = await apiClient.put(`/bookings/${booking.id}/cancel`);
+                                          if (response.success) {
+                                            // Refresh bookings after successful action
+                                            if (selectedHotelForBookings) {
+                                              fetchBookings(selectedHotelForBookings.id);
+                                            }
+                                            console.log('Booking cancelled successfully');
+                                          }
+                                        } catch (error) {
+                                          console.error('Error cancelling booking:', error);
+                                        }
+                                      }}
+                                    >
+                                      <XCircle className="h-4 w-4" />
+                                      Cancel
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* No Bookings State */}
+          {!isLoadingBookings && !bookingsError && bookings.length === 0 && selectedHotelForBookings && (
+            <Card>
+              <CardContent className="py-8">
+                <div className="text-center text-muted-foreground">
+                  <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p className="font-medium">No bookings found</p>
+                  <p className="text-sm mt-1">No bookings are currently available for {selectedHotelForBookings.name}.</p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* No Hotel Selected State */}
+          {!isLoadingBookings && !bookingsError && !selectedHotelForBookings && (
+            <Card>
+              <CardContent className="py-8">
+                <div className="text-center text-muted-foreground">
+                  <Building2 className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p className="font-medium">Select a Hotel</p>
+                  <p className="text-sm mt-1">Please select a hotel from the dropdown above to view its bookings.</p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
     </div>
   );
 };

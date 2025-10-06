@@ -9,10 +9,6 @@ import {
   Users,
   BarChart3,
   Plus,
-  Search,
-  Edit,
-  Trash2,
-  Eye,
   Settings,
   FileText,
   Building,
@@ -55,30 +51,6 @@ export const navigationItems = [
         path: '/dashboard/hotel/book',
         icon: Plus,
         description: 'Manage hotel bookings and reservations'
-      },
-      {
-        title: 'Search Hotels',
-        path: '/dashboard/hotel/search',
-        icon: Search,
-        description: 'Find available hotels'
-      },
-      {
-        title: 'View Bookings',
-        path: '/dashboard/hotel/bookings',
-        icon: Eye,
-        description: 'View all hotel reservations'
-      },
-      {
-        title: 'Edit Bookings',
-        path: '/dashboard/hotel/edit',
-        icon: Edit,
-        description: 'Modify existing bookings'
-      },
-      {
-        title: 'Cancel Bookings',
-        path: '/dashboard/hotel/cancel',
-        icon: Trash2,
-        description: 'Cancel hotel reservations'
       },
       {
         title: 'Hotel Settings',

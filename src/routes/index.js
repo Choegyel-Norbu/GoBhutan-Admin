@@ -51,10 +51,10 @@ export const navigationItems = [
         description: 'Manage rooms for existing hotels'
       },
       {
-        title: 'Book Hotel',
+        title: 'Booking Management',
         path: '/dashboard/hotel/book',
         icon: Plus,
-        description: 'Create new hotel bookings'
+        description: 'Manage hotel bookings and reservations'
       },
       {
         title: 'Search Hotels',
@@ -107,7 +107,7 @@ export const navigationItems = [
     description: 'Movie ticket reservations'
   },
   {
-    title: 'Bus Tickets',
+    title: 'Bus Management',
     path: '/dashboard/bus-ticket-booking',
     icon: Bus,
     description: 'Bus ticket bookings',

@@ -513,24 +513,72 @@ const AddHotel = () => {
       
       // Validate room fields
       if (fieldPath.length === 1) {
-        validateField(fieldPath[0], type === 'checkbox' ? checked : value);
-        // Clear room validation error for this field
         const newErrors = { ...errors };
-        delete newErrors[`rooms_${roomIndex}_${fieldPath[0]}`];
+        const errorKey = `rooms_${roomIndex}_${fieldPath[0]}`;
+        const fieldValue = type === 'checkbox' ? checked : value;
         
-        // For optional fields like floor, validate if value exists
-        if (fieldPath[0] === 'floor' && value) {
-          if (isNaN(value) || parseInt(value) < 0 ) {
-            newErrors[`rooms_${roomIndex}_${fieldPath[0]}`] = 'Floor must be zero or a positive number';
+        // Validate specific room fields
+        if (fieldPath[0] === 'roomNumber') {
+          if (!fieldValue || !fieldValue.trim()) {
+            newErrors[errorKey] = 'Room number is required';
+          } else if (fieldValue.trim().length > 20) {
+            newErrors[errorKey] = 'Room number must be less than 20 characters';
+          } else {
+            delete newErrors[errorKey];
           }
+        } else if (fieldPath[0] === 'basePrice') {
+          if (!fieldValue || isNaN(fieldValue) || parseFloat(fieldValue) <= 0) {
+            newErrors[errorKey] = 'Base price must be a positive number';
+          } else {
+            delete newErrors[errorKey];
+          }
+        } else if (fieldPath[0] === 'maxOccupancy') {
+          if (!fieldValue || isNaN(fieldValue) || parseInt(fieldValue) <= 0) {
+            newErrors[errorKey] = 'Max occupancy must be a positive number';
+          } else {
+            delete newErrors[errorKey];
+          }
+        } else if (fieldPath[0] === 'floor') {
+          if (fieldValue && (isNaN(fieldValue) || parseInt(fieldValue) < 0)) {
+            newErrors[errorKey] = 'Floor must be zero or a positive number';
+          } else {
+            delete newErrors[errorKey];
+          }
+        } else {
+          // For other fields, just clear any existing errors
+          delete newErrors[errorKey];
         }
         
         setErrors(newErrors);
       } else if (fieldPath.length === 2 && fieldPath[0] === 'roomType') {
-        validateField(`roomType${fieldPath[1].charAt(0).toUpperCase() + fieldPath[1].slice(1)}`, type === 'checkbox' ? checked : value);
-        // Clear room type validation error for this field
         const newErrors = { ...errors };
-        delete newErrors[`rooms_${roomIndex}_roomType_${fieldPath[1]}`];
+        const errorKey = `rooms_${roomIndex}_roomType_${fieldPath[1]}`;
+        const fieldValue = type === 'checkbox' ? checked : value;
+        
+        // Validate room type fields
+        if (fieldPath[1] === 'name') {
+          if (!fieldValue || !fieldValue.trim()) {
+            newErrors[errorKey] = 'Room type is required';
+          } else {
+            delete newErrors[errorKey];
+          }
+        } else if (fieldPath[1] === 'bedCount') {
+          if (!fieldValue || isNaN(fieldValue) || parseInt(fieldValue) <= 0) {
+            newErrors[errorKey] = 'Bed count must be a positive number';
+          } else {
+            delete newErrors[errorKey];
+          }
+        } else if (fieldPath[1] === 'bedType') {
+          if (!fieldValue || !fieldValue.trim()) {
+            newErrors[errorKey] = 'Bed type is required';
+          } else {
+            delete newErrors[errorKey];
+          }
+        } else {
+          // For other fields, just clear any existing errors
+          delete newErrors[errorKey];
+        }
+        
         setErrors(newErrors);
       }
     } else {
@@ -778,7 +826,7 @@ const AddHotel = () => {
         'roomType_bedType': `room-${roomIndex}-roomType-bedType`,
       };
       
-      const elementId = fieldIdMap[firstErrorKey.replace(`${roomFieldPrefix}${roomIndex}_`, '')];
+      const elementId = fieldIdMap[firstErrorKey.replace(`rooms_${roomIndex}_`, '')];
       elementToScroll = document.getElementById(elementId);
       
       // If direct ID doesn't work, try the parent room container
@@ -1031,20 +1079,23 @@ const AddHotel = () => {
           confirmButtonText: 'OK',
           confirmButtonColor: '#ef4444'
         });
+      } finally {
+        // Always reset isSubmitting state, regardless of success or failure
+        setIsSubmitting(false);
       }
     } else {
-      // Validation failed - scrollToFirstError was already called in validateForm()
+      // Validation failed - reset isSubmitting state immediately
+      setIsSubmitting(false);
+      // scrollToFirstError was already called in validateForm()
       // Validation errors are already displayed inline with the form fields
     }
-    
-    setIsSubmitting(false);
   };
 
   return (
     <div className="container mx-auto p-0 md:p-6">
 
       <div className="mb-6">
-        <h1 className="text-3xl font-bold flex items-center gap-2">
+        <h1 className="text-xl font-bold flex items-center gap-2">
           Add New Hotel
         </h1>
         <p className="text-muted-foreground mt-2">
@@ -1057,7 +1108,7 @@ const AddHotel = () => {
         {/* Basic Information */}
         <Card>
           <CardHeader>
-            <CardTitle>Basic Information</CardTitle>
+            <CardTitle className="text-md">Basic Information</CardTitle>
             <CardDescription>
               Enter the fundamental details about the hotel
             </CardDescription>
@@ -1120,7 +1171,7 @@ const AddHotel = () => {
         {/* Location Information */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 text-md">
               <MapPin className="h-5 w-5" />
               Location Information
             </CardTitle>
@@ -1207,7 +1258,7 @@ const AddHotel = () => {
         {/* Contact Information */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 text-md">
               <Phone className="h-5 w-5" />
               Contact Information
             </CardTitle>
@@ -1269,7 +1320,7 @@ const AddHotel = () => {
         {/* Hotel Details */}
         <Card>
           <CardHeader>
-            <CardTitle>Hotel Details</CardTitle>
+            <CardTitle className="text-md">Hotel Details</CardTitle>
             <CardDescription>
               Additional hotel information
             </CardDescription>
@@ -1311,7 +1362,7 @@ const AddHotel = () => {
         {/* Amenities */}
         <Card>
           <CardHeader>
-            <CardTitle>Amenities & Services</CardTitle>
+            <CardTitle className="text-md">Amenities & Services</CardTitle>
             <CardDescription>
               Select the amenities and services available at the hotel
             </CardDescription>
@@ -1344,7 +1395,7 @@ const AddHotel = () => {
         {/* Rooms */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 text-md">
               <Building className="h-5 w-5" />
               Rooms Management
             </CardTitle>

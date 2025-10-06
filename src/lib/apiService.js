@@ -38,12 +38,46 @@ class ApiClient {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       
+      // For successful responses, handle different content types
       const contentType = response.headers.get('content-type');
-      if (contentType && contentType.includes('application/json')) {
-        return await response.json();
+      const contentLength = response.headers.get('content-length');
+      
+      // Check if response has content
+      if (contentLength === '0' || !contentType) {
+        // Empty response body - return success indicator with status
+        return { 
+          success: true, 
+          status: response.status,
+          message: 'Operation completed successfully'
+        };
       }
       
-      return await response.text();
+      if (contentType && contentType.includes('application/json')) {
+        try {
+          return await response.json();
+        } catch (jsonError) {
+          // If JSON parsing fails but response is successful, return success indicator
+          console.warn('Failed to parse JSON response, but HTTP status is successful:', response.status);
+          return { 
+            success: true, 
+            status: response.status,
+            message: 'Operation completed successfully'
+          };
+        }
+      }
+      
+      const textResponse = await response.text();
+      
+      // If text response is empty, return success indicator
+      if (!textResponse || textResponse.trim() === '') {
+        return { 
+          success: true, 
+          status: response.status,
+          message: 'Operation completed successfully'
+        };
+      }
+      
+      return textResponse;
     } catch (error) {
       console.error('API request failed:', error);
       throw error;
@@ -135,6 +169,16 @@ export const api = {
     getHotels: () => apiClient.get(API_CONFIG.ENDPOINTS.HOTEL.HOTELS),
     updateHotel: (id, hotelData) => apiClient.put(`${API_CONFIG.ENDPOINTS.HOTEL.HOTELS}/${id}`, hotelData),
     deleteHotel: (id) => apiClient.delete(`${API_CONFIG.ENDPOINTS.HOTEL.HOTELS}/${id}`),
+  },
+
+  // Room Service
+  room: {
+    getAllRooms: () => apiClient.get(API_CONFIG.ENDPOINTS.HOTEL.ALL_ROOMS),
+    getRoomsByHotel: (hotelId) => apiClient.get(`/rooms/hotel/${hotelId}`),
+    getRoom: (roomId) => apiClient.get(`/rooms/${roomId}`),
+    createRoom: (roomData) => apiClient.post(API_CONFIG.ENDPOINTS.HOTEL.ALL_ROOMS, roomData),
+    updateRoom: (roomId, roomData) => apiClient.put(`/rooms/${roomId}`, roomData),
+    deleteRoom: (roomId) => apiClient.delete(`/rooms/${roomId}`),
   },
 
   // Flight Service

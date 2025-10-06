@@ -7,9 +7,10 @@ import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { Badge } from '@/components/ui/Badge';
 import { Bed, Loader2, Edit, Trash2, Save, X } from 'lucide-react';
-import { apiClient } from '@/lib/apiService';
+import { apiClient, api } from '@/lib/apiService';
 import { API_CONFIG } from '@/lib/api';
 import authAPI from '@/lib/authAPI';
+import Swal from 'sweetalert2';
 
 const RoomManager = () => {
   const [rooms, setRooms] = useState([]);
@@ -25,10 +26,7 @@ const RoomManager = () => {
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   
-  // Delete functionality states
-  const [deletingRoomId, setDeletingRoomId] = useState(null);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [isDeleteLoading, setIsDeleteLoading] = useState(false);
+  // Delete functionality states - removed since using SweetAlert2
 
   // Fetch hotels first (no rooms until hotel is selected)
   useEffect(() => {
@@ -79,12 +77,10 @@ const RoomManager = () => {
           apiClient.setAuthToken(token);
         }
         
-        // Use the hotel-specific endpoint: /room/hotel/{hotelId}
-        const endpoint = `/rooms/hotel/${selectedHotelId}`;
+        console.log('Fetching rooms for hotel:', selectedHotelId);
         
-        console.log('Fetching rooms from:', endpoint);
-        
-        const response = await apiClient.get(endpoint);
+        // Use the dedicated room service method
+        const response = await api.room.getRoomsByHotel(selectedHotelId);
         
         console.log('Rooms API Response Status:', response.status);
         console.log('Rooms API Response Data:', response);
@@ -177,7 +173,8 @@ const RoomManager = () => {
         apiClient.setAuthToken(token);
       }
       
-      const response = await apiClient.put(`/rooms/${editingRoom.id}`, editFormData);
+      // Use the dedicated room service method
+      const response = await api.room.updateRoom(editingRoom.id, editFormData);
       
       console.log('Edit room response:', response);
       console.log('Response success:', response.success);
@@ -243,65 +240,98 @@ const RoomManager = () => {
   };
 
   // Delete room functions
-  const handleDeleteRoom = (roomId) => {
-    setDeletingRoomId(roomId);
-    setShowDeleteConfirm(true);
+  const handleDeleteRoom = async (roomId) => {
+    const room = rooms.find(r => r.id === roomId);
+    const roomName = room?.roomNumber || `Room ID: ${roomId}`;
+    
+    // Show confirmation dialog with SweetAlert2
+    const result = await Swal.fire({
+      title: 'Delete Room?',
+      text: `Are you sure you want to delete ${roomName}? This action cannot be undone.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#ef4444',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: 'Yes, delete it!',
+      cancelButtonText: 'Cancel',
+      reverseButtons: true
+    });
+
+    if (result.isConfirmed) {
+      await confirmDelete(roomId, roomName);
+    }
   };
 
-  const confirmDelete = async () => {
+  const confirmDelete = async (roomId, roomName) => {
     try {
-      setIsDeleteLoading(true);
+      // Show loading state
+      Swal.fire({
+        title: 'Deleting Room...',
+        text: 'Please wait while we delete the room.',
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        showConfirmButton: false,
+        didOpen: () => {
+          Swal.showLoading();
+        }
+      });
       
       const token = authAPI.getStoredToken();
       if (token) {
         apiClient.setAuthToken(token);
       }
       
-      const response = await apiClient.delete(`/rooms/${deletingRoomId}`);
+      // Use the dedicated room service method
+      const response = await api.room.deleteRoom(roomId);
       
       console.log('Delete room response:', response);
+      console.log('Response type:', typeof response);
+      console.log('Response structure:', response);
       
-      // Check for HTTP 200 status
-      if (response.status === 200) {
-        // Remove the deleted room from the list
-        setRooms(prevRooms => prevRooms.filter(room => room.id !== deletingRoomId));
-        setShowDeleteConfirm(false);
-        setDeletingRoomId(null);
-        
-        console.log('Room deleted successfully');
-      } else {
-        setError(response.message || `Server error: ${response.status}`);
-      }
+      // With the improved apiClient, successful DELETE requests will always return a success object
+      // or the actual response data. Since we reached here without throwing, it's successful.
+      
+      // Remove the deleted room from the list
+      setRooms(prevRooms => prevRooms.filter(room => room.id !== roomId));
+      
+      // Show success message
+      await Swal.fire({
+        icon: 'success',
+        title: 'Room Deleted!',
+        text: `${roomName} has been successfully deleted.`,
+        confirmButtonText: 'OK',
+        confirmButtonColor: '#10b981'
+      });
+      
+      console.log('Room deleted successfully');
+      
     } catch (error) {
       console.error('Error deleting room:', error);
       
-      // Check if the error has HTTP 200 status despite being thrown
-      if (error.response?.status === 200) {
-        // Remove the room even if an error was thrown but status is 200
-        setRooms(prevRooms => prevRooms.filter(room => room.id !== deletingRoomId));
-        setShowDeleteConfirm(false);
-        setDeletingRoomId(null);
-        
-        console.log('Room deleted successfully (despite error thrown)');
-      } else {
-        setError(error.response?.data?.message || error.message || 'Failed to delete room');
+      // Show error message
+      let errorMessage = 'Failed to delete room. Please try again.';
+      
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.message) {
+        errorMessage = error.message;
       }
-    } finally {
-      setIsDeleteLoading(false);
+      
+      await Swal.fire({
+        icon: 'error',
+        title: 'Delete Failed',
+        text: errorMessage,
+        confirmButtonText: 'OK',
+        confirmButtonColor: '#ef4444'
+      });
     }
-  };
-
-  const cancelDelete = () => {
-    setShowDeleteConfirm(false);
-    setDeletingRoomId(null);
   };
 
   return (
     <div className="container mx-auto p-0 md:p-6 space-y-6">
       <div className="flex items-center gap-3">
-        <Bed className="h-8 w-8 text-primary" />
         <div>
-          <h1 className="text-3xl font-bold">Room Management</h1>
+          <h1 className="text-xl font-bold">Room Management</h1>
           <p className="text-muted-foreground">Manage rooms for existing hotels</p>
         </div>
       </div>
@@ -635,46 +665,6 @@ const RoomManager = () => {
         </div>
       )}
       
-      {/* Delete Confirmation Modal */}
-      {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-sm mx-4">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="flex-shrink-0">
-                <Trash2 className="h-8 w-8 text-red-600" />
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900">Delete Room</h3>
-                <p className="text-sm text-gray-500">
-                  Are you sure you want to delete this room? This action cannot be undone.
-                </p>
-              </div>
-            </div>
-            
-            <div className="flex gap-3">
-              <Button 
-                onClick={confirmDelete}
-                disabled={isDeleteLoading}
-                className="bg-red-600 hover:bg-red-700 flex items-center gap-2"
-              >
-                {isDeleteLoading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Trash2 className="h-4 w-4" />
-                )}
-                Delete Room
-              </Button>
-              <Button 
-                onClick={cancelDelete}
-                variant="outline"
-                disabled={isDeleteLoading}
-              >
-                Cancel
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Toast Notification */}
       {showToast && (

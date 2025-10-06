@@ -363,6 +363,240 @@ export const sanitizeSignUpFormData = (formData) => {
   };
 };
 
+/**
+ * Validates bus number format
+ * @param {string} busNumber - Bus number to validate
+ * @returns {object} - Validation result with isValid and message
+ */
+export const validateBusNumber = (busNumber) => {
+  if (!busNumber || busNumber.trim() === '') {
+    return {
+      isValid: false,
+      message: 'Bus number is required'
+    };
+  }
+
+  if (busNumber.trim().length < 3) {
+    return {
+      isValid: false,
+      message: 'Bus number must be at least 3 characters long'
+    };
+  }
+
+  if (busNumber.trim().length > 20) {
+    return {
+      isValid: false,
+      message: 'Bus number must be less than 20 characters'
+    };
+  }
+
+  // Check for valid bus number format (letters, numbers, hyphens)
+  const BUS_NUMBER_REGEX = /^[a-zA-Z0-9\-]+$/;
+  if (!BUS_NUMBER_REGEX.test(busNumber.trim())) {
+    return {
+      isValid: false,
+      message: 'Bus number can only contain letters, numbers, and hyphens'
+    };
+  }
+
+  return {
+    isValid: true,
+    message: ''
+  };
+};
+
+/**
+ * Validates bus type selection
+ * @param {string} busType - Bus type to validate
+ * @returns {object} - Validation result with isValid and message
+ */
+export const validateBusType = (busType) => {
+  if (!busType || busType.trim() === '') {
+    return {
+      isValid: false,
+      message: 'Bus type is required'
+    };
+  }
+
+  const validBusTypes = ['Standard', 'Deluxe', 'Luxury', 'Sleeper', 'AC'];
+  if (!validBusTypes.includes(busType)) {
+    return {
+      isValid: false,
+      message: 'Please select a valid bus type'
+    };
+  }
+
+  return {
+    isValid: true,
+    message: ''
+  };
+};
+
+/**
+ * Validates total seats number
+ * @param {string|number} totalSeats - Total seats to validate
+ * @returns {object} - Validation result with isValid and message
+ */
+export const validateTotalSeats = (totalSeats) => {
+  if (!totalSeats || totalSeats === '') {
+    return {
+      isValid: false,
+      message: 'Total seats is required'
+    };
+  }
+
+  const seatsNumber = parseInt(totalSeats);
+  if (isNaN(seatsNumber)) {
+    return {
+      isValid: false,
+      message: 'Total seats must be a valid number'
+    };
+  }
+
+  if (seatsNumber < 1) {
+    return {
+      isValid: false,
+      message: 'Total seats must be at least 1'
+    };
+  }
+
+  if (seatsNumber > 100) {
+    return {
+      isValid: false,
+      message: 'Total seats cannot exceed 100'
+    };
+  }
+
+  return {
+    isValid: true,
+    message: ''
+  };
+};
+
+/**
+ * Validates bus description
+ * @param {string} description - Description to validate
+ * @returns {object} - Validation result with isValid and message
+ */
+export const validateBusDescription = (description) => {
+  // Description is optional, so empty is valid
+  if (!description || description.trim() === '') {
+    return {
+      isValid: true,
+      message: ''
+    };
+  }
+
+  if (description.trim().length > 500) {
+    return {
+      isValid: false,
+      message: 'Description must be less than 500 characters'
+    };
+  }
+
+  return {
+    isValid: true,
+    message: ''
+  };
+};
+
+/**
+ * Validates bus amenities
+ * @param {string} amenities - Amenities to validate
+ * @returns {object} - Validation result with isValid and message
+ */
+export const validateBusAmenities = (amenities) => {
+  // Amenities is optional, so empty is valid
+  if (!amenities || amenities.trim() === '') {
+    return {
+      isValid: true,
+      message: ''
+    };
+  }
+
+  if (amenities.trim().length > 200) {
+    return {
+      isValid: false,
+      message: 'Amenities must be less than 200 characters'
+    };
+  }
+
+  // Check if amenities are properly comma-separated
+  const amenityList = amenities.split(',').map(a => a.trim()).filter(a => a.length > 0);
+  if (amenityList.length > 10) {
+    return {
+      isValid: false,
+      message: 'Maximum 10 amenities allowed'
+    };
+  }
+
+  // Check individual amenity length
+  for (const amenity of amenityList) {
+    if (amenity.length > 30) {
+      return {
+        isValid: false,
+        message: 'Each amenity must be less than 30 characters'
+      };
+    }
+  }
+
+  return {
+    isValid: true,
+    message: ''
+  };
+};
+
+/**
+ * Validates bus form data
+ * @param {object} formData - Form data containing bus details
+ * @returns {object} - Validation result with isValid, errors, and messages
+ */
+export const validateBusForm = (formData) => {
+  const busNumberValidation = validateBusNumber(formData.busNumber);
+  const busTypeValidation = validateBusType(formData.busType);
+  const totalSeatsValidation = validateTotalSeats(formData.totalSeats);
+  const descriptionValidation = validateBusDescription(formData.description);
+  const amenitiesValidation = validateBusAmenities(formData.amenities);
+
+  const errors = {};
+  const messages = {};
+
+  if (!busNumberValidation.isValid) {
+    errors.busNumber = busNumberValidation.message;
+    messages.busNumber = busNumberValidation.message;
+  }
+
+  if (!busTypeValidation.isValid) {
+    errors.busType = busTypeValidation.message;
+    messages.busType = busTypeValidation.message;
+  }
+
+  if (!totalSeatsValidation.isValid) {
+    errors.totalSeats = totalSeatsValidation.message;
+    messages.totalSeats = totalSeatsValidation.message;
+  }
+
+  if (!descriptionValidation.isValid) {
+    errors.description = descriptionValidation.message;
+    messages.description = descriptionValidation.message;
+  }
+
+  if (!amenitiesValidation.isValid) {
+    errors.amenities = amenitiesValidation.message;
+    messages.amenities = amenitiesValidation.message;
+  }
+
+  return {
+    isValid: busNumberValidation.isValid && 
+             busTypeValidation.isValid && 
+             totalSeatsValidation.isValid && 
+             descriptionValidation.isValid && 
+             amenitiesValidation.isValid,
+    errors,
+    messages
+  };
+};
+
 export default {
   validateEmail,
   validatePassword,
@@ -375,5 +609,11 @@ export default {
   validateSignUpForm,
   sanitizeInput,
   sanitizeFormData,
-  sanitizeSignUpFormData
+  sanitizeSignUpFormData,
+  validateBusNumber,
+  validateBusType,
+  validateTotalSeats,
+  validateBusDescription,
+  validateBusAmenities,
+  validateBusForm
 };

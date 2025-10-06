@@ -1,6 +1,6 @@
 // API Configuration
 export const API_CONFIG = {
-  BASE_URL: 'https://3caccc6d78b3.ngrok-free.app',
+  BASE_URL: 'https://7bc4ee969a7a.ngrok-free.app',
   
   // API Endpoints
   ENDPOINTS: {
@@ -50,6 +50,7 @@ export const API_CONFIG = {
       BOOKINGS: '/bus/bookings',
       ROUTES: '/bus/routes',
       SCHEDULES: '/bus/schedules',
+      BUSES: '/api/buses',
     },
   },
   

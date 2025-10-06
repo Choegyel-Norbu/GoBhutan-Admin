@@ -34,6 +34,11 @@ function BusBookingPage() {
     {
       id: 1,
       busNumber: 'BT-001',
+      busType: 'Standard',
+      totalSeats: 50,
+      description: 'Comfortable standard bus with basic amenities for daily commute',
+      amenities: 'AC, WiFi, Water',
+      // Additional fields for booking functionality
       busName: 'Mountain Express',
       from: 'Thimphu',
       to: 'Paro',
@@ -41,14 +46,16 @@ function BusBookingPage() {
       arrival: '09:30',
       duration: '1h 30m',
       price: 150,
-      availableSeats: 15,
-      totalSeats: 50,
-      busType: 'Standard',
-      amenities: ['AC', 'WiFi', 'Water']
+      availableSeats: 15
     },
     {
       id: 2,
       busNumber: 'BT-002',
+      busType: 'Deluxe',
+      totalSeats: 40,
+      description: 'Premium deluxe bus with enhanced comfort and luxury amenities',
+      amenities: 'AC, WiFi, Water, Snacks',
+      // Additional fields for booking functionality
       busName: 'Royal Transport',
       from: 'Thimphu',
       to: 'Paro',
@@ -56,14 +63,16 @@ function BusBookingPage() {
       arrival: '11:30',
       duration: '1h 30m',
       price: 200,
-      availableSeats: 8,
-      totalSeats: 40,
-      busType: 'Deluxe',
-      amenities: ['AC', 'WiFi', 'Water', 'Snacks']
+      availableSeats: 8
     },
     {
       id: 3,
       busNumber: 'BT-003',
+      busType: 'Standard',
+      totalSeats: 45,
+      description: 'Reliable standard bus perfect for mountain routes',
+      amenities: 'AC, Water',
+      // Additional fields for booking functionality
       busName: 'Himalayan Express',
       from: 'Thimphu',
       to: 'Paro',
@@ -71,10 +80,7 @@ function BusBookingPage() {
       arrival: '15:30',
       duration: '1h 30m',
       price: 120,
-      availableSeats: 25,
-      totalSeats: 45,
-      busType: 'Standard',
-      amenities: ['AC', 'Water']
+      availableSeats: 25
     }
   ];
 
@@ -293,9 +299,9 @@ function BusBookingPage() {
                             </div>
                           </div>
                           <div className="flex gap-2">
-                            {bus.amenities.map((amenity, index) => (
+                            {bus.amenities.split(', ').map((amenity, index) => (
                               <Badge key={index} variant="outline" className="text-xs">
-                                {amenity}
+                                {amenity.trim()}
                               </Badge>
                             ))}
                           </div>

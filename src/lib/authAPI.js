@@ -298,14 +298,20 @@ export const authAPI = {
   refreshToken: async () => {
     try {
       const authData = getStoredAuthData();
-      if (!authData?.refreshToken) {
-        throw new Error('No refresh token available');
+      if (!authData?.refreshToken || !authData?.username) {
+        throw new Error('No refresh token or username available');
       }
 
-      const response = await apiClient.post(API_CONFIG.ENDPOINTS.AUTH.REFRESH || '/auth/refresh', {
-        refreshToken: authData.refreshToken
-      });
+      // Prepare payload according to the API specification
+      const refreshPayload = {
+        username: authData.username,
+        refreshToken: authData.refreshToken,
+        client: authData.clients?.[0] || 'web' // Use first client or default to 'web'
+      };
+
+      const response = await apiClient.post(API_CONFIG.ENDPOINTS.AUTH.REFRESH || '/auth/refresh-token', refreshPayload);
       
+      // Handle response according to the API specification
       if (response.data.success && response.data.data) {
         // Update stored auth data with new tokens
         const updatedAuthData = {
@@ -315,12 +321,15 @@ export const authAPI = {
           timestamp: Date.now()
         };
         storeAuthData(updatedAuthData);
+        
+        console.log('Token refreshed successfully:', response.data.message);
       }
       
       return response;
     } catch (error) {
       // If refresh fails, clear auth data
       clearStoredAuthData();
+      console.error('Token refresh failed:', error.message);
       throw error;
     }
   },

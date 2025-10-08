@@ -50,6 +50,12 @@ export const navigationItems = [
         path: '/dashboard/hotel/book',
         icon: Plus,
         description: 'Manage hotel bookings and reservations'
+      },
+      {
+        title: 'Hotel Settings',
+        path: '/dashboard/hotel/settings',
+        icon: Settings,
+        description: 'Configure hotel preferences and details'
       }
     ]
   },

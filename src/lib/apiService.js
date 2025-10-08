@@ -14,6 +14,109 @@ class ApiClient {
   constructor(baseURL = API_BASE_URL) {
     this.baseURL = baseURL;
     this.defaultHeaders = defaultHeaders;
+    this.isRefreshing = false;
+    this.failedQueue = [];
+  }
+
+  // Process failed queue after token refresh
+  processQueue(error, token = null) {
+    this.failedQueue.forEach(({ resolve, reject }) => {
+      if (error) {
+        reject(error);
+      } else {
+        resolve(token);
+      }
+    });
+    
+    this.failedQueue = [];
+  }
+
+  // Refresh token method
+  async refreshToken() {
+    try {
+      const authData = JSON.parse(localStorage.getItem('gobhutan_auth_data'));
+      if (!authData?.refreshToken || !authData?.username) {
+        throw new Error('No refresh token or username available');
+      }
+
+      // Prepare payload according to the API specification
+      const refreshPayload = {
+        username: authData.username,
+        refreshToken: authData.refreshToken,
+        client: authData.clients?.[0] || 'web' // Use first client or default to 'web'
+      };
+
+      const response = await fetch(`${this.baseURL}/auth/refresh-token`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true',
+        },
+        body: JSON.stringify(refreshPayload)
+      });
+
+      if (!response.ok) {
+        throw new Error('Token refresh failed');
+      }
+
+      const data = await response.json();
+      
+      // Handle response according to the API specification
+      if (data.success && data.data) {
+        // Update stored auth data with new tokens
+        const updatedAuthData = {
+          ...authData,
+          accessToken: data.data.accessToken,
+          refreshToken: data.data.refreshToken || authData.refreshToken,
+          timestamp: Date.now()
+        };
+        localStorage.setItem('gobhutan_auth_data', JSON.stringify(updatedAuthData));
+        
+        // Update default headers with new token
+        this.defaultHeaders['Authorization'] = `Bearer ${data.data.accessToken}`;
+        
+        console.log('Token refreshed successfully:', data.message);
+        return data.data.accessToken;
+      } else {
+        throw new Error('Invalid refresh response');
+      }
+    } catch (error) {
+      // Clear auth data if refresh fails
+      localStorage.removeItem('gobhutan_auth_data');
+      localStorage.removeItem('gobhutan_user_data');
+      localStorage.removeItem('gobhutan_user_roles');
+      console.error('Token refresh failed:', error.message);
+      throw error;
+    }
+  }
+
+  // Handle 401 Unauthorized responses
+  async handleUnauthorized(endpoint, options) {
+    if (this.isRefreshing) {
+      // If already refreshing, queue this request
+      return new Promise((resolve, reject) => {
+        this.failedQueue.push({ resolve, reject });
+      }).then(token => {
+        return this.request(endpoint, { ...options, _retry: true });
+      }).catch(err => {
+        return Promise.reject(err);
+      });
+    }
+
+    this.isRefreshing = true;
+
+    try {
+      const newToken = await this.refreshToken();
+      this.processQueue(null, newToken);
+      
+      // Retry the original request with new token
+      return this.request(endpoint, { ...options, _retry: true });
+    } catch (error) {
+      this.processQueue(error, null);
+      throw error;
+    } finally {
+      this.isRefreshing = false;
+    }
   }
 
   // Generic request method
@@ -35,6 +138,10 @@ class ApiClient {
       const response = await fetch(url, config);
       
       if (!response.ok) {
+        // Handle 401 Unauthorized with automatic token refresh
+        if (response.status === 401 && !config._retry) {
+          return this.handleUnauthorized(endpoint, options);
+        }
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       
@@ -130,6 +237,21 @@ class ApiClient {
 
 // Create default instance with environment-aware URL
 const apiClient = new ApiClient(getApiUrl());
+
+// Initialize with stored token if available
+const initializeAuthToken = () => {
+  try {
+    const authData = JSON.parse(localStorage.getItem('gobhutan_auth_data'));
+    if (authData?.accessToken) {
+      apiClient.setAuthToken(authData.accessToken);
+    }
+  } catch (error) {
+    console.warn('Failed to initialize auth token:', error);
+  }
+};
+
+// Initialize auth token on module load
+initializeAuthToken();
 
 // Service-specific API methods
 export const api = {

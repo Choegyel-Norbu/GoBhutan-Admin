@@ -364,6 +364,39 @@ export const sanitizeSignUpFormData = (formData) => {
 };
 
 /**
+ * Validates bus name format
+ * @param {string} busName - Bus name to validate
+ * @returns {object} - Validation result with isValid and message
+ */
+export const validateBusName = (busName) => {
+  if (!busName || busName.trim() === '') {
+    return {
+      isValid: false,
+      message: 'Bus name is required'
+    };
+  }
+
+  if (busName.trim().length < 2) {
+    return {
+      isValid: false,
+      message: 'Bus name must be at least 2 characters long'
+    };
+  }
+
+  if (busName.trim().length > 50) {
+    return {
+      isValid: false,
+      message: 'Bus name must be less than 50 characters'
+    };
+  }
+
+  return {
+    isValid: true,
+    message: ''
+  };
+};
+
+/**
  * Validates bus number format
  * @param {string} busNumber - Bus number to validate
  * @returns {object} - Validation result with isValid and message
@@ -552,6 +585,7 @@ export const validateBusAmenities = (amenities) => {
  * @returns {object} - Validation result with isValid, errors, and messages
  */
 export const validateBusForm = (formData) => {
+  const busNameValidation = validateBusName(formData.busName);
   const busNumberValidation = validateBusNumber(formData.busNumber);
   const busTypeValidation = validateBusType(formData.busType);
   const totalSeatsValidation = validateTotalSeats(formData.totalSeats);
@@ -560,6 +594,11 @@ export const validateBusForm = (formData) => {
 
   const errors = {};
   const messages = {};
+
+  if (!busNameValidation.isValid) {
+    errors.busName = busNameValidation.message;
+    messages.busName = busNameValidation.message;
+  }
 
   if (!busNumberValidation.isValid) {
     errors.busNumber = busNumberValidation.message;
@@ -587,7 +626,8 @@ export const validateBusForm = (formData) => {
   }
 
   return {
-    isValid: busNumberValidation.isValid && 
+    isValid: busNameValidation.isValid && 
+             busNumberValidation.isValid && 
              busTypeValidation.isValid && 
              totalSeatsValidation.isValid && 
              descriptionValidation.isValid && 
@@ -610,6 +650,7 @@ export default {
   sanitizeInput,
   sanitizeFormData,
   sanitizeSignUpFormData,
+  validateBusName,
   validateBusNumber,
   validateBusType,
   validateTotalSeats,

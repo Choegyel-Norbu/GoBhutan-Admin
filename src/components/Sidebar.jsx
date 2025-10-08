@@ -5,11 +5,13 @@ import { navigationItems } from '@/routes';
 import { APP_NAME } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 import { Button } from './ui/Button';
+import { useAuth } from '@/contexts/AuthContext';
 
 function Sidebar() {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [expandedItems, setExpandedItems] = useState(new Set());
+  const { user } = useAuth();
 
   const toggleSidebar = () => setIsCollapsed(!isCollapsed);
   const toggleMobile = () => setIsMobileOpen(!isMobileOpen);
@@ -23,6 +25,45 @@ function Sidebar() {
     }
     setExpandedItems(newExpanded);
   };
+
+  // Filter navigation items based on user's clients
+  const filterNavigationItems = (items) => {
+    if (!user?.clients || user.clients.length === 0) {
+      return items; // Show all items if no clients info
+    }
+
+    return items.filter(item => {
+      // Check if user has access to this item's clients
+      const hasAccess = item.clients?.some(client => user.clients.includes(client));
+      
+      if (!hasAccess) return false;
+      
+      // If item has subcategories, filter them too
+      if (item.subcategories) {
+        const filteredSubcategories = item.subcategories.filter(subItem => {
+          return subItem.clients?.some(client => user.clients.includes(client));
+        });
+        
+        // Only show parent item if it has accessible subcategories
+        return filteredSubcategories.length > 0;
+      }
+      
+      return true;
+    }).map(item => {
+      // Filter subcategories for items that have them
+      if (item.subcategories) {
+        return {
+          ...item,
+          subcategories: item.subcategories.filter(subItem => {
+            return subItem.clients?.some(client => user.clients.includes(client));
+          })
+        };
+      }
+      return item;
+    });
+  };
+
+  const filteredNavigationItems = filterNavigationItems(navigationItems);
 
   return (
     <>
@@ -81,7 +122,7 @@ function Sidebar() {
 
           {/* Navigation */}
           <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
-            {navigationItems.map((item) => {
+            {filteredNavigationItems.map((item) => {
               const Icon = item.icon;
               const hasSubcategories = item.subcategories && item.subcategories.length > 0;
               const isExpanded = expandedItems.has(item.path);

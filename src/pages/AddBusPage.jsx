@@ -15,6 +15,7 @@ import Swal from 'sweetalert2';
 
 function AddBusPage() {
   const [formData, setFormData] = useState({
+    busName: '',
     busNumber: '',
     busType: '',
     totalSeats: '',
@@ -26,12 +27,27 @@ function AddBusPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleInputChange = (field, value) => {
-    // Sanitize input
-    const sanitizedValue = typeof value === 'string' ? sanitizeInput(value) : value;
+    // Only sanitize inputs that need it (busNumber) and preserve spaces for description/amenities
+    let processedValue = value;
+    
+    if (field === 'busNumber') {
+      // For bus number, remove spaces and sanitize
+      processedValue = typeof value === 'string' ? value.replace(/\s/g, '') : value;
+    } else if (field === 'description' || field === 'amenities') {
+      // For description and amenities, preserve spaces but remove potential XSS
+      processedValue = typeof value === 'string' ? 
+        value.replace(/[<>]/g, '').replace(/javascript:/gi, '').replace(/on\w+=/gi, '') : 
+        value;
+    } else {
+      // For other fields, basic sanitization without trimming spaces
+      processedValue = typeof value === 'string' ? 
+        value.replace(/[<>]/g, '').replace(/javascript:/gi, '').replace(/on\w+=/gi, '') : 
+        value;
+    }
     
     setFormData(prev => ({
       ...prev,
-      [field]: sanitizedValue
+      [field]: processedValue
     }));
 
     // Clear error for this field when user starts typing
@@ -44,13 +60,25 @@ function AddBusPage() {
     }
 
     // Real-time validation for immediate feedback
-    validateField(field, sanitizedValue);
+    validateField(field, processedValue);
   };
 
   const validateField = (name, value) => {
     const newErrors = { ...errors };
     
     switch (name) {
+      case 'busName':
+        if (!value.trim()) {
+          newErrors.busName = 'Bus name is required';
+        } else if (value.trim().length < 2) {
+          newErrors.busName = 'Bus name must be at least 2 characters long';
+        } else if (value.trim().length > 50) {
+          newErrors.busName = 'Bus name must be less than 50 characters';
+        } else {
+          delete newErrors.busName;
+        }
+        break;
+        
       case 'busNumber':
         if (!value.trim()) {
           newErrors.busNumber = 'Bus number is required';
@@ -146,13 +174,14 @@ function AddBusPage() {
     }
     
     try {
-      // Format the data according to the API schema
+      // Format the data according to the API schema with proper sanitization
       const payload = {
-        busNumber: formData.busNumber.trim(),
+        busName: sanitizeInput(formData.busName),
+        busNumber: sanitizeInput(formData.busNumber),
         busType: formData.busType,
         totalSeats: parseInt(formData.totalSeats),
-        description: formData.description.trim() || null,
-        amenities: formData.amenities.trim() || null
+        description: formData.description ? sanitizeInput(formData.description) : null,
+        amenities: formData.amenities ? sanitizeInput(formData.amenities) : null
       };
 
       console.log('Bus payload:', payload);
@@ -177,13 +206,14 @@ function AddBusPage() {
         await Swal.fire({
           icon: 'success',
           title: 'Bus Added Successfully!',
-          text: response.message || `Bus ${formData.busNumber} has been added successfully.`,
+          text: response.message || `Bus "${formData.busName}" (${formData.busNumber}) has been added successfully.`,
           confirmButtonText: 'OK',
           confirmButtonColor: '#10b981'
         });
         
         // Clear all form fields and errors
         setFormData({
+          busName: '',
           busNumber: '',
           busType: '',
           totalSeats: '',
@@ -235,6 +265,7 @@ function AddBusPage() {
 
   const handleReset = () => {
     setFormData({
+      busName: '',
       busNumber: '',
       busType: '',
       totalSeats: '',
@@ -247,14 +278,14 @@ function AddBusPage() {
   return (
     <PageWrapper 
       title="Add New Bus" 
+      titleClassName="text-xl"
       description="Add a new bus to the fleet management system."
     >
       <div className="w-full mx-auto space-y-6">
         {/* Form Card */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Bus className="h-5 w-5" />
+            <CardTitle className="flex items-center gap-2 text-lg">
               Bus Information
             </CardTitle>
             <CardDescription>
@@ -266,12 +297,28 @@ function AddBusPage() {
               {/* Basic Information */}
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
+                  <Label htmlFor="busName">Bus Name *</Label>
+                  <Input
+                    id="busName"
+                    value={formData.busName}
+                    onChange={(e) => handleInputChange('busName', e.target.value)}
+                    placeholder="e.g., Dug Transport"
+                    className={errors.busName ? 'border-red-500 focus:border-red-500' : 'focus:border-blue-100 focus:ring-0 focus:ring-blue-100'}
+                  />
+                  {errors.busName && (
+                    <div className="flex items-center gap-1 text-sm text-red-600">
+                      <AlertCircle className="h-4 w-4" />
+                      <span>{errors.busName}</span>
+                    </div>
+                  )}
+                </div>
+                <div className="space-y-2">
                   <Label htmlFor="busNumber">Bus Number *</Label>
                   <Input
                     id="busNumber"
                     value={formData.busNumber}
                     onChange={(e) => handleInputChange('busNumber', e.target.value)}
-                    placeholder="e.g., BT-001"
+                    placeholder="e.g., BP-001"
                     className={errors.busNumber ? 'border-red-500 focus:border-red-500' : 'focus:border-blue-100 focus:ring-0 focus:ring-blue-100'}
                   />
                   {errors.busNumber && (
@@ -387,36 +434,6 @@ function AddBusPage() {
                 </Button>
               </div>
             </form>
-          </CardContent>
-        </Card>
-
-        {/* Information Card */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Plus className="h-5 w-5" />
-              Quick Tips
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3 text-sm text-muted-foreground">
-              <div className="flex items-start gap-2">
-                <div className="w-2 h-2 bg-primary rounded-full mt-2 shrink-0"></div>
-                <p>Ensure the bus number is unique and follows your organization's naming convention.</p>
-              </div>
-              <div className="flex items-start gap-2">
-                <div className="w-2 h-2 bg-primary rounded-full mt-2 shrink-0"></div>
-                <p>Total seats should match the actual seating capacity of the bus.</p>
-              </div>
-              <div className="flex items-start gap-2">
-                <div className="w-2 h-2 bg-primary rounded-full mt-2 shrink-0"></div>
-                <p>List amenities separated by commas for better organization and display.</p>
-              </div>
-              <div className="flex items-start gap-2">
-                <div className="w-2 h-2 bg-primary rounded-full mt-2 shrink-0"></div>
-                <p>Choose the appropriate bus type based on comfort level and features.</p>
-              </div>
-            </div>
           </CardContent>
         </Card>
       </div>

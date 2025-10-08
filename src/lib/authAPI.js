@@ -330,6 +330,15 @@ export const authAPI = {
       // If refresh fails, clear auth data
       clearStoredAuthData();
       console.error('Token refresh failed:', error.message);
+      
+      // If refresh token returns 401, redirect to sign-in page
+      if (error.response?.status === 401) {
+        console.warn('Refresh token expired. Redirecting to sign-in page.');
+        // Redirect to sign-in page
+        window.location.href = '/signin';
+        return;
+      }
+      
       throw error;
     }
   },

@@ -56,6 +56,15 @@ class ApiClient {
       });
 
       if (!response.ok) {
+        // If refresh token returns 401, clear auth data and redirect to sign-in page
+        if (response.status === 401) {
+          localStorage.removeItem('gobhutan_auth_data');
+          localStorage.removeItem('gobhutan_user_data');
+          localStorage.removeItem('gobhutan_user_roles');
+          console.warn('Refresh token expired. Redirecting to sign-in page.');
+          window.location.href = '/signin';
+          return;
+        }
         throw new Error('Token refresh failed');
       }
 
@@ -86,6 +95,14 @@ class ApiClient {
       localStorage.removeItem('gobhutan_user_data');
       localStorage.removeItem('gobhutan_user_roles');
       console.error('Token refresh failed:', error.message);
+      
+      // If refresh token returns 401, redirect to sign-in page
+      if (error.message?.includes('401') || error.status === 401) {
+        console.warn('Refresh token expired. Redirecting to sign-in page.');
+        window.location.href = '/signin';
+        return;
+      }
+      
       throw error;
     }
   }

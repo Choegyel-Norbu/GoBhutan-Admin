@@ -11,7 +11,8 @@ import {
   Plus,
   Settings,
   Building,
-  Bed
+  Bed,
+  MapPin
 } from 'lucide-react';
 
 export const navigationItems = [
@@ -81,31 +82,38 @@ export const navigationItems = [
     clients: ['movie'] // Only for movie clients
   },
   {
-    title: 'Bus Management',
-    path: '/dashboard/bus-ticket-booking',
+    title: 'Bus',
+    path: '/dashboard/bus',
     icon: Bus,
-    description: 'Bus ticket bookings',
+    description: 'Bus management',
     clients: ['bus'], // Only for bus clients
     subcategories: [
       {
-        title: 'Add Bus',
+        title: 'Register Bus',
         path: '/dashboard/bus/add',
         icon: Plus,
-        description: 'Add new bus to system',
+        description: 'Register new bus to system',
+        clients: ['bus']
+      },
+      {
+        title: 'Bus Management',
+        path: '/dashboard/bus/manage',
+        icon: Bus,
+        description: 'Manage existing buses',
+        clients: ['bus']
+      },
+      {
+        title: 'Booking Management',
+        path: '/dashboard/bus/booking',
+        icon: Calendar,
+        description: 'Manage bus bookings and reservations',
         clients: ['bus']
       },
       {
         title: 'Bus Settings',
         path: '/dashboard/bus/settings',
         icon: Settings,
-        description: 'Configure bus preferences',
-        clients: ['bus']
-      },
-      {
-        title: 'Booking',
-        path: '/dashboard/bus/booking',
-        icon: Calendar,
-        description: 'Create new bus bookings',
+        description: 'Configure bus preferences and details',
         clients: ['bus']
       }
     ]

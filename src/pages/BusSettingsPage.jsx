@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Settings, Save, RefreshCw, Clock, MapPin, Users, DollarSign } from 'lucide-react';
+import { Save, RefreshCw } from 'lucide-react';
 import PageWrapper from '@/components/PageWrapper';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -107,12 +107,12 @@ function BusSettingsPage() {
   };
 
   const tabs = [
-    { id: 'general', label: 'General', icon: Settings },
-    { id: 'booking', label: 'Booking', icon: Users },
-    { id: 'pricing', label: 'Pricing', icon: DollarSign },
-    { id: 'notifications', label: 'Notifications', icon: Clock },
-    { id: 'routes', label: 'Routes', icon: MapPin },
-    { id: 'terms', label: 'Terms', icon: RefreshCw }
+    { id: 'general', label: 'General' },
+    { id: 'booking', label: 'Booking' },
+    { id: 'pricing', label: 'Pricing' },
+    { id: 'notifications', label: 'Notifications' },
+    { id: 'routes', label: 'Routes' },
+    { id: 'terms', label: 'Terms' }
   ];
 
   const renderGeneralSettings = () => (
@@ -451,8 +451,7 @@ function BusSettingsPage() {
         {/* Tab Navigation */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Settings className="h-5 w-5" />
+            <CardTitle>
               System Configuration
             </CardTitle>
             <CardDescription>
@@ -462,16 +461,13 @@ function BusSettingsPage() {
           <CardContent>
             <div className="flex flex-wrap gap-2 mb-6">
               {tabs.map((tab) => {
-                const Icon = tab.icon;
                 return (
                   <Button
                     key={tab.id}
                     variant={activeTab === tab.id ? "default" : "outline"}
                     size="sm"
                     onClick={() => setActiveTab(tab.id)}
-                    className="flex items-center gap-2"
                   >
-                    <Icon className="h-4 w-4" />
                     {tab.label}
                   </Button>
                 );

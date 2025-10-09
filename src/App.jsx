@@ -18,6 +18,8 @@ import FlightPage from './pages/FlightPage';
 import MoviePage from './pages/MoviePage';
 import BusPage from './pages/BusPage';
 import AddBusPage from './pages/AddBusPage';
+import BusManagementPage from './pages/BusManagementPage';
+import BusDetailsPage from './pages/BusDetailsPage';
 import BusSettingsPage from './pages/BusSettingsPage';
 import BusBookingPage from './pages/BusBookingPage';
 import SignInPage from './pages/SignInPage';
@@ -50,10 +52,16 @@ function App() {
             <Route path="hotel/reports" element={<HotelReportsPage />} />
             <Route path="flight" element={<FlightPage />} />
             <Route path="movie-ticketing" element={<MoviePage />} />
-            <Route path="bus-ticket-booking" element={<BusPage />} />
+            <Route path="bus" element={<BusPage />} />
             <Route path="bus/add" element={<AddBusPage />} />
+            <Route path="bus/manage" element={<BusManagementPage />} />
+            <Route path="bus/details/:busId" element={<BusDetailsPage />} />
             <Route path="bus/settings" element={<BusSettingsPage />} />
             <Route path="bus/booking" element={<BusBookingPage />} />
+            {/* Redirect old routes to new structure */}
+            <Route path="bus/routes" element={<Navigate to="/dashboard/bus/manage" replace />} />
+            <Route path="bus/schedules" element={<Navigate to="/dashboard/bus/manage" replace />} />
+            <Route path="bus-ticket-booking" element={<Navigate to="/dashboard/bus" replace />} />
           </Route>
         </Routes>
       </Router>

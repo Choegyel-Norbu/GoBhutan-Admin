@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
 import { Textarea } from '@/components/ui/Textarea';
 import { Select } from '@/components/ui/Select';
-import { Building, MapPin, Phone, Mail, Star, Wifi, Car, Dumbbell, Coffee, Shield, Utensils, Plus, Trash2 } from 'lucide-react';
+import { Building, MapPin, Phone, Mail, Star, Wifi, Car, Dumbbell, Coffee, Shield, Utensils, Plus, Trash2, Upload, Image as ImageIcon, Tv, Bath, Snowflake, Wind, Monitor, Clock, Coffee as CoffeeIcon } from 'lucide-react';
 import { apiClient } from '@/lib/apiService';
 import { API_CONFIG } from '@/lib/api';
 import authAPI from '@/lib/authAPI';
@@ -31,7 +31,8 @@ const AddHotel = () => {
       website: '',
       checkInTime: '',
       checkOutTime: '',
-      amenities: amenityOptions,
+      images: [],
+      amenities: hotelAmenityOptions,
       rooms: [{
         id: 0,
         roomNumber: '',
@@ -50,6 +51,7 @@ const AddHotel = () => {
         status: 'AVAILABLE',
         isActive: true,
         description: '',
+        amenities: roomAmenityOptions,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       }]
@@ -69,8 +71,8 @@ const AddHotel = () => {
     { value: 'VILLA', label: 'Villa', bedCount: 2, bedType: 'KING', roomSize: '100+ sqm' }
   ];
 
-  // Define amenity options first
-  const amenityOptions = [
+  // Define hotel amenity options first
+  const hotelAmenityOptions = [
     { 
       id: 1, 
       key: 'wifi', 
@@ -223,6 +225,110 @@ const AddHotel = () => {
     }
   ];
 
+  // Define room amenity options
+  const roomAmenityOptions = [
+    { 
+      id: 1, 
+      key: 'wifi', 
+      name: 'Free WiFi', 
+      description: 'Complimentary high-speed internet access',
+      iconClass: 'wifi',
+      category: 'BASIC',
+      icon: Wifi,
+      selected: false
+    },
+    { 
+      id: 2, 
+      key: 'tv', 
+      name: 'TV', 
+      description: 'Flat-screen television',
+      iconClass: 'tv',
+      category: 'ENTERTAINMENT',
+      icon: Tv,
+      selected: false
+    },
+    { 
+      id: 3, 
+      key: 'airConditioning', 
+      name: 'Air Conditioning', 
+      description: 'Climate control system',
+      iconClass: 'wind',
+      category: 'COMFORT',
+      icon: Wind,
+      selected: false
+    },
+    { 
+      id: 4, 
+      key: 'heating', 
+      name: 'Heating', 
+      description: 'Room heating system',
+      iconClass: 'snowflake',
+      category: 'COMFORT',
+      icon: Snowflake,
+      selected: false
+    },
+    { 
+      id: 5, 
+      key: 'minibar', 
+      name: 'Minibar', 
+      description: 'In-room minibar',
+      iconClass: 'coffee',
+      category: 'DINING',
+      icon: CoffeeIcon,
+      selected: false
+    },
+    { 
+      id: 6, 
+      key: 'safe', 
+      name: 'Safe', 
+      description: 'In-room safety deposit box',
+      iconClass: 'shield',
+      category: 'SECURITY',
+      icon: Shield,
+      selected: false
+    },
+    { 
+      id: 7, 
+      key: 'balcony', 
+      name: 'Balcony', 
+      description: 'Private balcony or terrace',
+      iconClass: 'building',
+      category: 'FEATURES',
+      icon: Building,
+      selected: false
+    },
+    { 
+      id: 8, 
+      key: 'bathtub', 
+      name: 'Bathtub', 
+      description: 'Private bathtub',
+      iconClass: 'bath',
+      category: 'BATHROOM',
+      icon: Bath,
+      selected: false
+    },
+    { 
+      id: 9, 
+      key: 'desk', 
+      name: 'Work Desk', 
+      description: 'Desk for work or study',
+      iconClass: 'monitor',
+      category: 'BUSINESS',
+      icon: Monitor,
+      selected: false
+    },
+    { 
+      id: 10, 
+      key: 'alarmClock', 
+      name: 'Alarm Clock', 
+      description: 'In-room alarm clock',
+      iconClass: 'clock',
+      category: 'CONVENIENCE',
+      icon: Clock,
+      selected: false
+    }
+  ];
+
   const [formData, setFormData] = useState({
     // Basic Information
     name: '',
@@ -245,8 +351,11 @@ const AddHotel = () => {
     checkInTime: '',
     checkOutTime: '',
     
+    // Hotel Images
+    images: [],
+    
     // Amenities
-    amenities: amenityOptions,
+    amenities: hotelAmenityOptions,
     
     // Rooms
     rooms: [{
@@ -266,6 +375,7 @@ const AddHotel = () => {
       status: 'AVAILABLE',
       isActive: true,
       description: '',
+      amenities: roomAmenityOptions,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     }]
@@ -504,6 +614,14 @@ const AddHotel = () => {
                 ...newRoom.roomType,
                 [fieldPath[1]]: type === 'checkbox' ? checked : value
               };
+            } else if (fieldPath.length === 2 && fieldPath[0] === 'amenities') {
+              // Room amenities field
+              const amenityKey = fieldPath[1];
+              newRoom.amenities = newRoom.amenities.map(amenity => 
+                amenity.key === amenityKey 
+                  ? { ...amenity, selected: checked }
+                  : amenity
+              );
             }
             return newRoom;
           }
@@ -610,6 +728,7 @@ const AddHotel = () => {
       status: 'AVAILABLE',
       isActive: true,
       description: '',
+      amenities: roomAmenityOptions,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
@@ -658,6 +777,30 @@ const AddHotel = () => {
       
       setErrors(adjustedErrors);
     }
+  };
+
+  const handleImageUpload = (e) => {
+    const files = Array.from(e.target.files);
+    const imageFiles = files.map(file => ({
+      id: Date.now() + Math.random(),
+      file: file,
+      name: file.name,
+      size: file.size,
+      type: file.type,
+      url: URL.createObjectURL(file)
+    }));
+    
+    setFormData(prev => ({
+      ...prev,
+      images: [...prev.images, ...imageFiles]
+    }));
+  };
+
+  const removeImage = (imageId) => {
+    setFormData(prev => ({
+      ...prev,
+      images: prev.images.filter(img => img.id !== imageId)
+    }));
   };
 
   const handleRoomTypeChange = (roomIndex, roomTypeValue) => {
@@ -1001,13 +1144,25 @@ const AddHotel = () => {
             maxOccupancy: room.maxOccupancy ? parseInt(room.maxOccupancy) : 0,
             status: room.status,
             isActive: room.isActive,
-            description: room.description
+            description: room.description,
+            amenities: room.amenities.filter(amenity => amenity.selected).map(amenity => ({
+              name: amenity.name,
+              description: amenity.description,
+              iconClass: amenity.iconClass,
+              category: amenity.category
+            }))
           })),
           amenities: formData.amenities.filter(amenity => amenity.selected).map(amenity => ({
             name: amenity.name,
             description: amenity.description,
             iconClass: amenity.iconClass,
             category: amenity.category
+          })),
+          images: formData.images.map(img => ({
+            name: img.name,
+            size: img.size,
+            type: img.type,
+            url: img.url
           }))
         };
 
@@ -1317,6 +1472,74 @@ const AddHotel = () => {
           </CardContent>
         </Card>
 
+        {/* Hotel Images */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-md">
+              <ImageIcon className="h-5 w-5" />
+              Hotel Images
+            </CardTitle>
+            <CardDescription>
+              Upload images of the hotel to showcase its features and rooms
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="images">Upload Images</Label>
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <p className="text-sm text-gray-600 mb-2">
+                  Drag and drop images here, or click to select files
+                </p>
+                <input
+                  id="images"
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  className="hidden"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => document.getElementById('images').click()}
+                >
+                  <Upload className="h-4 w-4 mr-2" />
+                  Choose Images
+                </Button>
+              </div>
+            </div>
+            
+            {formData.images.length > 0 && (
+              <div className="space-y-2">
+                <Label>Selected Images ({formData.images.length})</Label>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {formData.images.map((image) => (
+                    <div key={image.id} className="relative group">
+                      <img
+                        src={image.url}
+                        alt={image.name}
+                        className="w-full h-24 object-cover rounded-lg border"
+                      />
+                      <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => removeImage(image.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-1 truncate">{image.name}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Hotel Details */}
         <Card>
           <CardHeader>
@@ -1596,6 +1819,32 @@ const AddHotel = () => {
                   </div>
                 </div>
                 
+                {/* Room Amenities */}
+                <div className="mt-4">
+                  <h5 className="text-md font-medium mb-3">Room Amenities</h5>
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                    {room.amenities.map((amenity) => {
+                      const IconComponent = amenity.icon;
+                      return (
+                        <div key={amenity.key} className="flex items-center space-x-2">
+                          <input
+                            type="checkbox"
+                            id={`room-${roomIndex}-amenity-${amenity.key}`}
+                            name={`rooms.${roomIndex}.amenities.${amenity.key}`}
+                            checked={amenity.selected}
+                            onChange={handleInputChange}
+                            className="rounded border-gray-300"
+                          />
+                          <Label htmlFor={`room-${roomIndex}-amenity-${amenity.key}`} className="flex items-center gap-2 text-sm">
+                            <IconComponent className="h-4 w-4" />
+                            {amenity.name}
+                          </Label>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
                 {/* Room Description */}
                 <div className="mt-4 space-y-2">
                   <Label htmlFor={`room-${roomIndex}-description`}>Room Description</Label>

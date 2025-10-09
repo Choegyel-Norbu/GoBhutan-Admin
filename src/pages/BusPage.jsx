@@ -1,4 +1,3 @@
-import { Bus, MapPin, Clock, Users } from 'lucide-react';
 import PageWrapper from '@/components/PageWrapper';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -7,67 +6,97 @@ import DashboardCard from '@/components/DashboardCard';
 function BusPage() {
   return (
     <PageWrapper 
-      title="Bus Ticket Booking" 
-      description="Manage bus ticket reservations and route schedules."
+      title="Bus Management" 
+      description="Manage bus fleet operations and bookings."
     >
       {/* Stats */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         <DashboardCard
-          title="Active Routes"
+          title="Total Buses"
           value="12"
-          description="Operating today"
+          description="In fleet"
           trend="+2"
-          icon={MapPin}
         />
         <DashboardCard
-          title="Tickets Sold"
+          title="Active Routes"
+          value="8"
+          description="Operating today"
+          trend="+1"
+        />
+        <DashboardCard
+          title="Bookings Today"
           value="89"
-          description="Today's bookings"
+          description="Tickets sold"
           trend="+22%"
-          icon={Users}
-        />
-        <DashboardCard
-          title="Next Departure"
-          value="15 min"
-          description="Route to Thimphu"
-          icon={Clock}
         />
         <DashboardCard
           title="Fleet Status"
-          value="8/10"
-          description="Buses operational"
-          trend="80%"
-          icon={Bus}
+          value="80%"
+          description="Operational"
+          trend="+5%"
         />
       </div>
 
-      {/* Coming Soon Card */}
-      <Card className="text-center py-12">
+      {/* Quick Actions */}
+      <Card>
         <CardHeader>
-          <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
-            <Bus className="h-8 w-8 text-primary" />
+          <CardTitle>Quick Actions</CardTitle>
+          <CardDescription>
+            Common bus management tasks and operations.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <Button variant="outline" className="h-20 flex flex-col items-center justify-center gap-2">
+              <span className="text-lg">Register Bus</span>
+              <span className="text-sm text-muted-foreground">Add new bus to fleet</span>
+            </Button>
+            <Button variant="outline" className="h-20 flex flex-col items-center justify-center gap-2">
+              <span className="text-lg">Manage Fleet</span>
+              <span className="text-sm text-muted-foreground">View and edit buses</span>
+            </Button>
+            <Button variant="outline" className="h-20 flex flex-col items-center justify-center gap-2">
+              <span className="text-lg">Bookings</span>
+              <span className="text-sm text-muted-foreground">Manage reservations</span>
+            </Button>
+            <Button variant="outline" className="h-20 flex flex-col items-center justify-center gap-2">
+              <span className="text-lg">Settings</span>
+              <span className="text-sm text-muted-foreground">Configure system</span>
+            </Button>
           </div>
-          <CardTitle className="text-2xl">Bus Ticketing System</CardTitle>
-          <CardDescription className="text-lg max-w-2xl mx-auto">
-            Comprehensive bus booking platform coming soon! Manage routes, 
-            schedules, seat reservations, and passenger tracking.
+        </CardContent>
+      </Card>
+
+      {/* Recent Activity */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Recent Activity</CardTitle>
+          <CardDescription>
+            Latest bus operations and bookings.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <p className="text-muted-foreground">
-              Features in development:
-            </p>
-            <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-4 text-sm">
-              <div className="p-3 bg-muted rounded-lg">🚌 Route Planning</div>
-              <div className="p-3 bg-muted rounded-lg">🎫 Online Booking</div>
-              <div className="p-3 bg-muted rounded-lg">📍 Live Tracking</div>
-              <div className="p-3 bg-muted rounded-lg">💺 Seat Selection</div>
+            <div className="flex items-center justify-between p-4 border rounded-lg">
+              <div>
+                <p className="font-medium">New bus registered</p>
+                <p className="text-sm text-muted-foreground">BT-005 added to fleet</p>
+              </div>
+              <span className="text-sm text-muted-foreground">2 hours ago</span>
             </div>
-            <div className="pt-4">
-              <Button size="lg">
-                Get Notified When Ready
-              </Button>
+            <div className="flex items-center justify-between p-4 border rounded-lg">
+              <div>
+                <p className="font-medium">Booking confirmed</p>
+                <p className="text-sm text-muted-foreground">5 seats booked on BT-001</p>
+              </div>
+              <span className="text-sm text-muted-foreground">4 hours ago</span>
+            </div>
+            <div className="flex items-center justify-between p-4 border rounded-lg">
+              <div>
+                <p className="font-medium">Maintenance completed</p>
+                <p className="text-sm text-muted-foreground">BT-003 service finished</p>
+              </div>
+              <span className="text-sm text-muted-foreground">1 day ago</span>
             </div>
           </div>
         </CardContent>

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Bus, Plus, Save, X, AlertCircle } from 'lucide-react';
+import { Save, X, AlertCircle } from 'lucide-react';
 import PageWrapper from '@/components/PageWrapper';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -285,7 +285,7 @@ function AddBusPage() {
         {/* Form Card */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
+            <CardTitle className="text-lg">
               Bus Information
             </CardTitle>
             <CardDescription>

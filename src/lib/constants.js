@@ -6,7 +6,7 @@ export const ROUTES = {
   HOTEL: "/dashboard/hotel",
   FLIGHT: "/dashboard/flight",
   MOVIE: "/dashboard/movie-ticketing",
-  BUS: "/dashboard/bus-ticket-booking",
+  BUS: "/dashboard/bus",
 };
 
 export const STAT_CARDS = [
@@ -37,7 +37,7 @@ export const STAT_CARDS = [
 ];
 
 // API Configuration
-export const API_BASE_URL = 'https://6d10cb4d7a17.ngrok-free.app';
+export const API_BASE_URL = 'https://ffb4522489fb.ngrok-free.app';
 
 // Environment Configuration
 export const ENV = {

@@ -693,7 +693,10 @@ function BusDetailsPage() {
                     <MapPin className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
                     <h3 className="text-lg font-semibold mb-2">No routes found</h3>
                     <p className="text-muted-foreground mb-4">Add routes for this bus to get started.</p>
-                    <Button onClick={() => setShowAddRouteForm(true)}>
+                    <Button onClick={() => {
+                      setShowAddRouteForm(true);
+                      scrollToRouteForm();
+                    }}>
                       <Plus className="h-4 w-4 mr-2" />
                       Add First Route
                     </Button>
@@ -754,21 +757,33 @@ function BusDetailsPage() {
                             </div>
                             
                             <div className="flex gap-2 ml-4">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleEditRoute(route)}
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleDeleteRoute(route)}
-                                className="text-red-600 hover:text-red-700"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
+                              <div className="relative group">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleEditRoute(route)}
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-900 rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
+                                  Edit Route
+                                  <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+                                </div>
+                              </div>
+                              <div className="relative group">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleDeleteRoute(route)}
+                                  className="text-red-600 hover:text-red-700"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-900 rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
+                                  Delete Route
+                                  <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+                                </div>
+                              </div>
                             </div>
                           </div>
                         </CardContent>
@@ -803,7 +818,10 @@ function BusDetailsPage() {
                     <Calendar className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
                     <h3 className="text-lg font-semibold mb-2">No schedules found</h3>
                     <p className="text-muted-foreground mb-4">Add schedules for this bus to get started.</p>
-                    <Button onClick={() => setShowAddScheduleForm(true)}>
+                    <Button onClick={() => {
+                      setShowAddScheduleForm(true);
+                      scrollToScheduleForm();
+                    }}>
                       <Plus className="h-4 w-4 mr-2" />
                       Add First Schedule
                     </Button>
@@ -866,21 +884,33 @@ function BusDetailsPage() {
                               </div>
                               
                               <div className="flex gap-2 ml-4">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleEditSchedule(schedule)}
-                                >
-                                  <Edit className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleDeleteSchedule(schedule)}
-                                  className="text-red-600 hover:text-red-700"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
+                                <div className="relative group">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleEditSchedule(schedule)}
+                                  >
+                                    <Edit className="h-4 w-4" />
+                                  </Button>
+                                  <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-900 rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
+                                    Edit Schedule
+                                    <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+                                  </div>
+                                </div>
+                                <div className="relative group">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleDeleteSchedule(schedule)}
+                                    className="text-red-600 hover:text-red-700"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                  <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-900 rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
+                                    Delete Schedule
+                                    <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+                                  </div>
+                                </div>
                               </div>
                             </div>
                           </CardContent>

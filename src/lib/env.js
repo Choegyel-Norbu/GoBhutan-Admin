@@ -5,7 +5,7 @@ const getEnvVar = (key, defaultValue) => {
 
 export const ENV_CONFIG = {
   // API Configuration
-  API_BASE_URL: getEnvVar('VITE_API_BASE_URL', 'https://ffb4522489fb.ngrok-free.app'),
+  API_BASE_URL: getEnvVar('VITE_API_BASE_URL', 'https://1c40ba15ef84.ngrok-free.app'),
   
   // App Configuration
   APP_NAME: getEnvVar('VITE_APP_NAME', 'GoBhutan'),
@@ -23,9 +23,9 @@ export const ENV_CONFIG = {
 
 // API URLs for environments
 export const API_URLS = {
-  DEVELOPMENT: 'https://ffb4522489fb.ngrok-free.app',
-  STAGING: 'https://ffb4522489fb.ngrok-free.app',
-  PRODUCTION: 'https://ffb4522489fb.ngrok-free.app',
+  DEVELOPMENT: 'https://1c40ba15ef84.ngrok-free.app',
+  STAGING: 'https://1c40ba15ef84.ngrok-free.app',
+  PRODUCTION: 'https://1c40ba15ef84.ngrok-free.app',
 };
 
 // Get the appropriate API URL based on environment

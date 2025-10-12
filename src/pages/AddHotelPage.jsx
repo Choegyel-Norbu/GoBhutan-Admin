@@ -52,6 +52,7 @@ const AddHotel = () => {
         isActive: true,
         description: '',
         amenities: roomAmenityOptions,
+        images: [],
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       }]
@@ -376,6 +377,7 @@ const AddHotel = () => {
       isActive: true,
       description: '',
       amenities: roomAmenityOptions,
+      images: [],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     }]
@@ -729,6 +731,7 @@ const AddHotel = () => {
       isActive: true,
       description: '',
       amenities: roomAmenityOptions,
+      images: [],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
@@ -800,6 +803,46 @@ const AddHotel = () => {
     setFormData(prev => ({
       ...prev,
       images: prev.images.filter(img => img.id !== imageId)
+    }));
+  };
+
+  const handleRoomImageUpload = (e, roomIndex) => {
+    const files = Array.from(e.target.files);
+    const imageFiles = files.map(file => ({
+      id: Date.now() + Math.random(),
+      file: file,
+      name: file.name,
+      size: file.size,
+      type: file.type,
+      url: URL.createObjectURL(file)
+    }));
+    
+    setFormData(prev => ({
+      ...prev,
+      rooms: prev.rooms.map((room, index) => {
+        if (index === roomIndex) {
+          return {
+            ...room,
+            images: [...room.images, ...imageFiles]
+          };
+        }
+        return room;
+      })
+    }));
+  };
+
+  const removeRoomImage = (roomIndex, imageId) => {
+    setFormData(prev => ({
+      ...prev,
+      rooms: prev.rooms.map((room, index) => {
+        if (index === roomIndex) {
+          return {
+            ...room,
+            images: room.images.filter(img => img.id !== imageId)
+          };
+        }
+        return room;
+      })
     }));
   };
 
@@ -1116,57 +1159,72 @@ const AddHotel = () => {
     // Validate form - this will also handle scrolling to first error
     if (validateForm()) {
       try {
-        // Format the data according to the API schema
-        const payload = {
-          name: formData.name,
-          description: formData.description,
-          address: formData.address,
-          city: formData.city,
-          state: formData.state,
-          country: formData.country,
-          postalCode: formData.postalCode,
-          phoneNumber: formData.phoneNumber,
-          email: formData.email,
-          website: formData.website,
-          starRating: parseInt(formData.starRating) || 0,
-          checkInTime: formData.checkInTime,
-          checkOutTime: formData.checkOutTime,
-          rooms: formData.rooms.map((room) => ({
-            roomNumber: room.roomNumber,
-            roomType: {
-              name: room.roomType.name,
-              bedCount: room.roomType.bedCount ? parseInt(room.roomType.bedCount) : 0,
-              bedType: room.roomType.bedType,
-              roomSize: room.roomType.roomSize
-            },
-            floor: room.floor ? parseInt(room.floor) : 0,
-            basePrice: room.basePrice ? parseFloat(room.basePrice) : 0,
-            maxOccupancy: room.maxOccupancy ? parseInt(room.maxOccupancy) : 0,
-            status: room.status,
-            isActive: room.isActive,
-            description: room.description,
-            amenities: room.amenities.filter(amenity => amenity.selected).map(amenity => ({
-              name: amenity.name,
-              description: amenity.description,
-              iconClass: amenity.iconClass,
-              category: amenity.category
-            }))
-          })),
-          amenities: formData.amenities.filter(amenity => amenity.selected).map(amenity => ({
+        // Create FormData for file uploads
+        const formDataToSend = new FormData();
+        
+        // Add hotel data as individual fields
+        formDataToSend.append('name', formData.name);
+        formDataToSend.append('description', formData.description);
+        formDataToSend.append('address', formData.address);
+        formDataToSend.append('city', formData.city);
+        formDataToSend.append('state', formData.state);
+        formDataToSend.append('country', formData.country);
+        formDataToSend.append('postalCode', formData.postalCode);
+        formDataToSend.append('phoneNumber', formData.phoneNumber);
+        formDataToSend.append('email', formData.email);
+        formDataToSend.append('website', formData.website);
+        formDataToSend.append('starRating', parseInt(formData.starRating) || 0);
+        formDataToSend.append('checkInTime', formData.checkInTime);
+        formDataToSend.append('checkOutTime', formData.checkOutTime);
+        
+        // Add rooms as JSON string
+        const roomsData = formData.rooms.map((room) => ({
+          roomNumber: room.roomNumber,
+          roomType: {
+            name: room.roomType.name,
+            bedCount: room.roomType.bedCount ? parseInt(room.roomType.bedCount) : 0,
+            bedType: room.roomType.bedType,
+            roomSize: room.roomType.roomSize
+          },
+          floor: room.floor ? parseInt(room.floor) : 0,
+          basePrice: room.basePrice ? parseFloat(room.basePrice) : 0,
+          maxOccupancy: room.maxOccupancy ? parseInt(room.maxOccupancy) : 0,
+          status: room.status,
+          isActive: room.isActive,
+          description: room.description,
+          amenities: room.amenities.filter(amenity => amenity.selected).map(amenity => ({
             name: amenity.name,
             description: amenity.description,
             iconClass: amenity.iconClass,
             category: amenity.category
-          })),
-          images: formData.images.map(img => ({
-            name: img.name,
-            size: img.size,
-            type: img.type,
-            url: img.url
           }))
-        };
+        }));
+        formDataToSend.append('rooms', JSON.stringify(roomsData));
+        
+        // Add amenities as JSON string
+        const amenitiesData = formData.amenities.filter(amenity => amenity.selected).map(amenity => ({
+          name: amenity.name,
+          description: amenity.description,
+          iconClass: amenity.iconClass,
+          category: amenity.category
+        }));
+        formDataToSend.append('amenities', JSON.stringify(amenitiesData));
+        
+        // Add hotel images as files
+        formData.images.forEach((image, index) => {
+          formDataToSend.append(`hotelImages`, image.file);
+        });
+        
+        // Add room images as files
+        formData.rooms.forEach((room, roomIndex) => {
+          if (room.images && room.images.length > 0) {
+            room.images.forEach((image, imageIndex) => {
+              formDataToSend.append(`roomImages`, image.file);
+            });
+          }
+        });
 
-        console.log('Hotel payload:', payload);
+        console.log('Hotel FormData:', formDataToSend);
         
         // Get stored token and set it on the API client
         const token = authAPI.getStoredToken();
@@ -1174,11 +1232,11 @@ const AddHotel = () => {
           apiClient.setAuthToken(token);
         }
         
-        // Make API call to POST /api/v1/hotels
+        // Make API call to POST /api/v1/hotels with FormData
         console.log('Making API call to:', API_CONFIG.ENDPOINTS.HOTEL.HOTELS);
-        console.log('Request payload:', payload);
+        console.log('Request FormData:', formDataToSend);
         
-        const response = await apiClient.post(API_CONFIG.ENDPOINTS.HOTEL.HOTELS, payload);
+        const response = await apiClient.postFormData(API_CONFIG.ENDPOINTS.HOTEL.HOTELS, formDataToSend);
         
         console.log('API Response:', response);
         
@@ -1843,6 +1901,65 @@ const AddHotel = () => {
                       );
                     })}
                   </div>
+                </div>
+
+                {/* Room Images */}
+                <div className="mt-4">
+                  <h5 className="text-md font-medium mb-3">Room Images</h5>
+                  <div className="space-y-2">
+                    <Label htmlFor={`room-images-${roomIndex}`}>Upload Room Images</Label>
+                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+                      <Upload className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                      <p className="text-sm text-gray-600 mb-2">
+                        Upload images for this room
+                      </p>
+                      <input
+                        id={`room-images-${roomIndex}`}
+                        type="file"
+                        multiple
+                        accept="image/*"
+                        onChange={(e) => handleRoomImageUpload(e, roomIndex)}
+                        className="hidden"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => document.getElementById(`room-images-${roomIndex}`).click()}
+                      >
+                        <Upload className="h-4 w-4 mr-2" />
+                        Choose Images
+                      </Button>
+                    </div>
+                  </div>
+                  
+                  {room.images && room.images.length > 0 && (
+                    <div className="mt-4 space-y-2">
+                      <Label>Selected Room Images ({room.images.length})</Label>
+                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                        {room.images.map((image) => (
+                          <div key={image.id} className="relative group">
+                            <img
+                              src={image.url}
+                              alt={image.name}
+                              className="w-full h-20 object-cover rounded-lg border"
+                            />
+                            <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
+                              <Button
+                                type="button"
+                                variant="destructive"
+                                size="sm"
+                                onClick={() => removeRoomImage(roomIndex, image.id)}
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
+                            <p className="text-xs text-gray-500 mt-1 truncate">{image.name}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Room Description */}

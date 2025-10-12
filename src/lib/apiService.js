@@ -221,6 +221,22 @@ class ApiClient {
     });
   }
 
+  async postFormData(endpoint, formData, options = {}) {
+    // Remove Content-Type header to let browser set it with boundary for FormData
+    const headers = { ...this.defaultHeaders };
+    delete headers['Content-Type'];
+    
+    return this.request(endpoint, {
+      ...options,
+      method: 'POST',
+      headers: {
+        ...headers,
+        ...options.headers,
+      },
+      body: formData,
+    });
+  }
+
   async put(endpoint, data, options = {}) {
     return this.request(endpoint, {
       ...options,

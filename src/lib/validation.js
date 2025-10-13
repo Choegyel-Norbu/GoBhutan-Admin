@@ -177,7 +177,7 @@ export const validateClients = (clients) => {
   if (!clients || !Array.isArray(clients) || clients.length === 0) {
     return {
       isValid: false,
-      message: 'Please select at least one client type'
+      message: 'Please select at least one service'
     };
   }
 
@@ -189,7 +189,7 @@ export const validateClients = (clients) => {
   if (invalidClients.length > 0) {
     return {
       isValid: false,
-      message: 'Please select valid client types only'
+      message: 'Please select valid services only'
     };
   }
 
@@ -265,7 +265,6 @@ export const validateSignUpForm = (formData) => {
   const emailValidation = validateEmail(formData.email);
   const passwordValidation = validatePassword(formData.password);
   const firstNameValidation = validateFirstName(formData.firstName);
-  const lastNameValidation = validateLastName(formData.lastName);
   const clientsValidation = validateClients(formData.clients);
   const confirmPasswordValidation = validateConfirmPassword(formData.password, formData.confirmPassword);
 
@@ -292,11 +291,6 @@ export const validateSignUpForm = (formData) => {
     messages.firstName = firstNameValidation.message;
   }
 
-  if (!lastNameValidation.isValid) {
-    errors.lastName = lastNameValidation.message;
-    messages.lastName = lastNameValidation.message;
-  }
-
   if (!clientsValidation.isValid) {
     errors.clients = clientsValidation.message;
     messages.clients = clientsValidation.message;
@@ -312,7 +306,6 @@ export const validateSignUpForm = (formData) => {
              emailValidation.isValid && 
              passwordValidation.isValid && 
              firstNameValidation.isValid && 
-             lastNameValidation.isValid && 
              clientsValidation.isValid && 
              confirmPasswordValidation.isValid,
     errors,

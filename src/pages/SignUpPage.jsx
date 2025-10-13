@@ -289,14 +289,13 @@ const SignUpPage = () => {
     setSubmitError('');
     setValidationErrors({});
     
-    // Mark all fields as touched
+    // Mark all fields as touched (except lastName which is optional)
     setTouched({
       username: true,
       email: true,
       password: true,
       confirmPassword: true,
       firstName: true,
-      lastName: true,
       clients: true
     });
     
@@ -534,7 +533,7 @@ const SignUpPage = () => {
                       htmlFor="lastName" 
                       className="block text-sm font-medium text-gray-700 mb-1"
                     >
-                      Last Name <span className="text-blue-500">*</span>
+                      Last Name
                     </label>
                     <input
                       id="lastName"

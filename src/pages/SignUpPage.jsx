@@ -667,15 +667,6 @@ const SignUpPage = () => {
                       {validationErrors.password}
                     </p>
                   )}
-                  <div className="mt-2 text-sm text-gray-600">
-                    <p>Password must contain:</p>
-                    <ul className="list-disc list-inside mt-1 space-y-1">
-                      <li>At least 8 characters</li>
-                      <li>One uppercase letter</li>
-                      <li>One lowercase letter</li>
-                      <li>One number</li>
-                    </ul>
-                  </div>
                 </div>
 
                 {/* Confirm Password Field */}
@@ -726,87 +717,96 @@ const SignUpPage = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-3">
                     Services <span className="text-blue-500">*</span>
                   </label>
-                  <div className="space-y-2">
-                    <div className="flex items-center">
-                      <input
-                        id="bus-client"
-                        name="clients"
-                        type="checkbox"
-                        value="bus"
-                        checked={formData.clients.includes('bus')}
-                        onChange={handleClientsChange}
-                        onBlur={handleInputBlur}
-                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded disabled:opacity-50"
-                        disabled={isLoading}
-                      />
-                      <label htmlFor="bus-client" className="ml-2 block text-sm text-gray-900">
-                        Bus Client
-                      </label>
+                  <div className="space-y-3">
+                    {/* First Row: Bus, Hotel, Flight */}
+                    <div className="flex items-center space-x-6">
+                      <div className="flex items-center">
+                        <input
+                          id="bus-client"
+                          name="clients"
+                          type="checkbox"
+                          value="bus"
+                          checked={formData.clients.includes('bus')}
+                          onChange={handleClientsChange}
+                          onBlur={handleInputBlur}
+                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded disabled:opacity-50"
+                          disabled={isLoading}
+                        />
+                        <label htmlFor="bus-client" className="ml-2 block text-sm text-gray-900">
+                          Bus
+                        </label>
+                      </div>
+                      <div className="flex items-center">
+                        <input
+                          id="hotel-client"
+                          name="clients"
+                          type="checkbox"
+                          value="hotel"
+                          checked={formData.clients.includes('hotel')}
+                          onChange={handleClientsChange}
+                          onBlur={handleInputBlur}
+                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded disabled:opacity-50"
+                          disabled={isLoading}
+                        />
+                        <label htmlFor="hotel-client" className="ml-2 block text-sm text-gray-900">
+                          Hotel
+                        </label>
+                      </div>
+                      <div className="flex items-center">
+                        <input
+                          id="flight-client"
+                          name="clients"
+                          type="checkbox"
+                          value="flight"
+                          checked={formData.clients.includes('flight')}
+                          onChange={handleClientsChange}
+                          onBlur={handleInputBlur}
+                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded disabled:opacity-50"
+                          disabled={isLoading}
+                        />
+                        <label htmlFor="flight-client" className="ml-2 block text-sm text-gray-900">
+                          Flight
+                        </label>
+                      </div>
                     </div>
-                    <div className="flex items-center">
-                      <input
-                        id="hotel-client"
-                        name="clients"
-                        type="checkbox"
-                        value="hotel"
-                        checked={formData.clients.includes('hotel')}
-                        onChange={handleClientsChange}
-                        onBlur={handleInputBlur}
-                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded disabled:opacity-50"
-                        disabled={isLoading}
-                      />
-                      <label htmlFor="hotel-client" className="ml-2 block text-sm text-gray-900">
-                        Hotel Client
-                      </label>
+                    
+                    {/* Second Row: Taxi, Movie */}
+                    <div className="flex items-center space-x-6">
+                      <div className="flex items-center">
+                        <input
+                          id="taxi-client"
+                          name="clients"
+                          type="checkbox"
+                          value="taxi"
+                          checked={formData.clients.includes('taxi')}
+                          onChange={handleClientsChange}
+                          onBlur={handleInputBlur}
+                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded disabled:opacity-50"
+                          disabled={isLoading}
+                        />
+                        <label htmlFor="taxi-client" className="ml-2 block text-sm text-gray-900">
+                          Taxi
+                        </label>
+                      </div>
+                      <div className="flex items-center">
+                        <input
+                          id="movie-client"
+                          name="clients"
+                          type="checkbox"
+                          value="movie"
+                          checked={formData.clients.includes('movie')}
+                          onChange={handleClientsChange}
+                          onBlur={handleInputBlur}
+                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded disabled:opacity-50"
+                          disabled={isLoading}
+                        />
+                        <label htmlFor="movie-client" className="ml-2 block text-sm text-gray-900">
+                          Movie
+                        </label>
+                      </div>
                     </div>
-                    <div className="flex items-center">
-                      <input
-                        id="flight-client"
-                        name="clients"
-                        type="checkbox"
-                        value="flight"
-                        checked={formData.clients.includes('flight')}
-                        onChange={handleClientsChange}
-                        onBlur={handleInputBlur}
-                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded disabled:opacity-50"
-                        disabled={isLoading}
-                      />
-                      <label htmlFor="flight-client" className="ml-2 block text-sm text-gray-900">
-                        Flight Client
-                      </label>
-                    </div>
-                    <div className="flex items-center">
-                      <input
-                        id="taxi-client"
-                        name="clients"
-                        type="checkbox"
-                        value="taxi"
-                        checked={formData.clients.includes('taxi')}
-                        onChange={handleClientsChange}
-                        onBlur={handleInputBlur}
-                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded disabled:opacity-50"
-                        disabled={isLoading}
-                      />
-                      <label htmlFor="taxi-client" className="ml-2 block text-sm text-gray-900">
-                        Taxi Client
-                      </label>
-                    </div>
-                    <div className="flex items-center">
-                      <input
-                        id="movie-client"
-                        name="clients"
-                        type="checkbox"
-                        value="movie"
-                        checked={formData.clients.includes('movie')}
-                        onChange={handleClientsChange}
-                        onBlur={handleInputBlur}
-                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded disabled:opacity-50"
-                        disabled={isLoading}
-                      />
-                      <label htmlFor="movie-client" className="ml-2 block text-sm text-gray-900">
-                        Movie Client
-                      </label>
-                    </div>
+                    
+                    {/* Third Row: All Services */}
                     <div className="flex items-center mb-4">
                       <input
                         id="all-client"
@@ -820,7 +820,7 @@ const SignUpPage = () => {
                         disabled={isLoading}
                       />
                       <label htmlFor="all-client" className="ml-2 block text-sm text-gray-900">
-                        All Services Client
+                        All Services
                       </label>
                     </div>
                   </div>

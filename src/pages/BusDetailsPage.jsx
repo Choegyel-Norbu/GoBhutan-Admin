@@ -77,7 +77,7 @@ function BusDetailsPage() {
       }
       
       // Load only routes for this specific bus
-      const routesResponse = await api.bus.getRoutes();
+      const routesResponse = await api.bus.getRoutes(parseInt(busId));
       
       console.log('Routes API Response:', routesResponse); // Debug log
       
@@ -88,9 +88,8 @@ function BusDetailsPage() {
       
       console.log('Parsed routes data:', routesData); // Debug log
       
-      // Since routes don't have busId, we'll show all routes for now
-      // TODO: Implement proper filtering when busId is available in routes
-      const busRoutes = routesData.filter(route => route && route.id); // Filter valid routes
+      // Filter valid routes for this bus
+      const busRoutes = routesData.filter(route => route && route.id);
       
       // Use bus data from navigation state if available, otherwise create minimal bus object
       const busFromState = location.state?.bus;
@@ -128,7 +127,7 @@ function BusDetailsPage() {
       setSchedulesLoading(true);
       
       // Load schedules for this specific bus
-      const schedulesResponse = await api.bus.getSchedules();
+      const schedulesResponse = await api.bus.getSchedules(parseInt(busId));
       
       console.log('Schedules API Response:', schedulesResponse); // Debug log
       
@@ -139,9 +138,8 @@ function BusDetailsPage() {
       
       console.log('Parsed schedules data:', schedulesData); // Debug log
       
-      // Since schedules don't have busId, we'll show all schedules for now
-      // TODO: Implement proper filtering when busId is available in schedules
-      const busSchedules = schedulesData.filter(schedule => schedule && schedule.id); // Filter valid schedules
+      // Filter valid schedules for this bus
+      const busSchedules = schedulesData.filter(schedule => schedule && schedule.id);
       
       setSchedules(busSchedules);
       setSchedulesLoaded(true);

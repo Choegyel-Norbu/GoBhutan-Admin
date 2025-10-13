@@ -362,11 +362,17 @@ export const api = {
     createBooking: (booking) => apiClient.post(API_CONFIG.ENDPOINTS.BUS.BOOKINGS, booking),
     updateBooking: (id, booking) => apiClient.put(`${API_CONFIG.ENDPOINTS.BUS.BOOKINGS}/${id}`, booking),
     deleteBooking: (id) => apiClient.delete(`${API_CONFIG.ENDPOINTS.BUS.BOOKINGS}/${id}`),
-    getRoutes: () => apiClient.get(API_CONFIG.ENDPOINTS.BUS.ROUTES),
+    getRoutes: (busId = null) => {
+      const endpoint = busId ? `${API_CONFIG.ENDPOINTS.BUS.ROUTES}/bus/${busId}` : API_CONFIG.ENDPOINTS.BUS.ROUTES;
+      return apiClient.get(endpoint);
+    },
     createRoute: (route) => apiClient.post(API_CONFIG.ENDPOINTS.BUS.ROUTES, route),
     updateRoute: (id, route) => apiClient.put(`${API_CONFIG.ENDPOINTS.BUS.ROUTES}/${id}`, route),
     deleteRoute: (id) => apiClient.delete(`${API_CONFIG.ENDPOINTS.BUS.ROUTES}/${id}`),
-    getSchedules: () => apiClient.get(API_CONFIG.ENDPOINTS.BUS.SCHEDULES),
+    getSchedules: (busId = null) => {
+      const endpoint = busId ? `${API_CONFIG.ENDPOINTS.BUS.SCHEDULES}/bus/${busId}` : API_CONFIG.ENDPOINTS.BUS.SCHEDULES;
+      return apiClient.get(endpoint);
+    },
     createSchedule: (schedule) => apiClient.post(API_CONFIG.ENDPOINTS.BUS.SCHEDULES, schedule),
     updateSchedule: (id, schedule) => apiClient.put(`${API_CONFIG.ENDPOINTS.BUS.SCHEDULES}/${id}`, schedule),
     deleteSchedule: (id) => apiClient.delete(`${API_CONFIG.ENDPOINTS.BUS.SCHEDULES}/${id}`),

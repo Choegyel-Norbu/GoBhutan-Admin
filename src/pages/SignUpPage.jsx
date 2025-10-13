@@ -363,8 +363,8 @@ const SignUpPage = () => {
   const handleClientsChange = (e) => {
     const { value, checked } = e.target;
     
-    // Define all available services
-    const allServices = ['bus', 'hotel', 'flight', 'taxi', 'movie'];
+    // Define all available services (removed flight)
+    const allServices = ['bus', 'hotel', 'taxi', 'movie'];
     
     if (value === 'all') {
       // If "All Services Client" is checked, select all services
@@ -718,7 +718,7 @@ const SignUpPage = () => {
                     Services <span className="text-blue-500">*</span>
                   </label>
                   <div className="space-y-3">
-                    {/* First Row: Bus, Hotel, Flight */}
+                    {/* First Row: Bus, Hotel, Taxi, Movie */}
                     <div className="flex items-center space-x-6">
                       <div className="flex items-center">
                         <input
@@ -754,26 +754,6 @@ const SignUpPage = () => {
                       </div>
                       <div className="flex items-center">
                         <input
-                          id="flight-client"
-                          name="clients"
-                          type="checkbox"
-                          value="flight"
-                          checked={formData.clients.includes('flight')}
-                          onChange={handleClientsChange}
-                          onBlur={handleInputBlur}
-                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded disabled:opacity-50"
-                          disabled={isLoading}
-                        />
-                        <label htmlFor="flight-client" className="ml-2 block text-sm text-gray-900">
-                          Flight
-                        </label>
-                      </div>
-                    </div>
-                    
-                    {/* Second Row: Taxi, Movie */}
-                    <div className="flex items-center space-x-6">
-                      <div className="flex items-center">
-                        <input
                           id="taxi-client"
                           name="clients"
                           type="checkbox"
@@ -806,7 +786,7 @@ const SignUpPage = () => {
                       </div>
                     </div>
                     
-                    {/* Third Row: All Services */}
+                    {/* Second Row: All Services */}
                     <div className="flex items-center mb-4">
                       <input
                         id="all-client"
@@ -824,6 +804,14 @@ const SignUpPage = () => {
                       </label>
                     </div>
                   </div>
+                  
+                  {/* Note */}
+                  <div className="mt-2 mb-4">
+                    <p className="text-xs text-gray-600 italic">
+                      Note: You can select multiple services if you own them.
+                    </p>
+                  </div>
+                  
                   {touched.clients && validationErrors.clients && (
                     <p id="clients-error" className="mt-2 text-sm text-red-600">
                       {validationErrors.clients}

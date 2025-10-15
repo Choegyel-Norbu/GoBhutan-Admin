@@ -421,10 +421,6 @@ const AddRoomTypePage = () => {
           </div>
         </CardHeader>
         <CardContent>
-          {/* Debug info */}
-          <div className="mb-4 p-2 bg-gray-100 rounded text-xs">
-            Debug: loading={loading.toString()}, roomTypes.length={roomTypes.length}
-          </div>
           
           {loading ? (
             <div className="flex justify-center items-center py-8">

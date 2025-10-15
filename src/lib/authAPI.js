@@ -268,11 +268,38 @@ export const authAPI = {
   },
 
   /**
-   * Sign out user (alias for logout)
+   * Sign out user using the new signout endpoint
    * @returns {Promise} - Axios response
    */
   signOut: async () => {
-    return authAPI.logout();
+    try {
+      const authData = getStoredAuthData();
+      
+      // If we have auth data, try to call the signout endpoint
+      if (authData?.username && authData?.refreshToken) {
+        const signoutPayload = {
+          username: authData.username,
+          refreshToken: authData.refreshToken
+        };
+        
+        const response = await apiClient.post(API_CONFIG.ENDPOINTS.AUTH.SIGNOUT, signoutPayload);
+        
+        // Clear stored data after successful signout
+        clearStoredAuthData();
+        
+        return response;
+      } else {
+        // If no auth data, just clear local storage
+        clearStoredAuthData();
+        return { data: { success: true, message: 'Signed out successfully' } };
+      }
+    } catch (error) {
+      // Even if signout fails on server, clear local data
+      clearStoredAuthData();
+      
+      console.warn('Signout request failed, but local data cleared:', error.message);
+      return { data: { success: true, message: 'Signed out successfully' } };
+    }
   },
 
   /**

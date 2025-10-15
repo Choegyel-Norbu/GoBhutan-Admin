@@ -298,6 +298,7 @@ export const api = {
   auth: {
     login: (credentials) => apiClient.post(API_CONFIG.ENDPOINTS.AUTH.LOGIN, credentials),
     logout: () => apiClient.post(API_CONFIG.ENDPOINTS.AUTH.LOGOUT),
+    signout: (signoutData) => apiClient.post(API_CONFIG.ENDPOINTS.AUTH.SIGNOUT, signoutData),
     getProfile: () => apiClient.get(API_CONFIG.ENDPOINTS.AUTH.PROFILE),
     refreshToken: () => apiClient.post(API_CONFIG.ENDPOINTS.AUTH.REFRESH),
   },

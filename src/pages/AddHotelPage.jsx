@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -11,9 +11,51 @@ import { API_CONFIG } from '@/lib/api';
 import authAPI from '@/lib/authAPI';
 import Swal from 'sweetalert2';
 
-const AddHotel = () => {
+const AddHotel = ({ hotelId = null }) => {
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [roomTypes, setRoomTypes] = useState([]);
+  const [isLoadingRoomTypes, setIsLoadingRoomTypes] = useState(false);
+
+  // Fetch room types on component mount
+  useEffect(() => {
+    const fetchRoomTypes = async (hotelId = null) => {
+      setIsLoadingRoomTypes(true);
+      try {
+        const token = authAPI.getStoredToken();
+        if (token) {
+          apiClient.setAuthToken(token);
+        }
+        
+        // Use hotel-specific endpoint if hotelId is provided, otherwise use general endpoint
+        const endpoint = hotelId 
+          ? `${API_CONFIG.ENDPOINTS.HOTEL.ROOM_TYPES_BY_HOTEL}/${hotelId}`
+          : API_CONFIG.ENDPOINTS.HOTEL.ROOM_TYPES;
+        
+        console.log('Fetching room types from:', endpoint);
+        const response = await apiClient.get(endpoint);
+        console.log('Room types response:', response);
+        
+        if (response && Array.isArray(response)) {
+          setRoomTypes(response);
+        } else if (response && response.data && Array.isArray(response.data)) {
+          setRoomTypes(response.data);
+        } else {
+          console.warn('Unexpected room types response format:', response);
+          setRoomTypes([]);
+        }
+      } catch (error) {
+        console.error('Error fetching room types:', error);
+        // Fallback to empty array if API fails
+        setRoomTypes([]);
+      } finally {
+        setIsLoadingRoomTypes(false);
+      }
+    };
+
+    // Use hotelId prop if available, otherwise use general endpoint for new hotels
+    fetchRoomTypes(hotelId);
+  }, [hotelId]);
 
   // Function to clear all form fields
   const clearForm = () => {
@@ -60,17 +102,6 @@ const AddHotel = () => {
     setErrors({});
   };
   
-  // Define room type options
-  const roomTypeOptions = [
-    { value: 'STANDARD', label: 'Standard Room', bedCount: 1, bedType: 'SINGLE', roomSize: '20-25 sqm' },
-    { value: 'DELUXE', label: 'Deluxe Room', bedCount: 1, bedType: 'QUEEN', roomSize: '30-35 sqm' },
-    { value: 'SUPERIOR', label: 'Superior Room', bedCount: 1, bedType: 'KING', roomSize: '35-40 sqm' },
-    { value: 'SUITE', label: 'Suite', bedCount: 1, bedType: 'KING', roomSize: '50+ sqm' },
-    { value: 'FAMILY', label: 'Family Room', bedCount: 2, bedType: 'DOUBLE', roomSize: '40-45 sqm' },
-    { value: 'TWIN', label: 'Twin Room', bedCount: 2, bedType: 'TWIN', roomSize: '25-30 sqm' },
-    { value: 'APARTMENT', label: 'Apartment', bedCount: 1, bedType: 'QUEEN', roomSize: '60+ sqm' },
-    { value: 'VILLA', label: 'Villa', bedCount: 2, bedType: 'KING', roomSize: '100+ sqm' }
-  ];
 
   // Define hotel amenity options first
   const hotelAmenityOptions = [
@@ -846,8 +877,8 @@ const AddHotel = () => {
     }));
   };
 
-  const handleRoomTypeChange = (roomIndex, roomTypeValue) => {
-    const selectedRoomType = roomTypeOptions.find(option => option.value === roomTypeValue);
+  const handleRoomTypeChange = (roomIndex, roomTypeId) => {
+    const selectedRoomType = roomTypes.find(roomType => roomType.id === parseInt(roomTypeId));
     
     if (selectedRoomType) {
       setFormData(prev => ({
@@ -858,10 +889,11 @@ const AddHotel = () => {
               ...room,
               roomType: {
                 ...room.roomType,
-                name: selectedRoomType.value,
-                bedCount: selectedRoomType.bedCount,
-                bedType: selectedRoomType.bedType,
-                roomSize: selectedRoomType.roomSize
+                id: selectedRoomType.id,
+                name: selectedRoomType.name,
+                description: selectedRoomType.description
+                // Note: bedCount, bedType, and roomSize are now user-editable fields
+                // and will not be auto-populated from the room type
               }
             };
           }
@@ -872,8 +904,6 @@ const AddHotel = () => {
       // Clear validation errors for room type fields
       const newErrors = { ...errors };
       delete newErrors[`rooms_${roomIndex}_roomType_name`];
-      delete newErrors[`rooms_${roomIndex}_roomType_bedCount`];
-      delete newErrors[`rooms_${roomIndex}_roomType_bedType`];
       setErrors(newErrors);
     }
   };
@@ -1804,19 +1834,29 @@ const AddHotel = () => {
                 {/* Room Type Details */}
                 <div className="mt-4">
                   <h5 className="text-md font-medium mb-3">Room Type Details</h5>
+                  <p className="text-sm text-gray-600 mb-3">
+                    Select a room type and manually enter the bed count, bed type, and room size details.
+                    {hotelId ? ' Showing room types specific to this hotel.' : ' Showing all available room types.'}
+                  </p>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor={`room-${roomIndex}-roomType`}>Room Type *</Label>
                       <Select
                         id={`room-${roomIndex}-roomType`}
-                        value={room.roomType.name}
+                        value={room.roomType.id || ''}
                         onChange={(e) => handleRoomTypeChange(roomIndex, e.target.value)}
                         className={errors[`rooms_${roomIndex}_roomType_name`] ? 'border-red-500' : ''}
+                        disabled={isLoadingRoomTypes}
                       >
-                        <option value="">Select room type</option>
-                        {roomTypeOptions.map((roomType) => (
-                          <option key={roomType.value} value={roomType.value}>
-                            {roomType.label}
+                        <option value="">
+                          {isLoadingRoomTypes ? 
+                            (hotelId ? 'Loading hotel room types...' : 'Loading room types...') : 
+                           roomTypes.length === 0 ? 'No room types available' : 
+                           'Select room type'}
+                        </option>
+                        {roomTypes.map((roomType) => (
+                          <option key={roomType.id} value={roomType.id}>
+                            {roomType.name}
                           </option>
                         ))}
                       </Select>

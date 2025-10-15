@@ -6,6 +6,7 @@ import DashboardPage from './pages/DashboardPage';
 import TaxiPage from './pages/TaxiPage';
 import HotelPage from './pages/HotelPage';
 import AddHotelPage from './pages/AddHotelPage';
+import AddRoomTypePage from './pages/AddRoomTypePage';
 import RoomManager from './pages/RoomManager';
 import BookHotelPage from './pages/BookHotelPage';
 import SearchHotelsPage from './pages/SearchHotelsPage';
@@ -28,7 +29,7 @@ import SignUpPage from './pages/SignUpPage';
 function App() {
   return (
     <AuthProvider>
-      <Router>
+      <Router future={{ v7_relativeSplatPath: true }}>
         <Routes>
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/signin" element={<SignInPage />} />
@@ -41,8 +42,9 @@ function App() {
             <Route index element={<DashboardPage />} />
             <Route path="taxi" element={<TaxiPage />} />
             <Route path="hotel" element={<HotelPage />} />
-          <Route path="hotel/add" element={<AddHotelPage />} />
+            <Route path="hotel/add" element={<AddHotelPage />} />
             <Route path="hotel/add-rooms" element={<RoomManager />} />
+            <Route path="hotel/room-types" element={<AddRoomTypePage />} />
             <Route path="hotel/book" element={<BookHotelPage />} />
             <Route path="hotel/search" element={<SearchHotelsPage />} />
             <Route path="hotel/bookings" element={<ViewBookingsPage />} />

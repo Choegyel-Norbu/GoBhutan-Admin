@@ -12,7 +12,8 @@ import {
   Settings,
   Building,
   Bed,
-  MapPin
+  MapPin,
+  Home
 } from 'lucide-react';
 
 export const navigationItems = [
@@ -49,6 +50,13 @@ export const navigationItems = [
         path: '/dashboard/hotel/add-rooms',
         icon: Bed,
         description: 'Manage rooms for existing hotels',
+        clients: ['hotel']
+      },
+      {
+        title: 'Room Types',
+        path: '/dashboard/hotel/room-types',
+        icon: Home,
+        description: 'Manage room types and configurations',
         clients: ['hotel']
       },
       {

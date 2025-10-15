@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
 import { Textarea } from '@/components/ui/Textarea';
-import { Home } from 'lucide-react';
+import { Home, Edit, Trash2, Plus } from 'lucide-react';
 import { apiClient } from '@/lib/apiService';
 import { API_CONFIG } from '@/lib/api';
 import authAPI from '@/lib/authAPI';
@@ -13,11 +13,140 @@ import Swal from 'sweetalert2';
 const AddRoomTypePage = () => {
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [roomTypes, setRoomTypes] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [editingRoomType, setEditingRoomType] = useState(null);
+  const [showForm, setShowForm] = useState(false);
 
   const [formData, setFormData] = useState({
     name: '',
     description: ''
   });
+
+  // Fetch room types on component mount
+  useEffect(() => {
+    fetchRoomTypes();
+  }, []);
+
+
+  // Fetch all room types
+  const fetchRoomTypes = async () => {
+    setLoading(true);
+    try {
+      const token = authAPI.getStoredToken();
+      if (token) {
+        apiClient.setAuthToken(token);
+      }
+      
+      console.log('Fetching room types from:', API_CONFIG.ENDPOINTS.HOTEL.ROOM_TYPES);
+      const response = await apiClient.get(API_CONFIG.ENDPOINTS.HOTEL.ROOM_TYPES);
+      
+      console.log('Room types API response:', response);
+      
+      // Handle different response formats like other pages do
+      if (response && Array.isArray(response)) {
+        console.log('Setting room types (direct array):', response);
+        setRoomTypes(response);
+      } else if (response && response.success && Array.isArray(response.data)) {
+        console.log('Setting room types (success with data array):', response.data);
+        setRoomTypes(response.data);
+      } else if (response && response.data && Array.isArray(response.data)) {
+        console.log('Setting room types (data array):', response.data);
+        setRoomTypes(response.data);
+      } else {
+        console.warn('Unexpected room types response format:', response);
+        setRoomTypes([]);
+      }
+    } catch (error) {
+      console.error('Error fetching room types:', error);
+      console.error('Error details:', {
+        message: error.message,
+        status: error.status,
+        response: error.response,
+        stack: error.stack
+      });
+      
+      // Set empty array on error to show empty state
+      setRoomTypes([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle edit room type
+  const handleEdit = (roomType) => {
+    setEditingRoomType(roomType);
+    setFormData({
+      name: roomType.name,
+      description: roomType.description
+    });
+    setShowForm(true);
+    
+    // Scroll to form after a short delay to ensure it's rendered
+    setTimeout(() => {
+      const formElement = document.getElementById('room-type-form');
+      if (formElement) {
+        formElement.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start'
+        });
+      }
+    }, 100);
+  };
+
+  // Handle delete room type
+  const handleDelete = async (roomType) => {
+    const result = await Swal.fire({
+      title: 'Are you sure?',
+      text: `This will permanently delete "${roomType.name}" room type.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#ef4444',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: 'Yes, delete it!',
+      cancelButtonText: 'Cancel'
+    });
+
+    if (result.isConfirmed) {
+      try {
+        const token = authAPI.getStoredToken();
+        if (token) {
+          apiClient.setAuthToken(token);
+        }
+        
+        const response = await apiClient.delete(`${API_CONFIG.ENDPOINTS.HOTEL.ROOM_TYPES}/${roomType.id}`);
+        
+        if (response) {
+          await Swal.fire({
+            icon: 'success',
+            title: 'Deleted!',
+            text: `"${roomType.name}" has been deleted successfully.`,
+            confirmButtonText: 'OK',
+            confirmButtonColor: '#10b981'
+          });
+          
+          // Refresh the room types list
+          fetchRoomTypes();
+        }
+      } catch (error) {
+        console.error('Error deleting room type:', error);
+        await Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'Failed to delete room type. Please try again.',
+          confirmButtonText: 'OK',
+          confirmButtonColor: '#ef4444'
+        });
+      }
+    }
+  };
+
+  // Handle form cancel
+  const handleCancel = () => {
+    setShowForm(false);
+    setEditingRoomType(null);
+    clearForm();
+  };
 
   const validateField = (name, value) => {
     const newErrors = { ...errors };
@@ -135,6 +264,7 @@ const AddRoomTypePage = () => {
       description: ''
     });
     setErrors({});
+    setEditingRoomType(null);
   };
 
   const handleSubmit = async (e) => {
@@ -158,10 +288,16 @@ const AddRoomTypePage = () => {
           apiClient.setAuthToken(token);
         }
         
-        // Make API call to POST room type endpoint
-        console.log('Making API call to:', API_CONFIG.ENDPOINTS.HOTEL.ROOM_TYPES);
-        
-        const response = await apiClient.post(API_CONFIG.ENDPOINTS.HOTEL.ROOM_TYPES, payload);
+        // Make API call to POST or PUT room type endpoint
+        let response;
+        if (editingRoomType) {
+          const updateEndpoint = `${API_CONFIG.ENDPOINTS.HOTEL.ROOM_TYPES}/${editingRoomType.id}/roomType`;
+          console.log('Making API call to update:', updateEndpoint);
+          response = await apiClient.put(updateEndpoint, payload);
+        } else {
+          console.log('Making API call to create:', API_CONFIG.ENDPOINTS.HOTEL.ROOM_TYPES);
+          response = await apiClient.post(API_CONFIG.ENDPOINTS.HOTEL.ROOM_TYPES, payload);
+        }
         
         console.log('API Response:', response);
         
@@ -169,17 +305,22 @@ const AddRoomTypePage = () => {
         if (response) {
           await Swal.fire({
             icon: 'success',
-            title: 'Room Type Added Successfully!',
-            text: response.message || `${formData.name} has been added to your room types successfully.`,
+            title: editingRoomType ? 'Room Type Updated Successfully!' : 'Room Type Added Successfully!',
+            text: response.message || `${formData.name} has been ${editingRoomType ? 'updated' : 'added'} successfully.`,
             confirmButtonText: 'OK',
             confirmButtonColor: '#10b981'
           });
           
-          // Clear all form fields
+          // Clear all form fields and reset state
           clearForm();
+          setShowForm(false);
+          setEditingRoomType(null);
+          
+          // Refresh the room types list
+          fetchRoomTypes();
         } else {
           // Throw error for unsuccessful responses
-          throw new Error(response?.message || 'Failed to create room type');
+          throw new Error(response?.message || `Failed to ${editingRoomType ? 'update' : 'create'} room type`);
         }
         
       } catch (error) {
@@ -230,66 +371,179 @@ const AddRoomTypePage = () => {
       <div className="mb-6">
         <h1 className="text-xl font-bold flex items-center gap-2">
           <Home className="h-6 w-6" />
-          Add New Room Type
+          Room Types Management
         </h1>
         <p className="text-muted-foreground mt-2">
-          Create a new room type configuration for your hotels
+          Manage room types for your hotels
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-8">
-        {/* Room Type Information */}
-        <Card>
+      {/* Room Types Table */}
+      <Card className="mb-6">
+        <CardHeader>
+          <div className="flex justify-between items-center">
+            <div>
+              <CardTitle className="text-md">Room Types</CardTitle>
+              <CardDescription>
+                View and manage all room types
+              </CardDescription>
+            </div>
+            <div className="flex gap-2">
+              <Button 
+                onClick={fetchRoomTypes}
+                variant="outline"
+                className="flex items-center gap-2"
+              >
+                Refresh
+              </Button>
+              <Button 
+                onClick={() => {
+                  setShowForm(true);
+                  clearForm();
+                  
+                  // Scroll to form after a short delay to ensure it's rendered
+                  setTimeout(() => {
+                    const formElement = document.getElementById('room-type-form');
+                    if (formElement) {
+                      formElement.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                      });
+                    }
+                  }, 100);
+                }}
+                className="flex items-center gap-2"
+              >
+                <Plus className="h-4 w-4" />
+                Add New Room Type
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {/* Debug info */}
+          <div className="mb-4 p-2 bg-gray-100 rounded text-xs">
+            Debug: loading={loading.toString()}, roomTypes.length={roomTypes.length}
+          </div>
+          
+          {loading ? (
+            <div className="flex justify-center items-center py-8">
+              <div className="text-muted-foreground">Loading room types...</div>
+            </div>
+          ) : roomTypes.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              No room types found. Click "Add New Room Type" to create one.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left p-3 font-medium">ID</th>
+                    <th className="text-left p-3 font-medium">Name</th>
+                    <th className="text-left p-3 font-medium">Description</th>
+                    <th className="text-left p-3 font-medium">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {roomTypes.map((roomType) => (
+                    <tr key={roomType.id} className="border-b hover:bg-gray-50">
+                      <td className="p-3 text-sm">{roomType.id}</td>
+                      <td className="p-3 font-medium">{roomType.name}</td>
+                      <td className="p-3 text-sm text-muted-foreground">
+                        {roomType.description || 'No description'}
+                      </td>
+                      <td className="p-3">
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEdit(roomType)}
+                            className="flex items-center gap-1"
+                          >
+                            <Edit className="h-3 w-3" />
+                            Edit
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDelete(roomType)}
+                            className="flex items-center gap-1 text-red-600 hover:text-red-700 hover:bg-red-50"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                            Delete
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Add/Edit Form */}
+      {showForm && (
+        <Card id="room-type-form">
           <CardHeader>
-            <CardTitle className="text-md">Room Type Details</CardTitle>
+            <CardTitle className="text-md">
+              {editingRoomType ? 'Edit Room Type' : 'Add New Room Type'}
+            </CardTitle>
             <CardDescription>
-              Enter the details for the new room type
+              {editingRoomType ? 'Update the room type details' : 'Enter the details for the new room type'}
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Room Type Name *</Label>
-              <Input
-                id="name"
-                name="name"
-                value={formData.name}
-                onChange={handleInputChange}
-                placeholder="e.g., Deluxe Suite, Standard Room"
-                className={errors.name ? 'border-red-500' : ''}
-              />
-              {errors.name && (
-                <p className="text-sm text-red-500">{errors.name}</p>
-              )}
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
-              <Textarea
-                id="description"
-                name="description"
-                value={formData.description}
-                onChange={handleInputChange}
-                placeholder="Describe the room type, its features, and what makes it special..."
-                rows={4}
-                className={errors.description ? 'border-red-500' : ''}
-              />
-              {errors.description && (
-                <p className="text-sm text-red-500">{errors.description}</p>
-              )}
-            </div>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Room Type Name *</Label>
+                <Input
+                  id="name"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleInputChange}
+                  placeholder="e.g., Deluxe Suite, Standard Room"
+                  className={errors.name ? 'border-red-500' : ''}
+                />
+                {errors.name && (
+                  <p className="text-sm text-red-500">{errors.name}</p>
+                )}
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="description">Description</Label>
+                <Textarea
+                  id="description"
+                  name="description"
+                  value={formData.description}
+                  onChange={handleInputChange}
+                  placeholder="Describe the room type, its features, and what makes it special..."
+                  rows={4}
+                  className={errors.description ? 'border-red-500' : ''}
+                />
+                {errors.description && (
+                  <p className="text-sm text-red-500">{errors.description}</p>
+                )}
+              </div>
+
+              {/* Submit Buttons */}
+              <div className="flex justify-end space-x-4 pt-4">
+                <Button type="button" variant="outline" onClick={handleCancel} disabled={isSubmitting}>
+                  Cancel
+                </Button>
+                <Button type="submit" className="min-w-[120px]" disabled={isSubmitting}>
+                  {isSubmitting 
+                    ? (editingRoomType ? 'Updating...' : 'Adding...') 
+                    : (editingRoomType ? 'Update Room Type' : 'Add Room Type')
+                  }
+                </Button>
+              </div>
+            </form>
           </CardContent>
         </Card>
-
-        {/* Submit Button */}
-        <div className="flex justify-end space-x-4">
-          <Button type="button" variant="outline" disabled={isSubmitting}>
-            Cancel
-          </Button>
-          <Button type="submit" className="min-w-[120px]" disabled={isSubmitting}>
-            {isSubmitting ? 'Adding Room Type...' : 'Add Room Type'}
-          </Button>
-        </div>
-      </form>
+      )}
     </div>
   );
 };

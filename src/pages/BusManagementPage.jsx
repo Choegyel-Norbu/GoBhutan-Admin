@@ -71,64 +71,8 @@ function BusManagementPage() {
     }
   };
 
-  // Mock data for buses (fallback if API fails)
-  const mockBuses = [
-    {
-      id: 1,
-      busName: 'Mountain Express',
-      busNumber: 'BT-001',
-      busType: 'Standard',
-      totalSeats: 50,
-      description: 'Comfortable standard bus with basic amenities for daily commute',
-      amenities: 'AC, WiFi, Water',
-      status: 'active',
-      registeredDate: '2024-01-15',
-      lastService: '2024-01-10',
-      nextService: '2024-02-10'
-    },
-    {
-      id: 2,
-      busName: 'Royal Transport',
-      busNumber: 'BT-002',
-      busType: 'Deluxe',
-      totalSeats: 40,
-      description: 'Premium deluxe bus with enhanced comfort and luxury amenities',
-      amenities: 'AC, WiFi, Water, Snacks',
-      status: 'active',
-      registeredDate: '2024-01-20',
-      lastService: '2024-01-18',
-      nextService: '2024-02-18'
-    },
-    {
-      id: 3,
-      busName: 'Himalayan Express',
-      busNumber: 'BT-003',
-      busType: 'Standard',
-      totalSeats: 45,
-      description: 'Reliable standard bus perfect for mountain routes',
-      amenities: 'AC, Water',
-      status: 'maintenance',
-      registeredDate: '2024-01-25',
-      lastService: '2024-01-22',
-      nextService: '2024-02-22'
-    },
-    {
-      id: 4,
-      busName: 'Thunder Express',
-      busNumber: 'BT-004',
-      busType: 'Luxury',
-      totalSeats: 35,
-      description: 'Luxury bus with premium amenities and comfort',
-      amenities: 'AC, WiFi, Water, Snacks, Entertainment',
-      status: 'inactive',
-      registeredDate: '2024-02-01',
-      lastService: '2024-01-28',
-      nextService: '2024-02-28'
-    }
-  ];
-
-  // Use API data if available, otherwise fallback to mock data
-  const displayBuses = buses.length > 0 ? buses : mockBuses;
+  // Use only API data - no mock data fallback
+  const displayBuses = buses;
 
   const filteredBuses = Array.isArray(displayBuses) ? displayBuses.filter(bus => {
     if (!bus || typeof bus !== 'object') return false;
@@ -646,16 +590,21 @@ function BusManagementPage() {
               {filteredBuses.length === 0 && (
                 <div className="text-center py-12">
                   <Bus className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-                  <h3 className="text-lg font-semibold mb-2">No buses found</h3>
+                  <h3 className="text-lg font-semibold mb-2">
+                    {searchTerm || filterType !== 'all' || filterStatus !== 'all' 
+                      ? 'No buses found'
+                      : 'No buses in your fleet'
+                    }
+                  </h3>
                   <p className="text-muted-foreground mb-4">
                     {searchTerm || filterType !== 'all' || filterStatus !== 'all' 
-                      ? 'Try adjusting your search or filter criteria.'
-                      : 'Get started by adding your first bus to the fleet.'
+                      ? 'Try adjusting your search or filter criteria to find buses.'
+                      : 'Your bus fleet is currently empty. Add your first bus to get started with managing your transportation services.'
                     }
                   </p>
-                  <Button>
+                  <Button onClick={() => navigate('/dashboard/bus/add')}>
                     <Plus className="h-4 w-4 mr-2" />
-                    Add New Bus
+                    Add Your First Bus
                   </Button>
                 </div>
               )}

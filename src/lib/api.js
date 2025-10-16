@@ -1,6 +1,6 @@
 // API Configuration
 export const API_CONFIG = {
-  BASE_URL: 'https://b7e96e42d904.ngrok-free.app',
+  BASE_URL: 'https://f845700c1541.ngrok-free.app',
   
   // API Endpoints
   ENDPOINTS: {

@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
 import { Select } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';
-import { Settings, Building2, Wifi, Car, Coffee, Shield, Utensils, Save, RefreshCw, MapPin, Loader2, ArrowLeft, Phone, Clock } from 'lucide-react';
+import { Settings, Building2, Wifi, Car, Coffee, Shield, Utensils, Save, RefreshCw, MapPin, Loader2, ArrowLeft, Phone, Clock, Trash2 } from 'lucide-react';
 import { apiClient, api } from '@/lib/apiService';
 import authAPI from '@/lib/authAPI';
 import Swal from 'sweetalert2';
@@ -352,6 +352,98 @@ const HotelSettingsPage = () => {
       await Swal.fire({
         icon: 'error',
         title: 'Update Failed',
+        text: errorMessage,
+        confirmButtonText: 'OK',
+        confirmButtonColor: '#ef4444'
+      });
+      
+      setSubmitMessage({
+        type: 'error',
+        message: errorMessage
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!selectedHotel) {
+      setSubmitMessage({
+        type: 'error',
+        message: 'No hotel selected. Please select a hotel first.'
+      });
+      return;
+    }
+
+    // Show confirmation dialog
+    const result = await Swal.fire({
+      title: 'Delete Hotel',
+      text: `Are you sure you want to delete "${selectedHotel.name}"? This action cannot be undone and will also delete all associated rooms and bookings.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#ef4444',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: 'Yes, Delete Hotel',
+      cancelButtonText: 'Cancel',
+      reverseButtons: true
+    });
+
+    if (!result.isConfirmed) {
+      return;
+    }
+
+    setIsSubmitting(true);
+    setSubmitMessage({ type: '', message: '' });
+    
+    try {
+      const token = authAPI.getStoredToken();
+      if (token) {
+        apiClient.setAuthToken(token);
+      }
+
+      // Show loading alert
+      Swal.fire({
+        title: 'Deleting Hotel...',
+        text: 'Please wait while we delete the hotel.',
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        showConfirmButton: false,
+        didOpen: () => {
+          Swal.showLoading();
+        }
+      });
+
+      await api.hotel.deleteHotel(selectedHotel.id);
+      
+      // Show success alert
+      await Swal.fire({
+        icon: 'success',
+        title: 'Hotel Deleted Successfully!',
+        text: `Hotel "${selectedHotel.name}" has been deleted.`,
+        confirmButtonText: 'OK',
+        confirmButtonColor: '#10b981'
+      });
+      
+      // Go back to hotels list and refresh
+      setCurrentView('hotels');
+      setSelectedHotel(null);
+      await fetchHotels();
+      
+    } catch (error) {
+      console.error('Error deleting hotel:', error);
+      
+      // Show error alert
+      let errorMessage = 'Failed to delete hotel. Please try again.';
+      
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      await Swal.fire({
+        icon: 'error',
+        title: 'Delete Failed',
         text: errorMessage,
         confirmButtonText: 'OK',
         confirmButtonColor: '#ef4444'
@@ -783,14 +875,27 @@ const HotelSettingsPage = () => {
         </Card>
 
         {/* Action Buttons */}
-        <div className="flex justify-end gap-4">
-          <Button type="button" variant="outline" onClick={handleBackToHotels}>
-            Cancel
+        <div className="flex justify-between">
+          <Button 
+            type="button" 
+            variant="destructive" 
+            onClick={handleDelete}
+            disabled={isSubmitting}
+            className="flex items-center gap-2"
+          >
+            <Trash2 className="h-4 w-4" />
+            {isSubmitting ? 'Deleting...' : 'Delete Hotel'}
           </Button>
-          <Button type="submit" disabled={isSubmitting}>
-            <Save className="h-4 w-4 mr-2" />
-            {isSubmitting ? 'Updating...' : 'Update Hotel'}
-          </Button>
+          
+          <div className="flex gap-4">
+            <Button type="button" variant="outline" onClick={handleBackToHotels}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isSubmitting}>
+              <Save className="h-4 w-4 mr-2" />
+              {isSubmitting ? 'Updating...' : 'Update Hotel'}
+            </Button>
+          </div>
         </div>
 
         {/* Submit Message */}

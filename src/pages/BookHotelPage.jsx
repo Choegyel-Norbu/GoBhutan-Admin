@@ -930,28 +930,39 @@ const BookHotelPage = () => {
               <CardDescription>Choose a hotel to view its bookings</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-2">
-                <Label htmlFor="hotel-selector">Hotel</Label>
-                <Select
-                  value={selectedHotelForBookings?.id || ''}
-                  onChange={(e) => {
-                    const hotelId = e.target.value;
-                    console.log('Hotel selected:', hotelId);
-                    const hotel = hotels.find(h => h.id.toString() === hotelId);
-                    console.log('Found hotel:', hotel);
-                    if (hotel) {
-                      setSelectedHotelForBookings(hotel);
-                      fetchBookings(hotel.id);
-                    }
-                  }}
-                >
-                  <option value="">Select a hotel</option>
-                  {hotels.map((hotel) => (
-                    <option key={hotel.id} value={hotel.id}>
-                      {hotel.name}
-                    </option>
-                  ))}
-                </Select>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="hotel-selector">Hotel</Label>
+                  <Select
+                    value={selectedHotelForBookings?.id || ''}
+                    onChange={(e) => {
+                      const hotelId = e.target.value;
+                      console.log('Hotel selected:', hotelId);
+                      const hotel = hotels.find(h => h.id.toString() === hotelId);
+                      console.log('Found hotel:', hotel);
+                      if (hotel) {
+                        setSelectedHotelForBookings(hotel);
+                        fetchBookings(hotel.id);
+                      }
+                    }}
+                  >
+                    <option value="">Select a hotel</option>
+                    {hotels.map((hotel) => (
+                      <option key={hotel.id} value={hotel.id}>
+                        {hotel.name}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+                
+                {/* Selected Hotel Display */}
+                {selectedHotelForBookings && (
+                  <div className="text-center py-4">
+                    <h3 className="text-lg font-semibold text-primary">
+                      {selectedHotelForBookings.name}
+                    </h3>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -991,7 +1002,7 @@ const BookHotelPage = () => {
           {!isLoadingBookings && !bookingsError && bookings.length > 0 && selectedHotelForBookings && (
             <Card>
               <CardHeader>
-                <CardTitle>Bookings for {selectedHotelForBookings.name} ({bookings.length})</CardTitle>
+                <CardTitle>Total Bookings</CardTitle>
                 <CardDescription>Manage hotel bookings and operations</CardDescription>
               </CardHeader>
               <CardContent>

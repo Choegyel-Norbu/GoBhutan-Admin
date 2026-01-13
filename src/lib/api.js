@@ -1,6 +1,11 @@
 // API Configuration
+// Use environment variable with fallback to production API URL
+const getApiBaseUrl = () => {
+  return import.meta.env.VITE_API_BASE_URL || 'https://gobhutan.site/boot';
+};
+
 export const API_CONFIG = {
-  BASE_URL: 'https://f845700c1541.ngrok-free.app',
+  BASE_URL: getApiBaseUrl(),
   
   // API Endpoints
   ENDPOINTS: {
@@ -12,6 +17,8 @@ export const API_CONFIG = {
       SIGNOUT: '/auth/signout',
       REFRESH: '/auth/refresh-token',
       PROFILE: '/auth/profile',
+      UPDATE_USER: '/auth/update-user',
+      UPDATE_CLIENTS: '/auth/update-clients',
     },
     
     // Dashboard
@@ -51,9 +58,11 @@ export const API_CONFIG = {
     
     BUS: {
       BOOKINGS: '/bus/bookings',
-      ROUTES: '/api/routes',
+      ROUTES: '/api/bus-routes',
       SCHEDULES: '/api/schedules',
       BUSES: '/api/buses',
+      AVAILABLE_SEATS: '/bus/bookings/schedule',
+      GENERATE_SEATS: '/api/buses',
     },
   },
   

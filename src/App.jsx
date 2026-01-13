@@ -23,13 +23,18 @@ import BusManagementPage from './pages/BusManagementPage';
 import BusDetailsPage from './pages/BusDetailsPage';
 import BusSettingsPage from './pages/BusSettingsPage';
 import BusBookingPage from './pages/BusBookingPage';
+import TheaterPage from './pages/TheaterPage';
+import AddTheaterPage from './pages/AddTheaterPage';
+import TheaterSitConfigPage from './pages/TheaterSitConfigPage';
+import AddMoviePage from './pages/AddMoviePage';
+import UserSettingsPage from './pages/UserSettingsPage';
 import SignInPage from './pages/SignInPage';
 import SignUpPage from './pages/SignUpPage';
 
 function App() {
   return (
     <AuthProvider>
-      <Router future={{ v7_relativeSplatPath: true }}>
+      <Router basename="/go-bhutan-admin" future={{ v7_relativeSplatPath: true }}>
         <Routes>
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/signin" element={<SignInPage />} />
@@ -60,6 +65,11 @@ function App() {
             <Route path="bus/details/:busId" element={<BusDetailsPage />} />
             <Route path="bus/settings" element={<BusSettingsPage />} />
             <Route path="bus/booking" element={<BusBookingPage />} />
+            <Route path="theater" element={<TheaterPage />} />
+            <Route path="theater/add" element={<AddTheaterPage />} />
+            <Route path="theater/sitconfig" element={<TheaterSitConfigPage />} />
+            <Route path="theater/movie" element={<AddMoviePage />} />
+            <Route path="settings" element={<UserSettingsPage />} />
             {/* Redirect old routes to new structure */}
             <Route path="bus/routes" element={<Navigate to="/dashboard/bus/manage" replace />} />
             <Route path="bus/schedules" element={<Navigate to="/dashboard/bus/manage" replace />} />

@@ -5,16 +5,16 @@ const getEnvVar = (key, defaultValue) => {
 
 export const ENV_CONFIG = {
   // API Configuration
-  API_BASE_URL: getEnvVar('VITE_API_BASE_URL', 'https://f845700c1541.ngrok-free.app'),
-  
+  API_BASE_URL: getEnvVar('VITE_API_BASE_URL', 'https://gobhutan.site/boot'),
+
   // App Configuration
   APP_NAME: getEnvVar('VITE_APP_NAME', 'GoBhutan'),
   APP_VERSION: getEnvVar('VITE_APP_VERSION', '1.0.0'),
-  
+
   // Development Settings
   DEBUG: getEnvVar('VITE_DEBUG', 'true') === 'true',
   LOG_LEVEL: getEnvVar('VITE_LOG_LEVEL', 'debug'),
-  
+
   // Environment Detection
   IS_DEVELOPMENT: import.meta.env.MODE === 'development',
   IS_PRODUCTION: import.meta.env.MODE === 'production',
@@ -22,26 +22,19 @@ export const ENV_CONFIG = {
 };
 
 // API URLs for environments
+// Use environment variable with fallback
+const DEFAULT_API_URL = 'https://gobhutan.site/boot';
+
 export const API_URLS = {
-  DEVELOPMENT: 'https://f845700c1541.ngrok-free.app',
-  STAGING: 'https://f845700c1541.ngrok-free.app',
-  PRODUCTION: 'https://f845700c1541.ngrok-free.app',
+  DEVELOPMENT: import.meta.env.VITE_API_BASE_URL || DEFAULT_API_URL,
+  STAGING: import.meta.env.VITE_API_BASE_URL || DEFAULT_API_URL,
+  PRODUCTION: import.meta.env.VITE_API_BASE_URL || DEFAULT_API_URL,
 };
 
 // Get the appropriate API URL based on environment
 export const getApiUrl = () => {
-  const mode = import.meta.env.MODE;
-  
-  switch (mode) {
-    case 'development':
-      return API_URLS.DEVELOPMENT;
-    case 'preview':
-      return API_URLS.STAGING;
-    case 'production':
-      return API_URLS.PRODUCTION;
-    default:
-      return API_URLS.DEVELOPMENT;
-  }
+  // Always use the environment variable if available, otherwise use default
+  return import.meta.env.VITE_API_BASE_URL || DEFAULT_API_URL;
 };
 
 export default ENV_CONFIG;

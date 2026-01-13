@@ -6,7 +6,6 @@ import { getApiUrl } from './env';
 const defaultHeaders = {
   'Content-Type': 'application/json',
   'Accept': 'application/json',
-  'ngrok-skip-browser-warning': 'true',
 };
 
 // Create a simple HTTP client
@@ -50,7 +49,6 @@ class ApiClient {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'ngrok-skip-browser-warning': 'true',
         },
         body: JSON.stringify(refreshPayload)
       });
@@ -148,8 +146,6 @@ class ApiClient {
       ...options,
     };
 
-    // Add ngrok header for all requests
-    config.headers['ngrok-skip-browser-warning'] = 'true';
 
     try {
       const response = await fetch(url, config);
@@ -301,6 +297,8 @@ export const api = {
     signout: (signoutData) => apiClient.post(API_CONFIG.ENDPOINTS.AUTH.SIGNOUT, signoutData),
     getProfile: () => apiClient.get(API_CONFIG.ENDPOINTS.AUTH.PROFILE),
     refreshToken: () => apiClient.post(API_CONFIG.ENDPOINTS.AUTH.REFRESH),
+    updateUser: (userData) => apiClient.put(API_CONFIG.ENDPOINTS.AUTH.UPDATE_USER, userData),
+    updateClients: (userData) => apiClient.post(API_CONFIG.ENDPOINTS.AUTH.UPDATE_CLIENTS, userData),
   },
 
   // Taxi Service
@@ -374,13 +372,30 @@ export const api = {
       const endpoint = busId ? `${API_CONFIG.ENDPOINTS.BUS.SCHEDULES}/bus/${busId}` : API_CONFIG.ENDPOINTS.BUS.SCHEDULES;
       return apiClient.get(endpoint);
     },
+    getSchedulesByRoute: (routeId) => {
+      return apiClient.get(`${API_CONFIG.ENDPOINTS.BUS.SCHEDULES}/route/${routeId}`);
+    },
     createSchedule: (schedule) => apiClient.post(API_CONFIG.ENDPOINTS.BUS.SCHEDULES, schedule),
     updateSchedule: (id, schedule) => apiClient.put(`${API_CONFIG.ENDPOINTS.BUS.SCHEDULES}/${id}`, schedule),
     deleteSchedule: (id) => apiClient.delete(`${API_CONFIG.ENDPOINTS.BUS.SCHEDULES}/${id}`),
+    generateSchedules: (payload) => apiClient.post(`${API_CONFIG.ENDPOINTS.BUS.SCHEDULES}/bus/generate`, payload),
     getBuses: () => apiClient.get(API_CONFIG.ENDPOINTS.BUS.BUSES),
+    getBus: (busId) => apiClient.get(`${API_CONFIG.ENDPOINTS.BUS.BUSES}/bus/${busId}`),
     createBus: (bus) => apiClient.post(API_CONFIG.ENDPOINTS.BUS.BUSES, bus),
     updateBus: (id, bus) => apiClient.put(`${API_CONFIG.ENDPOINTS.BUS.BUSES}/${id}`, bus),
     deleteBus: (id) => apiClient.delete(`${API_CONFIG.ENDPOINTS.BUS.BUSES}/${id}`),
+    getAvailableSeats: (scheduleId) => {
+      return apiClient.get(`${API_CONFIG.ENDPOINTS.BUS.AVAILABLE_SEATS}/${scheduleId}/available-seats`);
+    },
+    getSeatConfigs: (busId) => {
+      return apiClient.get(`${API_CONFIG.ENDPOINTS.BUS.BUSES}/${busId}/seat-configs`);
+    },
+    generateSeats: (busId) => {
+      return apiClient.post(`${API_CONFIG.ENDPOINTS.BUS.GENERATE_SEATS}/${busId}/seat-configs/generate-seats`);
+    },
+    lockBooking: (bookingData) => {
+      return apiClient.post('/api/bookings/lock', bookingData);
+    },
   },
 };
 

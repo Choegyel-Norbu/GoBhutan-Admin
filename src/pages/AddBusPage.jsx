@@ -10,7 +10,8 @@ import { Textarea } from '@/components/ui/Textarea';
 import { apiClient } from '@/lib/apiService';
 import { API_CONFIG } from '@/lib/api';
 import authAPI from '@/lib/authAPI';
-import { validateBusForm, sanitizeInput } from '@/lib/validation';
+import { validateBusForm, sanitizeInput, validateLayoutType, validateRecurrenceType } from '@/lib/validation';
+import { RecurrenceType } from '@/lib/constants';
 import Swal from 'sweetalert2';
 
 function AddBusPage() {
@@ -19,6 +20,8 @@ function AddBusPage() {
     busNumber: '',
     busType: '',
     totalSeats: '',
+    layoutType: '',
+    recurrenceType: '',
     description: '',
     amenities: ''
   });
@@ -29,6 +32,11 @@ function AddBusPage() {
   const handleInputChange = (field, value) => {
     // Only sanitize inputs that need it (busNumber) and preserve spaces for description/amenities
     let processedValue = value;
+    
+    // Handle Select components - ensure empty string for empty selection
+    if (value === null || value === undefined) {
+      processedValue = '';
+    }
     
     if (field === 'busNumber') {
       // For bus number, remove spaces and sanitize
@@ -49,15 +57,6 @@ function AddBusPage() {
       ...prev,
       [field]: processedValue
     }));
-
-    // Clear error for this field when user starts typing
-    if (errors[field]) {
-      setErrors(prev => {
-        const newErrors = { ...prev };
-        delete newErrors[field];
-        return newErrors;
-      });
-    }
 
     // Real-time validation for immediate feedback
     validateField(field, processedValue);
@@ -112,6 +111,32 @@ function AddBusPage() {
           newErrors.totalSeats = 'Total seats cannot exceed 100';
         } else {
           delete newErrors.totalSeats;
+        }
+        break;
+        
+      case 'layoutType':
+        if (!value || value.trim() === '') {
+          newErrors.layoutType = 'Layout type is required';
+        } else {
+          const validation = validateLayoutType(value);
+          if (!validation.isValid) {
+            newErrors.layoutType = validation.message;
+          } else {
+            delete newErrors.layoutType;
+          }
+        }
+        break;
+        
+      case 'recurrenceType':
+        if (!value || value.trim() === '') {
+          newErrors.recurrenceType = 'Recurrence type is required';
+        } else {
+          const validation = validateRecurrenceType(value);
+          if (!validation.isValid) {
+            newErrors.recurrenceType = validation.message;
+          } else {
+            delete newErrors.recurrenceType;
+          }
         }
         break;
         
@@ -180,6 +205,8 @@ function AddBusPage() {
         busNumber: sanitizeInput(formData.busNumber),
         busType: formData.busType,
         totalSeats: parseInt(formData.totalSeats),
+        layoutType: formData.layoutType ? sanitizeInput(formData.layoutType) : null,
+        recurrenceType: formData.recurrenceType || null,
         description: formData.description ? sanitizeInput(formData.description) : null,
         amenities: formData.amenities ? sanitizeInput(formData.amenities) : null
       };
@@ -217,6 +244,8 @@ function AddBusPage() {
           busNumber: '',
           busType: '',
           totalSeats: '',
+          layoutType: '',
+          recurrenceType: '',
           description: '',
           amenities: ''
         });
@@ -269,6 +298,8 @@ function AddBusPage() {
       busNumber: '',
       busType: '',
       totalSeats: '',
+      layoutType: '',
+      recurrenceType: '',
       description: '',
       amenities: ''
     });
@@ -328,6 +359,10 @@ function AddBusPage() {
                     </div>
                   )}
                 </div>
+              </div>
+
+              {/* Bus Type and Recurrence Type */}
+              <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="busType">Bus Type *</Label>
                   <Select
@@ -349,25 +384,73 @@ function AddBusPage() {
                     </div>
                   )}
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="recurrenceType">Recurrence Type *</Label>
+                  <Select
+                    id="recurrenceType"
+                    value={formData.recurrenceType}
+                    onChange={(e) => handleInputChange('recurrenceType', e.target.value)}
+                    className={errors.recurrenceType ? 'border-red-500 focus:border-red-500' : 'focus:border-blue-100 focus:ring-0 focus:ring-blue-100'}
+                  >
+                    <option value="">Select recurrence type</option>
+                    <option value={RecurrenceType.DAILY}>Daily - Bus runs every day</option>
+                    <option value={RecurrenceType.ALTERNATE}>Alternate - Bus runs every 2 days</option>
+                    <option value={RecurrenceType.CUSTOM}>Custom - Uses operating days set (manual)</option>
+                  </Select>
+                  {errors.recurrenceType && (
+                    <div className="flex items-center gap-1 text-sm text-red-600 mt-1">
+                      <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                      <span>{errors.recurrenceType}</span>
+                    </div>
+                  )}
+                  <p className="text-sm text-muted-foreground">
+                    Schedule recurrence pattern for bus operations
+                  </p>
+                </div>
               </div>
 
-              {/* Total Seats */}
-              <div className="space-y-2">
-                <Label htmlFor="totalSeats">Total Seats *</Label>
-                <Input
-                  id="totalSeats"
-                  type="number"
-                  value={formData.totalSeats}
-                  onChange={(e) => handleInputChange('totalSeats', e.target.value)}
-                  placeholder="e.g., 50"
-                  className={errors.totalSeats ? 'border-red-500 focus:border-red-500' : 'focus:border-blue-100 focus:ring-0 focus:ring-blue-100'}
-                />
-                {errors.totalSeats && (
-                  <div className="flex items-center gap-1 text-sm text-red-600">
-                    <AlertCircle className="h-4 w-4" />
-                    <span>{errors.totalSeats}</span>
-                  </div>
-                )}
+              {/* Seating Configuration */}
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="totalSeats">Total Seats *</Label>
+                  <Input
+                    id="totalSeats"
+                    type="number"
+                    value={formData.totalSeats}
+                    onChange={(e) => handleInputChange('totalSeats', e.target.value)}
+                    placeholder="e.g., 50"
+                    className={errors.totalSeats ? 'border-red-500 focus:border-red-500' : 'focus:border-blue-100 focus:ring-0 focus:ring-blue-100'}
+                  />
+                  {errors.totalSeats && (
+                    <div className="flex items-center gap-1 text-sm text-red-600">
+                      <AlertCircle className="h-4 w-4" />
+                      <span>{errors.totalSeats}</span>
+                    </div>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="layoutType">Layout Type *</Label>
+                  <Select
+                    id="layoutType"
+                    value={formData.layoutType}
+                    onChange={(e) => handleInputChange('layoutType', e.target.value)}
+                    className={errors.layoutType ? 'border-red-500 focus:border-red-500' : 'focus:border-blue-100 focus:ring-0 focus:ring-blue-100'}
+                  >
+                    <option value="">Select layout type</option>
+                    <option value="1+2">1+2 (19 seats)</option>
+                    <option value="2+2">2+2 (32 seats)</option>
+                    <option value="2+3">2+3 (40 seats)</option>
+                  </Select>
+                  {errors.layoutType && (
+                    <div className="flex items-center gap-1 text-sm text-red-600 mt-1">
+                      <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                      <span>{errors.layoutType}</span>
+                    </div>
+                  )}
+                  <p className="text-sm text-muted-foreground">
+                    Seat configuration (e.g., 1+2 = 1 seat left, 2 seats right)
+                  </p>
+                </div>
               </div>
 
               {/* Amenities */}

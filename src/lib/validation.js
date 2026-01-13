@@ -500,6 +500,89 @@ export const validateTotalSeats = (totalSeats) => {
 };
 
 /**
+ * Validates layout type
+ * @param {string} layoutType - Layout type to validate (e.g., "1+2", "2+2", "2+3")
+ * @returns {object} - Validation result with isValid and message
+ */
+export const validateLayoutType = (layoutType) => {
+  // Layout type is required (has asterisk in label)
+  if (!layoutType || layoutType.trim() === '') {
+    return {
+      isValid: false,
+      message: 'Layout type is required'
+    };
+  }
+
+  const trimmedValue = layoutType.trim();
+
+  // First validate format: must be in "X+Y" format where X and Y are digits
+  const LAYOUT_TYPE_REGEX = /^(\d+\+\d+)$/;
+  if (!LAYOUT_TYPE_REGEX.test(trimmedValue)) {
+    return {
+      isValid: false,
+      message: 'Layout type must be in format "X+Y" (e.g., "1+2", "2+2", "2+3")'
+    };
+  }
+
+  // Validate against predefined valid layout types
+  // Valid formats: 1+2, 2+2, 2+3 (and allow other valid X+Y combinations)
+  const [leftSeats, rightSeats] = trimmedValue.split('+').map(Number);
+  
+  // Validate that numbers are reasonable (between 1 and 5 for each side)
+  if (isNaN(leftSeats) || isNaN(rightSeats)) {
+    return {
+      isValid: false,
+      message: 'Layout type must contain valid numbers (e.g., "1+2", "2+2", "2+3")'
+    };
+  }
+
+  if (leftSeats < 1 || leftSeats > 5 || rightSeats < 1 || rightSeats > 5) {
+    return {
+      isValid: false,
+      message: 'Layout type seat numbers must be between 1 and 5 per side'
+    };
+  }
+
+  return {
+    isValid: true,
+    message: ''
+  };
+};
+
+/**
+ * Validates recurrence type
+ * @param {string} recurrenceType - Recurrence type to validate (DAILY, ALTERNATE, CUSTOM)
+ * @returns {object} - Validation result with isValid and message
+ */
+export const validateRecurrenceType = (recurrenceType) => {
+  // Recurrence type is required (has asterisk in label)
+  if (!recurrenceType || recurrenceType.trim() === '') {
+    return {
+      isValid: false,
+      message: 'Recurrence type is required'
+    };
+  }
+
+  const trimmedValue = recurrenceType.trim();
+
+  // Validate against RecurrenceType enum values
+  // Valid values: DAILY, ALTERNATE, CUSTOM
+  const validRecurrenceTypes = ['DAILY', 'ALTERNATE', 'CUSTOM'];
+  
+  if (!validRecurrenceTypes.includes(trimmedValue)) {
+    return {
+      isValid: false,
+      message: 'Please select a valid recurrence type. Options: DAILY (runs every day), ALTERNATE (runs every 2 days), or CUSTOM (uses operating days set)'
+    };
+  }
+
+  return {
+    isValid: true,
+    message: ''
+  };
+};
+
+/**
  * Validates bus description
  * @param {string} description - Description to validate
  * @returns {object} - Validation result with isValid and message
@@ -582,6 +665,8 @@ export const validateBusForm = (formData) => {
   const busNumberValidation = validateBusNumber(formData.busNumber);
   const busTypeValidation = validateBusType(formData.busType);
   const totalSeatsValidation = validateTotalSeats(formData.totalSeats);
+  const layoutTypeValidation = validateLayoutType(formData.layoutType);
+  const recurrenceTypeValidation = validateRecurrenceType(formData.recurrenceType);
   const descriptionValidation = validateBusDescription(formData.description);
   const amenitiesValidation = validateBusAmenities(formData.amenities);
 
@@ -608,6 +693,16 @@ export const validateBusForm = (formData) => {
     messages.totalSeats = totalSeatsValidation.message;
   }
 
+  if (!layoutTypeValidation.isValid) {
+    errors.layoutType = layoutTypeValidation.message;
+    messages.layoutType = layoutTypeValidation.message;
+  }
+
+  if (!recurrenceTypeValidation.isValid) {
+    errors.recurrenceType = recurrenceTypeValidation.message;
+    messages.recurrenceType = recurrenceTypeValidation.message;
+  }
+
   if (!descriptionValidation.isValid) {
     errors.description = descriptionValidation.message;
     messages.description = descriptionValidation.message;
@@ -623,6 +718,8 @@ export const validateBusForm = (formData) => {
              busNumberValidation.isValid && 
              busTypeValidation.isValid && 
              totalSeatsValidation.isValid && 
+             layoutTypeValidation.isValid &&
+             recurrenceTypeValidation.isValid &&
              descriptionValidation.isValid && 
              amenitiesValidation.isValid,
     errors,
@@ -647,6 +744,8 @@ export default {
   validateBusNumber,
   validateBusType,
   validateTotalSeats,
+  validateLayoutType,
+  validateRecurrenceType,
   validateBusDescription,
   validateBusAmenities,
   validateBusForm

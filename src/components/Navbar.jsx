@@ -50,7 +50,7 @@ function Navbar() {
   };
 
   return (
-    <header className="sticky top-0 z-30 flex justify-end h-16 items-center gap-4 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-6">
+    <header className="sticky top-0 z-30 flex justify-end h-14 md:h-16 items-center gap-2 md:gap-4 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 md:px-6">
      {/* Right side */}
       <div className="flex items-center justify-end gap-2">
 
@@ -58,16 +58,16 @@ function Navbar() {
         <div className="relative" ref={dropdownRef}>
           <Button
             variant="ghost"
-            className="flex items-center gap-2 h-10"
+            className="flex items-center gap-2 h-9 md:h-10 px-2 md:px-3"
             onClick={() => setIsProfileOpen(!isProfileOpen)}
             aria-expanded={isProfileOpen}
             aria-haspopup="true"
           >
-            <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-medium">
+            <div className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-medium text-xs md:text-sm">
               {getUserInitials(user?.name || user?.username)}
             </div>
             <div className="hidden sm:block text-left">
-              <div className="text-sm font-medium">{user?.name || user?.username || 'User'}</div>
+              <div className="text-xs md:text-sm font-medium">{user?.name || user?.username || 'User'}</div>
               <div className="text-xs text-muted-foreground">
                 {user?.clients?.includes('admin') ? 'Admin' : 'User'}
               </div>
@@ -75,14 +75,14 @@ function Navbar() {
           </Button>
 
           {isProfileOpen && (
-            <div className="absolute right-0 mt-2 w-48 bg-popover border border-border rounded-lg shadow-lg z-50">
+            <div className="absolute right-0 mt-2 w-40 md:w-48 bg-popover border border-border rounded-lg shadow-lg z-50">
               <div className="p-1">
                 <button 
                   onClick={handleSignOut}
                   disabled={isSigningOut}
-                  className="flex items-center gap-2 w-full px-3 py-2 text-sm text-left hover:bg-destructive hover:text-destructive-foreground rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex items-center gap-2 w-full px-2 md:px-3 py-2 text-xs md:text-sm text-left hover:bg-destructive hover:text-destructive-foreground rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <LogOut className="h-4 w-4" />
+                  <LogOut className="h-3 w-3 md:h-4 md:w-4" />
                   {isSigningOut ? 'Signing out...' : 'Sign out'}
                 </button>
               </div>

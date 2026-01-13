@@ -337,35 +337,35 @@ const SignInPage = () => {
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+    <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-2 md:p-4">
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.5 }}
-        className="w-full max-w-4xl overflow-hidden rounded-2xl flex bg-white shadow-xl"
+        className="w-full max-w-4xl overflow-hidden rounded-xl md:rounded-2xl flex flex-col md:flex-row bg-white shadow-xl"
       >
         {/* Left side - Map */}
-        <div className="hidden md:block w-1/2 h-[800px] relative overflow-hidden border-r border-gray-100">
+        <div className="hidden md:block w-1/2 h-[600px] md:h-[800px] relative overflow-hidden border-r border-gray-100">
           <div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-indigo-100">
             <DotMap />
             
             {/* Logo and text overlay */}
-            <div className="absolute inset-0 flex flex-col items-center justify-center p-8 z-10">
+            <div className="absolute inset-0 flex flex-col items-center justify-center p-6 md:p-8 z-10">
               <motion.div 
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.6, duration: 0.5 }}
-                className="mb-8"
+                className="mb-6 md:mb-8"
               >
-                <div className="h-16 w-16 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-xl shadow-blue-200">
-                  <ArrowRight className="text-white h-8 w-8" />
+                <div className="h-12 w-12 md:h-16 md:w-16 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-xl shadow-blue-200">
+                  <ArrowRight className="text-white h-6 w-6 md:h-8 md:w-8" />
                 </div>
               </motion.div>
               <motion.h2 
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.7, duration: 0.5 }}
-                className="text-4xl font-bold mb-4 text-center text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600"
+                className="text-2xl md:text-4xl font-bold mb-3 md:mb-4 text-center text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600"
               >
                 GoBhutan Admin
               </motion.h2>
@@ -373,7 +373,7 @@ const SignInPage = () => {
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.8, duration: 0.5 }}
-                className="text-base text-center text-gray-600 max-w-sm leading-relaxed"
+                className="text-sm md:text-base text-center text-gray-600 max-w-sm leading-relaxed"
               >
                 Sign in to access your GoBhutan admin dashboard and manage travel reservations across Bhutan
               </motion.p>
@@ -382,14 +382,14 @@ const SignInPage = () => {
         </div>
         
         {/* Right side - Sign In Form */}
-        <div className="w-full md:w-1/2 h-[800px] p-8 md:p-10 flex flex-col justify-center bg-white">
+        <div className="w-full md:w-1/2 min-h-[600px] md:h-[800px] p-4 md:p-8 lg:p-10 flex flex-col justify-center bg-white">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <h1 className="text-2xl md:text-2xl font-bold mb-1 text-gray-800">Welcome</h1>
-            <p className="text-gray-500 mb-8 text-sm">Sign in to your account</p>
+            <h1 className="text-xl md:text-2xl font-bold mb-1 text-gray-800">Welcome</h1>
+            <p className="text-gray-500 mb-6 md:mb-8 text-sm">Sign in to your account</p>
             
             <form onSubmit={handleSubmit}>
               {/* Success Message Display */}
@@ -425,7 +425,7 @@ const SignInPage = () => {
               )}
 
               {/* Username Field */}
-              <div className="mb-5">
+              <div className="mb-4 md:mb-5">
                 <label 
                   htmlFor="username" 
                   className="block text-sm font-medium text-gray-700 mb-1"
@@ -457,7 +457,7 @@ const SignInPage = () => {
               </div>
 
               {/* Password Field */}
-              <div className="mb-5">
+              <div className="mb-4 md:mb-5">
                 <label 
                   htmlFor="password" 
                   className="block text-sm font-medium text-gray-700 mb-1"
@@ -516,12 +516,12 @@ const SignInPage = () => {
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full bg-gradient-to-r relative overflow-hidden from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white py-3 rounded-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-200"
+                  className="w-full bg-gradient-to-r relative overflow-hidden from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white py-3 md:py-3 rounded-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-200"
                 >
-                  <span className="flex items-center justify-center">
+                  <span className="flex items-center justify-center text-sm md:text-base">
                     {isLoading ? (
                       <>
-                        <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <svg className="animate-spin -ml-1 mr-3 h-4 w-4 md:h-5 md:w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                         </svg>
@@ -538,12 +538,12 @@ const SignInPage = () => {
               </motion.div>
               
               {/* Sign Up Link */}
-              <div className="text-center mt-6">
-                <p className="text-sm text-gray-600">
+              <div className="text-center mt-4 md:mt-6">
+                <p className="text-xs md:text-sm text-gray-600">
                   Don't have an account?{' '}
                   <Link 
                     to="/signup" 
-                    className="text-blue-600 hover:text-blue-700 text-sm transition-colors"
+                    className="text-blue-600 hover:text-blue-700 text-xs md:text-sm transition-colors"
                   >
                     Sign up
                   </Link>

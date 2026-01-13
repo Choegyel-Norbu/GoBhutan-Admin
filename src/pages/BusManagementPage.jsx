@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bus, Plus, Edit, Trash2, Search, Filter, Eye, MapPin, Calendar, RefreshCw, Save, X, AlertCircle } from 'lucide-react';
+import { Bus, Plus, Edit, Trash2, Search, Filter, Eye, MapPin, Calendar, RefreshCw, Save, X, AlertCircle, Grid3x3 } from 'lucide-react';
 import PageWrapper from '@/components/PageWrapper';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -10,7 +10,8 @@ import { Select } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';
 import { Badge } from '@/components/ui/Badge';
 import { api } from '@/lib/apiService';
-import { validateBusForm, sanitizeInput } from '@/lib/validation';
+import { validateBusForm, sanitizeInput, validateLayoutType, validateRecurrenceType } from '@/lib/validation';
+import { RecurrenceType } from '@/lib/constants';
 import Swal from 'sweetalert2';
 
 function BusManagementPage() {
@@ -30,12 +31,15 @@ function BusManagementPage() {
     busNumber: '',
     busType: '',
     totalSeats: '',
+    layoutType: '',
+    recurrenceType: '',
     description: '',
     amenities: ''
   });
   const [editErrors, setEditErrors] = useState({});
   const [isSubmittingEdit, setIsSubmittingEdit] = useState(false);
   const editFormRef = useRef(null);
+  const [generatingSeats, setGeneratingSeats] = useState({});
 
   // Load buses data on component mount
   useEffect(() => {
@@ -91,6 +95,8 @@ function BusManagementPage() {
       busNumber: bus.busNumber || '',
       busType: bus.busType || '',
       totalSeats: bus.totalSeats?.toString() || '',
+      layoutType: bus.layoutType || '',
+      recurrenceType: bus.recurrenceType || '',
       description: bus.description || '',
       amenities: bus.amenities || ''
     });
@@ -114,6 +120,11 @@ function BusManagementPage() {
     // Only sanitize inputs that need it (busNumber) and preserve spaces for description/amenities
     let processedValue = value;
     
+    // Handle Select components - ensure empty string for empty selection
+    if (value === null || value === undefined) {
+      processedValue = '';
+    }
+    
     if (field === 'busNumber') {
       // For bus number, remove spaces and sanitize
       processedValue = typeof value === 'string' ? value.replace(/\s/g, '') : value;
@@ -133,15 +144,6 @@ function BusManagementPage() {
       ...prev,
       [field]: processedValue
     }));
-
-    // Clear error for this field when user starts typing
-    if (editErrors[field]) {
-      setEditErrors(prev => {
-        const newErrors = { ...prev };
-        delete newErrors[field];
-        return newErrors;
-      });
-    }
 
     // Real-time validation for immediate feedback
     validateEditField(field, processedValue);
@@ -196,6 +198,32 @@ function BusManagementPage() {
           newErrors.totalSeats = 'Total seats cannot exceed 100';
         } else {
           delete newErrors.totalSeats;
+        }
+        break;
+        
+      case 'layoutType':
+        if (!value || value.trim() === '') {
+          newErrors.layoutType = 'Layout type is required';
+        } else {
+          const validation = validateLayoutType(value);
+          if (!validation.isValid) {
+            newErrors.layoutType = validation.message;
+          } else {
+            delete newErrors.layoutType;
+          }
+        }
+        break;
+        
+      case 'recurrenceType':
+        if (!value || value.trim() === '') {
+          newErrors.recurrenceType = 'Recurrence type is required';
+        } else {
+          const validation = validateRecurrenceType(value);
+          if (!validation.isValid) {
+            newErrors.recurrenceType = validation.message;
+          } else {
+            delete newErrors.recurrenceType;
+          }
         }
         break;
         
@@ -264,6 +292,8 @@ function BusManagementPage() {
         busNumber: sanitizeInput(editFormData.busNumber),
         busType: editFormData.busType,
         totalSeats: parseInt(editFormData.totalSeats),
+        layoutType: editFormData.layoutType ? sanitizeInput(editFormData.layoutType) : null,
+        recurrenceType: editFormData.recurrenceType || null,
         description: editFormData.description ? sanitizeInput(editFormData.description) : null,
         amenities: editFormData.amenities ? sanitizeInput(editFormData.amenities) : null
       };
@@ -294,6 +324,8 @@ function BusManagementPage() {
           busNumber: '',
           busType: '',
           totalSeats: '',
+          layoutType: '',
+          recurrenceType: '',
           description: '',
           amenities: ''
         });
@@ -391,6 +423,99 @@ function BusManagementPage() {
     navigate(`/dashboard/bus/details/${bus.id}`, { state: { bus } });
   };
 
+  const handleGenerateSeats = async (bus) => {
+    const result = await Swal.fire({
+      title: 'Generate Seats?',
+      text: `This will generate seat configurations for ${bus.busName} (${bus.busNumber}). This action cannot be undone.`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#10b981',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: 'Yes, generate seats!',
+      cancelButtonText: 'Cancel'
+    });
+
+    if (result.isConfirmed) {
+      setGeneratingSeats(prev => ({ ...prev, [bus.id]: true }));
+      
+      try {
+        // Show loading alert
+        Swal.fire({
+          title: 'Generating Seats...',
+          text: `Please wait while we generate seat configurations for ${bus.busName}.`,
+          allowOutsideClick: false,
+          allowEscapeKey: false,
+          showConfirmButton: false,
+          didOpen: () => {
+            Swal.showLoading();
+          }
+        });
+
+        const response = await api.bus.generateSeats(bus.id);
+        
+        console.log('Generate seats response:', response);
+        
+        // Show success alert
+        await Swal.fire({
+          icon: 'success',
+          title: 'Seats Generated Successfully!',
+          text: response?.message || `Seat configurations have been generated for ${bus.busName} (${bus.busNumber}).`,
+          confirmButtonText: 'OK',
+          confirmButtonColor: '#10b981'
+        });
+        
+        // Refresh buses list to get updated data
+        loadBuses();
+      } catch (error) {
+        console.error('Error generating seats:', error);
+        
+        // Extract error message from various possible response structures
+        let errorMessage = 'Failed to generate seats. Please try again.';
+        
+        if (error?.response?.data) {
+          const errorData = error.response.data;
+          // Check for error in different formats
+          if (errorData.error) {
+            errorMessage = errorData.error;
+          } else if (errorData.message) {
+            errorMessage = errorData.message;
+          } else if (typeof errorData === 'string') {
+            errorMessage = errorData;
+          }
+        } else if (error?.message) {
+          errorMessage = error.message;
+        }
+        
+        // Parse database errors for better user understanding
+        if (errorMessage.includes('seat_type') || errorMessage.includes('Data truncated')) {
+          errorMessage = 'Database error: The seat type configuration is invalid. Please ensure the bus has valid seat configuration settings.';
+        }
+        
+        Swal.fire({
+          icon: 'error',
+          title: 'Failed to Generate Seats',
+          html: `
+            <div class="text-left">
+              <p class="mb-2">${errorMessage}</p>
+              <p class="text-sm text-muted-foreground mt-2">
+                This may be due to invalid seat type configuration. Please contact support if the issue persists.
+              </p>
+            </div>
+          `,
+          confirmButtonText: 'OK',
+          confirmButtonColor: '#ef4444',
+          width: '500px'
+        });
+      } finally {
+        setGeneratingSeats(prev => {
+          const newState = { ...prev };
+          delete newState[bus.id];
+          return newState;
+        });
+      }
+    }
+  };
+
   const getStatusBadge = (status) => {
     const statusConfig = {
       active: { variant: 'default', label: 'Active' },
@@ -421,67 +546,6 @@ function BusManagementPage() {
       description="Manage existing buses in your fleet."
     >
       <div className="max-w-7xl mx-auto space-y-6">
-        
-
-        {/* Search and Filter */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Search className="h-5 w-5" />
-              Search & Filter Buses
-            </CardTitle>
-            <CardDescription>
-              Find and filter buses in your fleet.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-              <div className="space-y-2">
-                <Label htmlFor="search">Search</Label>
-                <Input
-                  id="search"
-                  placeholder="Search by name or number..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="filterType">Bus Type</Label>
-                <Select
-                  value={filterType}
-                  onChange={(e) => setFilterType(e.target.value)}
-                >
-                  <option value="all">All Types</option>
-                  <option value="Standard">Standard</option>
-                  <option value="Deluxe">Deluxe</option>
-                  <option value="Luxury">Luxury</option>
-                  <option value="Sleeper">Sleeper</option>
-                  <option value="AC">AC Bus</option>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="filterStatus">Status</Label>
-                <Select
-                  value={filterStatus}
-                  onChange={(e) => setFilterStatus(e.target.value)}
-                >
-                  <option value="all">All Status</option>
-                  <option value="active">Active</option>
-                  <option value="maintenance">Maintenance</option>
-                  <option value="inactive">Inactive</option>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>&nbsp;</Label>
-                <Button variant="outline" className="w-full">
-                  <Filter className="h-4 w-4 mr-2" />
-                  Advanced Filter
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
         {/* Buses List */}
         <Card>
           <CardHeader>
@@ -549,9 +613,28 @@ function BusManagementPage() {
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
-                          <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-900 rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
+                          <div className="absolute bottom-full left-0 mb-2 px-2 py-1 text-xs text-white bg-gray-900 rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-[100] min-w-max">
                             View Routes & Schedules
-                            <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+                            <div className="absolute top-full left-4 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+                          </div>
+                        </div>
+                        <div className="relative group">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleGenerateSeats(bus)}
+                            disabled={generatingSeats[bus.id]}
+                            className="text-green-600 hover:text-green-700"
+                          >
+                            {generatingSeats[bus.id] ? (
+                              <RefreshCw className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Grid3x3 className="h-4 w-4" />
+                            )}
+                          </Button>
+                          <div className="absolute bottom-full left-0 mb-2 px-2 py-1 text-xs text-white bg-gray-900 rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-[100] min-w-max">
+                            Generate Seats
+                            <div className="absolute top-full left-4 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
                           </div>
                         </div>
                         <div className="relative group">
@@ -562,9 +645,9 @@ function BusManagementPage() {
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
-                          <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-900 rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
+                          <div className="absolute bottom-full left-0 mb-2 px-2 py-1 text-xs text-white bg-gray-900 rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-[100] min-w-max">
                             Edit Bus Details
-                            <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+                            <div className="absolute top-full left-4 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
                           </div>
                         </div>
                         <div className="relative group">
@@ -576,9 +659,9 @@ function BusManagementPage() {
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
-                          <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-900 rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
+                          <div className="absolute bottom-full left-0 mb-2 px-2 py-1 text-xs text-white bg-gray-900 rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-[100] min-w-max">
                             Delete Bus
-                            <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+                            <div className="absolute top-full left-4 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
                           </div>
                         </div>
                       </div>
@@ -656,6 +739,10 @@ function BusManagementPage() {
                       <p className="text-sm text-red-600">{editErrors.busNumber}</p>
                     )}
                   </div>
+                </div>
+
+                {/* Bus Type and Recurrence Type */}
+                <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-2">
                     <Label htmlFor="edit-busType">Bus Type *</Label>
                     <Select
@@ -675,22 +762,70 @@ function BusManagementPage() {
                       <p className="text-sm text-red-600">{editErrors.busType}</p>
                     )}
                   </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-recurrenceType">Recurrence Type *</Label>
+                    <Select
+                      id="edit-recurrenceType"
+                      value={editFormData.recurrenceType}
+                      onChange={(e) => handleEditInputChange('recurrenceType', e.target.value)}
+                      className={editErrors.recurrenceType ? 'border-red-500 focus:border-red-500' : 'focus:border-blue-100 focus:ring-0 focus:ring-blue-100'}
+                    >
+                      <option value="">Select recurrence type</option>
+                      <option value={RecurrenceType.DAILY}>Daily - Bus runs every day</option>
+                      <option value={RecurrenceType.ALTERNATE}>Alternate - Bus runs every 2 days</option>
+                      <option value={RecurrenceType.CUSTOM}>Custom - Uses operating days set (manual)</option>
+                    </Select>
+                    {editErrors.recurrenceType && (
+                      <div className="flex items-center gap-1 text-sm text-red-600 mt-1">
+                        <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                        <span>{editErrors.recurrenceType}</span>
+                      </div>
+                    )}
+                    <p className="text-sm text-muted-foreground">
+                      Schedule recurrence pattern for bus operations
+                    </p>
+                  </div>
                 </div>
 
-                {/* Total Seats */}
-                <div className="space-y-2">
-                  <Label htmlFor="edit-totalSeats">Total Seats *</Label>
-                  <Input
-                    id="edit-totalSeats"
-                    type="number"
-                    value={editFormData.totalSeats}
-                    onChange={(e) => handleEditInputChange('totalSeats', e.target.value)}
-                    placeholder="e.g., 50"
-                    className={editErrors.totalSeats ? 'border-red-500 focus:border-red-500' : 'focus:border-blue-100 focus:ring-0 focus:ring-blue-100'}
-                  />
-                  {editErrors.totalSeats && (
-                    <p className="text-sm text-red-600">{editErrors.totalSeats}</p>
-                  )}
+                {/* Seating Configuration */}
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-totalSeats">Total Seats *</Label>
+                    <Input
+                      id="edit-totalSeats"
+                      type="number"
+                      value={editFormData.totalSeats}
+                      onChange={(e) => handleEditInputChange('totalSeats', e.target.value)}
+                      placeholder="e.g., 50"
+                      className={editErrors.totalSeats ? 'border-red-500 focus:border-red-500' : 'focus:border-blue-100 focus:ring-0 focus:ring-blue-100'}
+                    />
+                    {editErrors.totalSeats && (
+                      <p className="text-sm text-red-600">{editErrors.totalSeats}</p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-layoutType">Layout Type *</Label>
+                    <Select
+                      id="edit-layoutType"
+                      value={editFormData.layoutType}
+                      onChange={(e) => handleEditInputChange('layoutType', e.target.value)}
+                      className={editErrors.layoutType ? 'border-red-500 focus:border-red-500' : 'focus:border-blue-100 focus:ring-0 focus:ring-blue-100'}
+                    >
+                      <option value="">Select layout type</option>
+                      <option value="1+2">1+2 (19 seats)</option>
+                      <option value="2+2">2+2 (32 seats)</option>
+                      <option value="2+3">2+3 (40 seats)</option>
+                    </Select>
+                    {editErrors.layoutType && (
+                      <div className="flex items-center gap-1 text-sm text-red-600 mt-1">
+                        <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                        <span>{editErrors.layoutType}</span>
+                      </div>
+                    )}
+                    <p className="text-sm text-muted-foreground">
+                      Seat configuration (e.g., 1+2 = 1 seat left, 2 seats right)
+                    </p>
+                  </div>
                 </div>
 
                 {/* Amenities */}

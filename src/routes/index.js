@@ -13,7 +13,10 @@ import {
   Building,
   Bed,
   MapPin,
-  Home
+  Home,
+  UserCog,
+  Clapperboard,
+  Grid3x3
 } from 'lucide-react';
 
 export const navigationItems = [
@@ -83,13 +86,6 @@ export const navigationItems = [
     clients: ['flight'] // Only for flight clients
   },
   {
-    title: 'Movie Tickets',
-    path: '/dashboard/movie-ticketing',
-    icon: Film,
-    description: 'Movie ticket reservations',
-    clients: ['movie'] // Only for movie clients
-  },
-  {
     title: 'Bus',
     path: '/dashboard/bus',
     icon: Bus,
@@ -125,6 +121,43 @@ export const navigationItems = [
         clients: ['bus']
       }
     ]
+  },
+  {
+    title: 'Theater',
+    path: '/dashboard/theater',
+    icon: Clapperboard,
+    description: 'Theater management',
+    clients: ['theater', 'movie'], // Available for theater and movie clients
+    subcategories: [
+      {
+        title: 'Registration',
+        path: '/dashboard/theater/add',
+        icon: Building,
+        description: 'Register new theater to system',
+        clients: ['theater']
+      },
+      {
+        title: 'Seat Config',
+        path: '/dashboard/theater/sitconfig',
+        icon: Grid3x3,
+        description: 'Configure theater seat layout',
+        clients: ['theater']
+      },
+      {
+        title: 'Movie',
+        path: '/dashboard/theater/movie',
+        icon: Film,
+        description: 'Register and manage movies',
+        clients: ['theater', 'movie'] // Available for both theater and movie clients
+      }
+    ]
+  },
+  {
+    title: 'Settings',
+    path: '/dashboard/settings',
+    icon: Settings,
+    description: 'Manage user profile and preferences',
+    clients: ['hotel', 'bus', 'taxi', 'flight', 'movie', 'theater'] // Available to all clients
   }
 ];
 

@@ -71,11 +71,11 @@ function Sidebar() {
       <Button
         variant="ghost"
         size="icon"
-        className="fixed top-4 left-4 z-50 md:hidden"
+        className="fixed top-3 left-3 z-50 md:hidden h-10 w-10"
         onClick={toggleMobile}
         aria-label="Toggle navigation menu"
       >
-        {isMobileOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+        {isMobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
       </Button>
 
       {/* Mobile overlay */}
@@ -90,7 +90,7 @@ function Sidebar() {
       {/* Sidebar */}
       <aside
         className={cn(
-          "fixed left-0 top-0 z-40 h-full bg-card border-r border-border transition-all duration-300 ease-in-out md:relative md:translate-x-0",
+          "fixed left-0 top-0 z-40 h-full bg-sidebar border-r border-sidebar-border transition-all duration-300 ease-in-out md:relative md:translate-x-0",
           isCollapsed ? "w-16" : "w-64",
           isMobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
         )}
@@ -98,11 +98,11 @@ function Sidebar() {
         <div className="flex flex-col h-full">
           {/* Header */}
           <div className={cn(
-            "flex items-center h-16 px-4 border-b border-border",
+            "flex items-center h-14 md:h-16 px-3 md:px-4 border-b border-sidebar-border",
             isCollapsed ? "justify-center" : "justify-between"
           )}>
             {!isCollapsed && (
-              <h1 className="text-lg font-semibold truncate">
+              <h1 className="text-base md:text-lg font-semibold truncate text-sidebar-foreground">
                 {APP_NAME}
               </h1>
             )}
@@ -110,18 +110,18 @@ function Sidebar() {
               variant="ghost"
               size="icon"
               onClick={toggleSidebar}
-              className="hidden md:flex"
+              className="hidden md:flex h-8 w-8 text-sidebar-foreground hover:bg-sidebar-accent"
               aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
             >
               <ChevronLeft className={cn(
-                "h-4 w-4 transition-transform",
+                "h-4 w-4 transition-transform text-sidebar-foreground",
                 isCollapsed && "rotate-180"
               )} />
             </Button>
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
+          <nav className="flex-1 p-3 md:p-4 space-y-1 md:space-y-2 overflow-y-auto">
             {filteredNavigationItems.map((item) => {
               const Icon = item.icon;
               const hasSubcategories = item.subcategories && item.subcategories.length > 0;
@@ -137,21 +137,21 @@ function Sidebar() {
                           toggleExpanded(item.path);
                         }}
                         className={cn(
-                          "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
-                          "hover:bg-accent hover:text-accent-foreground",
-                          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                          "w-full flex items-center gap-2 md:gap-3 px-2 md:px-3 py-2 rounded-lg text-xs md:text-sm font-medium transition-colors",
+                          "bg-sidebar-accent/50 hover:bg-sidebar-accent text-sidebar-foreground hover:text-sidebar-foreground",
+                          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring",
                           isCollapsed && "justify-center"
                         )}
                         title={isCollapsed ? item.title : undefined}
                       >
-                        <Icon className="h-5 w-5 shrink-0" />
+                        <Icon className="h-4 w-4 md:h-5 md:w-5 shrink-0" />
                         {!isCollapsed && (
                           <>
                             <span className="truncate flex-1 text-left">{item.title}</span>
                             {isExpanded ? (
-                              <ChevronDown className="h-4 w-4" />
+                              <ChevronDown className="h-3 w-3 md:h-4 md:w-4" />
                             ) : (
-                              <ChevronRight className="h-4 w-4" />
+                              <ChevronRight className="h-3 w-3 md:h-4 md:w-4" />
                             )}
                           </>
                         )}
@@ -167,16 +167,16 @@ function Sidebar() {
                         }}
                         className={({ isActive }) =>
                           cn(
-                            "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
-                            "hover:bg-accent hover:text-accent-foreground",
-                            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                            isActive && "bg-accent text-accent-foreground",
+                            "flex items-center gap-2 md:gap-3 px-2 md:px-3 py-2 rounded-lg text-xs md:text-sm font-medium transition-colors",
+                            "bg-sidebar-accent/50 hover:bg-sidebar-accent text-sidebar-foreground hover:text-sidebar-foreground",
+                            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring",
+                            isActive && "bg-sidebar-primary text-sidebar-primary-foreground",
                             isCollapsed && "justify-center"
                           )
                         }
                         title={isCollapsed ? item.title : undefined}
                       >
-                        <Icon className="h-5 w-5 shrink-0" />
+                        <Icon className="h-4 w-4 md:h-5 md:w-5 shrink-0" />
                         {!isCollapsed && (
                           <span className="truncate">{item.title}</span>
                         )}
@@ -186,7 +186,7 @@ function Sidebar() {
                   
                   {/* Subcategories */}
                   {hasSubcategories && isExpanded && !isCollapsed && (
-                    <div className="ml-6 mt-1 space-y-1">
+                    <div className="ml-4 md:ml-6 mt-1 space-y-1">
                       {item.subcategories.map((subItem) => {
                         const SubIcon = subItem.icon;
                         return (
@@ -201,14 +201,14 @@ function Sidebar() {
                             }}
                             className={({ isActive }) =>
                               cn(
-                                "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
-                                "hover:bg-accent hover:text-accent-foreground",
-                                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                                isActive && "bg-accent text-accent-foreground"
+                                "flex items-center gap-2 md:gap-3 px-2 md:px-3 py-2 rounded-lg text-xs md:text-sm font-medium transition-colors",
+                                "bg-sidebar-accent/50 hover:bg-sidebar-accent text-sidebar-foreground hover:text-sidebar-foreground",
+                                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring",
+                                isActive && "bg-sidebar-primary text-sidebar-primary-foreground"
                               )
                             }
                           >
-                            <SubIcon className="h-4 w-4 shrink-0" />
+                            <SubIcon className="h-3 w-3 md:h-4 md:w-4 shrink-0" />
                             <span className="truncate">{subItem.title}</span>
                           </NavLink>
                         );
@@ -222,8 +222,8 @@ function Sidebar() {
 
           {/* Footer */}
           {!isCollapsed && (
-            <div className="p-4 border-t border-border">
-              <div className="text-xs text-muted-foreground">
+            <div className="p-3 md:p-4 border-t border-sidebar-border">
+              <div className="text-xs text-sidebar-foreground/70">
                 © 2024 GoBhutan
               </div>
             </div>

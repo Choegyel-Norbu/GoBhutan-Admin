@@ -42,8 +42,18 @@ const RoomManager = () => {
         const response = await apiClient.get(API_CONFIG.ENDPOINTS.HOTEL.HOTELS);
         console.log('Hotels response:', response);
         
-        const hotelsData = response.data || response;
-        setHotels(Array.isArray(hotelsData) ? hotelsData : []);
+        // Handle the new API response structure: { success, message, data: [...] }
+        let hotelsData = [];
+        if (response && response.success && Array.isArray(response.data)) {
+          hotelsData = response.data;
+        } else if (Array.isArray(response)) {
+          hotelsData = response;
+        } else if (response && Array.isArray(response.data)) {
+          hotelsData = response.data;
+        }
+        
+        console.log('Parsed hotels data:', hotelsData);
+        setHotels(hotelsData);
         
         // Don't auto-select first hotel - let user choose
       } catch (err) {
@@ -328,29 +338,30 @@ const RoomManager = () => {
   };
 
   return (
-    <div className="container mx-auto p-0 md:p-6 space-y-6">
+    <div className="container mx-auto p-4 md:p-6 space-y-4 md:space-y-6">
       <div className="flex items-center gap-3">
         <div>
-          <h1 className="text-xl font-bold">Room Management</h1>
-          <p className="text-muted-foreground">Manage rooms for existing hotels</p>
+          <h1 className="text-lg md:text-xl font-bold">Room Management</h1>
+          <p className="text-sm md:text-base text-muted-foreground">Manage rooms for existing hotels</p>
         </div>
       </div>
 
       {/* Hotel Selection */}
       <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Select Hotel</CardTitle>
-          <CardDescription>
+        <CardHeader className="pb-4">
+          <CardTitle className="text-base md:text-lg">Select Hotel</CardTitle>
+          <CardDescription className="text-sm">
             Choose a hotel to view and manage its rooms
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="max-w-md">
-            <Label htmlFor="hotel-select">Hotel</Label>
+        <CardContent className="pt-0">
+          <div className="w-full max-w-md">
+            <Label htmlFor="hotel-select" className="text-sm font-medium">Hotel</Label>
             <Select
               id="hotel-select"
               value={selectedHotelId || ''}
               onChange={(e) => setSelectedHotelId(e.target.value)}
+              className="mt-1"
             >
               <option value="">Select a hotel...</option>
               {hotels.map((hotel) => (
@@ -403,32 +414,41 @@ const RoomManager = () => {
       {/* Rooms List */}
       {!isLoading && !error && selectedHotelId && rooms.length > 0 && (
         <Card>
-          <CardHeader>
-            <CardTitle>
-              Rooms - {hotels.find(h => h.id === selectedHotelId)?.name || 'Selected Hotel'} ({rooms.length} rooms)
+          <CardHeader className="pb-4">
+            {/* Selected Hotel Display */}
+            {selectedHotelId && (
+              <div className="text-center py-2 md:py-4">
+                <h3 className="text-base md:text-lg font-semibold text-primary">
+                  {hotels.find(h => h.id === parseInt(selectedHotelId))?.name || 'Selected Hotel'}
+                </h3>
+              </div>
+            )}
+            <CardTitle className="text-sm md:text-base">
+              All rooms
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-xs md:text-sm">
               {selectedHotelId ? 'Rooms for the selected hotel' : 'Select a hotel to view rooms'}
             </CardDescription>
           </CardHeader>
 
-
-          <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+          <CardContent className="pt-0">
+            {/* Table with horizontal scroll on mobile */}
+            <div className="overflow-x-auto -mx-4 md:mx-0">
+              <div className="min-w-full px-4 md:px-0">
+                <table className="w-full text-xs md:text-sm">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-4 py-3 text-left font-semibold text-gray-700">Room #</th>
-                    <th className="px-4 py-3 text-left font-semibold text-gray-700">Hotel</th>
-                    <th className="px-4 py-3 text-left font-semibold text-gray-700">Room Type</th>
-                    <th className="px-4 py-3 text-left font-semibold text-gray-700">Floor</th>
-                    <th className="px-4 py-3 text-left font-semibold text-gray-700">Base Price</th>
-                    <th className="px-4 py-3 text-left font-semibold text-gray-700">Max Occupancy</th>
-                    <th className="px-4 py-3 text-left font-semibold text-gray-700">Status</th>
-                    <th className="px-4 py-3 text-left font-semibold text-gray-700">Active</th>
-                    <th className="px-4 py-3 text-left font-semibold text-gray-700">Description</th>
-                    <th className="px-4 py-3 text-left font-semibold text-gray-700">Created</th>
-                    <th className="px-4 py-3 text-left font-semibold text-gray-700">Actions</th>
+                    <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-gray-700 whitespace-nowrap">Room #</th>
+                    <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-gray-700 whitespace-nowrap">Hotel</th>
+                    <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-gray-700 whitespace-nowrap">Room Type</th>
+                    <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-gray-700 whitespace-nowrap">Floor</th>
+                    <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-gray-700 whitespace-nowrap">Base Price</th>
+                    <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-gray-700 whitespace-nowrap">Max Occupancy</th>
+                    <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-gray-700 whitespace-nowrap">Status</th>
+                    <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-gray-700 whitespace-nowrap">Active</th>
+                    <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-gray-700 whitespace-nowrap">Description</th>
+                    <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-gray-700 whitespace-nowrap">Created</th>
+                    <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-gray-700 whitespace-nowrap">Actions</th>
                   </tr>
                 </thead>
 
@@ -436,32 +456,32 @@ const RoomManager = () => {
                 <tbody className="divide-y divide-gray-200">
                   {rooms.map((room, index) => (
                     <tr key={room.id || index} className="hover:bg-gray-50">
-                      <td className="px-4 py-3">
+                      <td className="px-2 md:px-4 py-2 md:py-3 whitespace-nowrap">
                         <span className="font-medium text-gray-900">
                           {room.roomNumber || 'N/A'}
                         </span>
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-2 md:px-4 py-2 md:py-3 whitespace-nowrap">
                         <span className="text-gray-700">{room.hotelName || 'N/A'}</span>
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-2 md:px-4 py-2 md:py-3 whitespace-nowrap">
                         <div>
                           <div className="font-medium text-gray-900">{room.roomTypeName || 'N/A'}</div>
                         </div>
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-2 md:px-4 py-2 md:py-3 whitespace-nowrap">
                         <span className="text-gray-700">{room.floor || 'N/A'}</span>
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-2 md:px-4 py-2 md:py-3 whitespace-nowrap">
                         <span className="font-medium text-green-600">
                           Nu {room.basePrice || 'N/A'}
                         </span>
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-2 md:px-4 py-2 md:py-3 whitespace-nowrap">
                         <span className="text-gray-700">{room.maxOccupancy || 'N/A'}</span>
                       </td>
-                      <td className="px-4 py-3">
-                        <span className={`px-2 py-1 text-xs rounded-full font-medium ${
+                      <td className="px-2 md:px-4 py-2 md:py-3 whitespace-nowrap">
+                        <span className={`px-1 md:px-2 py-1 text-xs rounded-full font-medium ${
                           room.status === 'AVAILABLE' ? 'bg-green-100 text-green-800' :
                           room.status === 'OCCUPIED' ? 'bg-red-100 text-red-800' :
                           room.status === 'MAINTENANCE' ? 'bg-yellow-100 text-yellow-800' :
@@ -471,42 +491,42 @@ const RoomManager = () => {
                           {room.status || 'N/A'}
                         </span>
                       </td>
-                      <td className="px-4 py-3">
-                        <span className={`px-2 py-1 text-xs rounded-full font-medium ${
+                      <td className="px-2 md:px-4 py-2 md:py-3 whitespace-nowrap">
+                        <span className={`px-1 md:px-2 py-1 text-xs rounded-full font-medium ${
                           room.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                         }`}>
                           {room.isActive ? 'Active' : 'Inactive'}
                         </span>
                       </td>
-                      <td className="px-4 py-3">
-                        <div className="max-w-48">
+                      <td className="px-2 md:px-4 py-2 md:py-3">
+                        <div className="max-w-32 md:max-w-48">
                           <span className="text-xs text-gray-600 truncate block">
                             {room.description || 'N/A'}
                           </span>
                         </div>
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-2 md:px-4 py-2 md:py-3 whitespace-nowrap">
                         <span className="text-xs text-gray-500">
                           {room.createdAt ? new Date(room.createdAt).toLocaleDateString() : 'N/A'}
                         </span>
                       </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
+                      <td className="px-2 md:px-4 py-2 md:py-3 whitespace-nowrap">
+                        <div className="flex items-center gap-1 md:gap-2">
                           <button 
                             onClick={() => handleEditRoom(room)}
-                            className="text-blue-600 hover:text-blue-800 text-xs flex items-center gap-1"
+                            className="text-blue-600 hover:text-blue-800 text-xs flex items-center gap-1 px-2 py-1 rounded hover:bg-blue-50"
                             title="Edit room"
                           >
                             <Edit className="h-3 w-3" />
-                            Edit
+                            <span className="hidden sm:inline">Edit</span>
                           </button>
                           <button 
                             onClick={() => handleDeleteRoom(room.id)}
-                            className="text-red-600 hover:text-red-800 text-xs flex items-center gap-1"
+                            className="text-red-600 hover:text-red-800 text-xs flex items-center gap-1 px-2 py-1 rounded hover:bg-red-50"
                             title="Delete room"
                           >
                             <Trash2 className="h-3 w-3" />
-                            Delete
+                            <span className="hidden sm:inline">Delete</span>
                           </button>
                         </div>
                       </td>
@@ -514,12 +534,13 @@ const RoomManager = () => {
                   ))}
                 </tbody>
               </table>
+              </div>
             </div>
             
             {/* Room Description Panel */}
-            <div className="mt-6">
-              <div className="bg-gray-50 rounded-lg p-4">
-                <h4 className="text-sm font-medium text-gray-700 mb-2">Room Details</h4>
+            <div className="mt-4 md:mt-6">
+              <div className="bg-gray-50 rounded-lg p-3 md:p-4">
+                <h4 className="text-xs md:text-sm font-medium text-gray-700 mb-2">Room Details</h4>
                 <div className="text-xs text-gray-600">
                   Click on any row to view detailed room descriptions and additional information.
                 </div>
@@ -544,42 +565,44 @@ const RoomManager = () => {
 
       {/* Edit Room Modal */}
       {editingRoom && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-4 md:p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold">Edit Room</h3>
+              <h3 className="text-base md:text-lg font-semibold">Edit Room</h3>
               <button 
                 onClick={handleCancelEdit}
-                className="text-gray-400 hover:text-gray-600"
+                className="text-gray-400 hover:text-gray-600 p-1"
               >
-                <X className="h-6 w-6" />
+                <X className="h-5 w-5 md:h-6 md:w-6" />
               </button>
             </div>
             
-            <div className="space-y-4">
+            <div className="space-y-3 md:space-y-4">
               <div>
-                <Label htmlFor="roomNumber">Room Number</Label>
+                <Label htmlFor="roomNumber" className="text-sm font-medium">Room Number</Label>
                 <Input
                   id="roomNumber"
                   value={editFormData.roomNumber}
                   onChange={(e) => handleEditFormChange('roomNumber', e.target.value)}
                   placeholder="e.g., 101"
+                  className="mt-1"
                 />
               </div>
               
               <div>
-                <Label htmlFor="floor">Floor</Label>
+                <Label htmlFor="floor" className="text-sm font-medium">Floor</Label>
                 <Input
                   id="floor"
                   type="number"
                   value={editFormData.floor}
                   onChange={(e) => handleEditFormChange('floor', parseInt(e.target.value))}
                   placeholder="e.g., 1"
+                  className="mt-1"
                 />
               </div>
               
               <div>
-                <Label htmlFor="basePrice">Base Price ($)</Label>
+                <Label htmlFor="basePrice" className="text-sm font-medium">Base Price ($)</Label>
                 <Input
                   id="basePrice"
                   type="number"
@@ -587,26 +610,29 @@ const RoomManager = () => {
                   value={editFormData.basePrice}
                   onChange={(e) => handleEditFormChange('basePrice', parseFloat(e.target.value))}
                   placeholder="e.g., 99.99"
+                  className="mt-1"
                 />
               </div>
               
               <div>
-                <Label htmlFor="maxOccupancy">Max Occupancy</Label>
+                <Label htmlFor="maxOccupancy" className="text-sm font-medium">Max Occupancy</Label>
                 <Input
                   id="maxOccupancy"
                   type="number"
                   value={editFormData.maxOccupancy}
                   onChange={(e) => handleEditFormChange('maxOccupancy', parseInt(e.target.value))}
                   placeholder="e.g., 2"
+                  className="mt-1"
                 />
               </div>
               
               <div>
-                <Label htmlFor="status">Status</Label>
+                <Label htmlFor="status" className="text-sm font-medium">Status</Label>
                 <Select
                   id="status"
                   value={editFormData.status}
                   onChange={(e) => handleEditFormChange('status', e.target.value)}
+                  className="mt-1"
                 >
                   <option value="AVAILABLE">Available</option>
                   <option value="OCCUPIED">Occupied</option>
@@ -616,11 +642,12 @@ const RoomManager = () => {
               </div>
               
               <div>
-                <Label htmlFor="isActive">Active Status</Label>
+                <Label htmlFor="isActive" className="text-sm font-medium">Active Status</Label>
                 <Select
                   id="isActive"
                   value={editFormData.isActive.toString()}
                   onChange={(e) => handleEditFormChange('isActive', e.target.value === 'true')}
+                  className="mt-1"
                 >
                   <option value="true">Active</option>
                   <option value="false">Inactive</option>
@@ -628,22 +655,22 @@ const RoomManager = () => {
               </div>
               
               <div>
-                <Label htmlFor="description">Description</Label>
+                <Label htmlFor="description" className="text-sm font-medium">Description</Label>
                 <Textarea
                   id="description"
                   value={editFormData.description}
                   onChange={(e) => handleEditFormChange('description', e.target.value)}
                   placeholder="Room description..."
                   rows={3}
+                  className="mt-1"
                 />
               </div>
               
-              
-              <div className="flex gap-3 pt-4">
+              <div className="flex flex-col sm:flex-row gap-2 md:gap-3 pt-4">
                 <Button 
                   onClick={handleSaveEdit}
                   disabled={isEditLoading}
-                  className="flex items-center gap-2"
+                  className="flex items-center justify-center gap-2 py-2 px-4 text-sm"
                 >
                   {isEditLoading ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -656,6 +683,7 @@ const RoomManager = () => {
                   onClick={handleCancelEdit}
                   variant="outline"
                   disabled={isEditLoading}
+                  className="py-2 px-4 text-sm"
                 >
                   Cancel
                 </Button>

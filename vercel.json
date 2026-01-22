@@ -1,4 +1,11 @@
 {
+  "redirects": [
+    {
+      "source": "/",
+      "destination": "/go-bhutan-admin/",
+      "permanent": false
+    }
+  ],
   "rewrites": [
     {
       "source": "/go-bhutan-admin/assets/:path*",
@@ -14,7 +21,11 @@
     },
     {
       "source": "/go-bhutan-admin/:path*",
-      "destination": "/go-bhutan-admin/index.html"
+      "destination": "/index.html"
+    },
+    {
+      "source": "/go-bhutan-admin",
+      "destination": "/index.html"
     }
   ],
   "headers": [

@@ -1,15 +1,16 @@
 {
+  "trailingSlash": false,
   "redirects": [
     {
       "source": "/",
-      "destination": "/go-bhutan-admin/",
+      "destination": "/go-bhutan-admin",
       "permanent": false
     }
   ],
   "rewrites": [
     {
-      "source": "/go-bhutan-admin/assets/:path*",
-      "destination": "/assets/:path*"
+      "source": "/go-bhutan-admin/assets/(.*)",
+      "destination": "/assets/$1"
     },
     {
       "source": "/go-bhutan-admin/icon.svg",
@@ -20,7 +21,7 @@
       "destination": "/manifest.json"
     },
     {
-      "source": "/go-bhutan-admin/:path*",
+      "source": "/go-bhutan-admin/(.*)",
       "destination": "/index.html"
     },
     {
@@ -30,7 +31,7 @@
   ],
   "headers": [
     {
-      "source": "/go-bhutan-admin/assets/:path*",
+      "source": "/go-bhutan-admin/assets/(.*)",
       "headers": [
         {
           "key": "Cache-Control",

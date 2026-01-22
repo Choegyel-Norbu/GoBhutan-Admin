@@ -39,9 +39,9 @@ export const API_CONFIG = {
       ROOMS: '/hotel/rooms',
       GUESTS: '/hotel/guests',
       HOTELS: '/api/v1/hotels',
-      ALL_ROOMS: '/rooms',
+      ALL_ROOMS: '/api/rooms',
       ROOM_TYPES: '/api/room-types',
-      ROOM_TYPES_BY_HOTEL: '/api/room-types/hotel',
+      ROOM_TYPES_BY_HOTEL: '/api/room-types',
     },
     
     FLIGHT: {

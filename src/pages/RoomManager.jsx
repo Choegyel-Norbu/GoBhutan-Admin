@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { Badge } from '@/components/ui/Badge';
-import { Bed, Loader2, Edit, Trash2, Save, X } from 'lucide-react';
+import { Bed, Loader2, Edit, Trash2, Save, X, Plus, Upload, Image as ImageIcon } from 'lucide-react';
 import { apiClient, api } from '@/lib/apiService';
 import { API_CONFIG } from '@/lib/api';
 import authAPI from '@/lib/authAPI';
@@ -25,6 +25,25 @@ const RoomManager = () => {
   const [isEditLoading, setIsEditLoading] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
+  
+  // Add room functionality states
+  const [showAddRoomForm, setShowAddRoomForm] = useState(false);
+  const [roomTypes, setRoomTypes] = useState([]);
+  const [isLoadingRoomTypes, setIsLoadingRoomTypes] = useState(false);
+  const [addRoomFormData, setAddRoomFormData] = useState({
+    roomNumber: '',
+    roomTypeId: '',
+    roomSize: '',
+    floor: '',
+    basePrice: '',
+    maxOccupancy: '',
+    status: 'AVAILABLE',
+    isActive: true,
+    description: '',
+    images: []
+  });
+  const [addRoomErrors, setAddRoomErrors] = useState({});
+  const [isSubmittingRoom, setIsSubmittingRoom] = useState(false);
   
   // Delete functionality states - removed since using SweetAlert2
 
@@ -66,6 +85,44 @@ const RoomManager = () => {
     
     fetchHotels();
   }, []);
+
+  // Fetch room types for selected hotel
+  useEffect(() => {
+    if (!selectedHotelId) {
+      setRoomTypes([]);
+      return;
+    }
+
+    const fetchRoomTypes = async () => {
+      try {
+        setIsLoadingRoomTypes(true);
+        const token = authAPI.getStoredToken();
+        if (token) {
+          apiClient.setAuthToken(token);
+        }
+        
+        const response = await apiClient.get(API_CONFIG.ENDPOINTS.HOTEL.ROOM_TYPES_BY_HOTEL);
+        
+        let roomTypesData = [];
+        if (response && Array.isArray(response)) {
+          roomTypesData = response;
+        } else if (response && response.success && Array.isArray(response.data)) {
+          roomTypesData = response.data;
+        } else if (response && Array.isArray(response.data)) {
+          roomTypesData = response.data;
+        }
+        
+        setRoomTypes(roomTypesData);
+      } catch (error) {
+        console.error('Error fetching room types:', error);
+        setRoomTypes([]);
+      } finally {
+        setIsLoadingRoomTypes(false);
+      }
+    };
+
+    fetchRoomTypes();
+  }, [selectedHotelId]);
 
   // Fetch rooms when hotel is selected
   useEffect(() => {
@@ -249,6 +306,228 @@ const RoomManager = () => {
     setEditFormData({});
   };
 
+  // Add room functions
+  const handleToggleAddRoom = () => {
+    setShowAddRoomForm(!showAddRoomForm);
+    if (!showAddRoomForm) {
+      // Opening form - reset form data
+      setAddRoomFormData({
+        roomNumber: '',
+        roomTypeId: '',
+        roomSize: '',
+        floor: '',
+        basePrice: '',
+        maxOccupancy: '',
+        status: 'AVAILABLE',
+        isActive: true,
+        description: '',
+        images: []
+      });
+      setAddRoomErrors({});
+    }
+  };
+
+  const handleCancelAddRoom = () => {
+    setShowAddRoomForm(false);
+    setAddRoomFormData({
+      roomNumber: '',
+      roomTypeId: '',
+      floor: '',
+      basePrice: '',
+      maxOccupancy: '',
+      status: 'AVAILABLE',
+      isActive: true,
+      description: '',
+      images: []
+    });
+    setAddRoomErrors({});
+  };
+
+  const handleRoomImageUpload = (e) => {
+    const files = Array.from(e.target.files);
+    const imageFiles = files.map(file => ({
+      id: Date.now() + Math.random(),
+      file: file,
+      name: file.name,
+      size: file.size,
+      type: file.type,
+      url: URL.createObjectURL(file)
+    }));
+    
+    setAddRoomFormData(prev => ({
+      ...prev,
+      images: [...prev.images, ...imageFiles]
+    }));
+  };
+
+  const removeRoomImage = (imageId) => {
+    setAddRoomFormData(prev => ({
+      ...prev,
+      images: prev.images.filter(img => img.id !== imageId)
+    }));
+  };
+
+  const handleAddRoomFormChange = (field, value) => {
+    setAddRoomFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+    
+    // Clear error for this field when user starts typing
+    if (addRoomErrors[field]) {
+      setAddRoomErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[field];
+        return newErrors;
+      });
+    }
+  };
+
+  const validateAddRoomForm = () => {
+    const errors = {};
+    
+    if (!addRoomFormData.roomNumber.trim()) {
+      errors.roomNumber = 'Room number is required';
+    }
+    
+    if (!addRoomFormData.roomTypeId) {
+      errors.roomTypeId = 'Room type is required';
+    }
+    
+    if (!addRoomFormData.roomSize.trim()) {
+      errors.roomSize = 'Room size is required';
+    }
+    
+    if (!addRoomFormData.basePrice || isNaN(addRoomFormData.basePrice) || parseFloat(addRoomFormData.basePrice) <= 0) {
+      errors.basePrice = 'Base price must be a positive number';
+    }
+    
+    if (!addRoomFormData.maxOccupancy || isNaN(addRoomFormData.maxOccupancy) || parseInt(addRoomFormData.maxOccupancy) <= 0) {
+      errors.maxOccupancy = 'Max occupancy must be a positive number';
+    }
+    
+    setAddRoomErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleSubmitAddRoom = async (e) => {
+    e.preventDefault();
+    
+    if (!validateAddRoomForm()) {
+      return;
+    }
+    
+    setIsSubmittingRoom(true);
+    
+    try {
+      // Create FormData for form-data submission (like hotel creation)
+      const formDataToSend = new FormData();
+      
+      // Add basic room information as flat form-data fields
+      formDataToSend.append('hotelId', selectedHotelId.toString());
+      formDataToSend.append('roomNumber', addRoomFormData.roomNumber.trim());
+      // Send both camelCase and snake_case for room_type_id to ensure backend compatibility
+      formDataToSend.append('roomTypeId', addRoomFormData.roomTypeId.toString());
+      formDataToSend.append('room_type_id', addRoomFormData.roomTypeId.toString());
+      formDataToSend.append('roomSize', addRoomFormData.roomSize.trim());
+      if (addRoomFormData.floor) {
+        formDataToSend.append('floor', addRoomFormData.floor.toString());
+      }
+      formDataToSend.append('basePrice', parseFloat(addRoomFormData.basePrice).toString());
+      formDataToSend.append('maxOccupancy', parseInt(addRoomFormData.maxOccupancy).toString());
+      formDataToSend.append('status', addRoomFormData.status);
+      formDataToSend.append('isActive', addRoomFormData.isActive.toString());
+      if (addRoomFormData.description.trim()) {
+        formDataToSend.append('description', addRoomFormData.description.trim());
+      }
+      
+      // Add room images as files with key "roomImages" (similar to hotelImages)
+      addRoomFormData.images.forEach((image) => {
+        formDataToSend.append('roomImages', image.file);
+      });
+      
+      console.log('Room FormData:', formDataToSend);
+      // Log form data entries for debugging
+      for (const [key, value] of formDataToSend.entries()) {
+        console.log(`${key}:`, value instanceof File ? value.name : value);
+      }
+      
+      const token = authAPI.getStoredToken();
+      if (token) {
+        apiClient.setAuthToken(token);
+      }
+      
+      // Make API call to POST /rooms with FormData
+      console.log('Making API call to:', API_CONFIG.ENDPOINTS.HOTEL.ALL_ROOMS);
+      
+      const response = await apiClient.postFormData(API_CONFIG.ENDPOINTS.HOTEL.ALL_ROOMS, formDataToSend);
+      
+      console.log('Create room response:', response);
+      
+      if (response && response.success === true) {
+        // Refresh rooms list
+        const roomsResponse = await api.room.getRoomsByHotel(selectedHotelId);
+        const responseData = roomsResponse.data || roomsResponse;
+        let roomsData = [];
+        
+        if (responseData.success && Array.isArray(responseData.data)) {
+          roomsData = responseData.data;
+        } else if (Array.isArray(responseData)) {
+          roomsData = responseData;
+        }
+        
+        setRooms(roomsData);
+        
+        // Reset form and hide it
+        handleCancelAddRoom();
+        
+        await Swal.fire({
+          icon: 'success',
+          title: 'Room Added Successfully!',
+          text: response.message || `Room ${addRoomFormData.roomNumber} has been added successfully.`,
+          confirmButtonText: 'OK',
+          confirmButtonColor: '#10b981'
+        });
+      } else {
+        throw new Error(response?.message || 'Failed to create room');
+      }
+    } catch (error) {
+      console.error('Error creating room:', error);
+      console.error('Error details:', {
+        message: error.message,
+        status: error.status,
+        response: error.response,
+        stack: error.stack
+      });
+      
+      let errorMessage = 'Failed to create room. Please try again or contact support.';
+      
+      if (error.response) {
+        // Server responded with error status
+        console.error('Server response:', error.response);
+        errorMessage = `Server error (${error.response.status}): ${error.response.data?.message || error.message}`;
+      } else if (error.request) {
+        // Request was made but no response received
+        console.error('No response received:', error.request);
+        errorMessage = 'No response from server. Please check your connection.';
+      } else {
+        // Something else happened
+        console.error('Request setup error:', error.message);
+        errorMessage = `Request error: ${error.message}`;
+      }
+      
+      await Swal.fire({
+        icon: 'error',
+        title: 'Failed to Create Room',
+        text: errorMessage,
+        confirmButtonText: 'OK',
+        confirmButtonColor: '#ef4444'
+      });
+    } finally {
+      setIsSubmittingRoom(false);
+    }
+  };
+
   // Delete room functions
   const handleDeleteRoom = async (roomId) => {
     const room = rooms.find(r => r.id === roomId);
@@ -412,15 +691,26 @@ const RoomManager = () => {
       )}
 
       {/* Rooms List */}
-      {!isLoading && !error && selectedHotelId && rooms.length > 0 && (
+      {!isLoading && !error && selectedHotelId && (
         <Card>
           <CardHeader className="pb-4">
             {/* Selected Hotel Display */}
             {selectedHotelId && (
-              <div className="text-center py-2 md:py-4">
+              <div className="flex items-center justify-between mb-2">
+                <div className="text-center flex-1">
                 <h3 className="text-base md:text-lg font-semibold text-primary">
                   {hotels.find(h => h.id === parseInt(selectedHotelId))?.name || 'Selected Hotel'}
                 </h3>
+                </div>
+                <Button
+                  onClick={handleToggleAddRoom}
+                  className="flex items-center gap-2"
+                  size="sm"
+                  variant={showAddRoomForm ? "outline" : "default"}
+                >
+                  <Plus className="h-4 w-4" />
+                  {showAddRoomForm ? 'Cancel' : 'Add Room'}
+                </Button>
               </div>
             )}
             <CardTitle className="text-sm md:text-base">
@@ -430,6 +720,25 @@ const RoomManager = () => {
               {selectedHotelId ? 'Rooms for the selected hotel' : 'Select a hotel to view rooms'}
             </CardDescription>
           </CardHeader>
+
+          {rooms.length === 0 ? (
+            <CardContent className="py-8">
+              <div className="text-center text-muted-foreground">
+                <Bed className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p className="font-medium">No rooms found</p>
+                <p className="text-sm mt-1 mb-4">No rooms are currently registered for this hotel.</p>
+                <Button
+                  onClick={handleToggleAddRoom}
+                  className="flex items-center gap-2 mx-auto"
+                  size="sm"
+                  variant={showAddRoomForm ? "outline" : "default"}
+                >
+                  <Plus className="h-4 w-4" />
+                  {showAddRoomForm ? 'Cancel' : 'Add First Room'}
+                </Button>
+              </div>
+            </CardContent>
+          ) : (
 
           <CardContent className="pt-0">
             {/* Table with horizontal scroll on mobile */}
@@ -547,18 +856,249 @@ const RoomManager = () => {
               </div>
             </div>
           </CardContent>
+          )}
         </Card>
       )}
 
-      {/* No Rooms State */}
-      {!isLoading && !error && selectedHotelId && rooms.length === 0 && (
+      {/* Add Room Form Section */}
+      {!isLoading && !error && selectedHotelId && showAddRoomForm && (
         <Card>
-          <CardContent className="py-8">
-            <div className="text-center text-muted-foreground">
-              <Bed className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p className="font-medium">No rooms found</p>
-              <p className="text-sm mt-1">No rooms are currently registered in the system.</p>
-            </div>
+          <CardHeader className="pb-4">
+            <CardTitle className="text-base md:text-lg flex items-center gap-2">
+              <Plus className="h-5 w-5" />
+              Add New Room
+            </CardTitle>
+            <CardDescription className="text-sm">
+              Fill in the details below to add a new room to this hotel
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmitAddRoom} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="roomNumber" className="text-sm font-medium">Room Number *</Label>
+                  <Input
+                    id="roomNumber"
+                    value={addRoomFormData.roomNumber}
+                    onChange={(e) => handleAddRoomFormChange('roomNumber', e.target.value)}
+                    placeholder="e.g., 101"
+                    className={addRoomErrors.roomNumber ? 'border-red-500' : ''}
+                    disabled={isSubmittingRoom}
+                  />
+                  {addRoomErrors.roomNumber && (
+                    <p className="text-xs text-red-500 mt-1">{addRoomErrors.roomNumber}</p>
+                  )}
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="roomTypeId" className="text-sm font-medium">Room Type *</Label>
+                  <Select
+                    id="roomTypeId"
+                    value={addRoomFormData.roomTypeId}
+                    onChange={(e) => handleAddRoomFormChange('roomTypeId', e.target.value)}
+                    className={addRoomErrors.roomTypeId ? 'border-red-500' : ''}
+                    disabled={isSubmittingRoom || isLoadingRoomTypes}
+                  >
+                    <option value="">Select room type...</option>
+                    {roomTypes.map((roomType) => (
+                      <option key={roomType.id} value={roomType.id}>
+                        {roomType.name}
+                      </option>
+                    ))}
+                  </Select>
+                  {addRoomErrors.roomTypeId && (
+                    <p className="text-xs text-red-500 mt-1">{addRoomErrors.roomTypeId}</p>
+                  )}
+                  {isLoadingRoomTypes && (
+                    <p className="text-xs text-gray-500 mt-1">Loading room types...</p>
+                  )}
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="roomSize" className="text-sm font-medium">Room Size *</Label>
+                  <Input
+                    id="roomSize"
+                    value={addRoomFormData.roomSize}
+                    onChange={(e) => handleAddRoomFormChange('roomSize', e.target.value)}
+                    placeholder="e.g., 250 sq ft"
+                    className={addRoomErrors.roomSize ? 'border-red-500' : ''}
+                    disabled={isSubmittingRoom}
+                  />
+                  {addRoomErrors.roomSize && (
+                    <p className="text-xs text-red-500 mt-1">{addRoomErrors.roomSize}</p>
+                  )}
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="floor" className="text-sm font-medium">Floor</Label>
+                  <Input
+                    id="floor"
+                    type="number"
+                    value={addRoomFormData.floor}
+                    onChange={(e) => handleAddRoomFormChange('floor', e.target.value)}
+                    placeholder="e.g., 1"
+                    disabled={isSubmittingRoom}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="basePrice" className="text-sm font-medium">Base Price (Nu) *</Label>
+                  <Input
+                    id="basePrice"
+                    type="number"
+                    step="0.01"
+                    value={addRoomFormData.basePrice}
+                    onChange={(e) => handleAddRoomFormChange('basePrice', e.target.value)}
+                    placeholder="e.g., 2999.99"
+                    className={addRoomErrors.basePrice ? 'border-red-500' : ''}
+                    disabled={isSubmittingRoom}
+                  />
+                  {addRoomErrors.basePrice && (
+                    <p className="text-xs text-red-500 mt-1">{addRoomErrors.basePrice}</p>
+                  )}
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="maxOccupancy" className="text-sm font-medium">Max Occupancy *</Label>
+                  <Input
+                    id="maxOccupancy"
+                    type="number"
+                    value={addRoomFormData.maxOccupancy}
+                    onChange={(e) => handleAddRoomFormChange('maxOccupancy', e.target.value)}
+                    placeholder="e.g., 2"
+                    className={addRoomErrors.maxOccupancy ? 'border-red-500' : ''}
+                    disabled={isSubmittingRoom}
+                  />
+                  {addRoomErrors.maxOccupancy && (
+                    <p className="text-xs text-red-500 mt-1">{addRoomErrors.maxOccupancy}</p>
+                  )}
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="status" className="text-sm font-medium">Status</Label>
+                  <Select
+                    id="status"
+                    value={addRoomFormData.status}
+                    onChange={(e) => handleAddRoomFormChange('status', e.target.value)}
+                    disabled={isSubmittingRoom}
+                  >
+                    <option value="AVAILABLE">Available</option>
+                    <option value="OCCUPIED">Occupied</option>
+                    <option value="MAINTENANCE">Maintenance</option>
+                    <option value="OUT_OF_ORDER">Out of Order</option>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="isActive" className="text-sm font-medium">Active Status</Label>
+                  <Select
+                    id="isActive"
+                    value={addRoomFormData.isActive.toString()}
+                    onChange={(e) => handleAddRoomFormChange('isActive', e.target.value === 'true')}
+                    disabled={isSubmittingRoom}
+                  >
+                    <option value="true">Active</option>
+                    <option value="false">Inactive</option>
+                  </Select>
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="description" className="text-sm font-medium">Description</Label>
+                <Textarea
+                  id="description"
+                  value={addRoomFormData.description}
+                  onChange={(e) => handleAddRoomFormChange('description', e.target.value)}
+                  placeholder="Room description..."
+                  rows={3}
+                  disabled={isSubmittingRoom}
+                />
+              </div>
+              
+              {/* Room Images */}
+              <div className="space-y-2">
+                <Label htmlFor="roomImages" className="text-sm font-medium flex items-center gap-2">
+                  <ImageIcon className="h-4 w-4" />
+                  Room Images
+                </Label>
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                  <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-sm text-gray-600 mb-2">
+                    Drag and drop images here, or click to select files
+                  </p>
+                  <input
+                    id="roomImages"
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    onChange={handleRoomImageUpload}
+                    className="hidden"
+                    disabled={isSubmittingRoom}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => document.getElementById('roomImages').click()}
+                    disabled={isSubmittingRoom}
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    Choose Images
+                  </Button>
+                </div>
+                
+                {addRoomFormData.images.length > 0 && (
+                  <div className="space-y-2 mt-4">
+                    <Label>Selected Images ({addRoomFormData.images.length})</Label>
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                      {addRoomFormData.images.map((image) => (
+                        <div key={image.id} className="relative group">
+                          <img
+                            src={image.url}
+                            alt={image.name}
+                            className="w-full h-24 object-cover rounded-lg border"
+                          />
+                          <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
+                            <Button
+                              type="button"
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => removeRoomImage(image.id)}
+                              disabled={isSubmittingRoom}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                          <p className="text-xs text-gray-500 mt-1 truncate">{image.name}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+              
+              <div className="flex flex-col sm:flex-row gap-3 pt-4">
+                <Button 
+                  type="submit"
+                  disabled={isSubmittingRoom}
+                  className="flex items-center justify-center gap-2"
+                >
+                  {isSubmittingRoom ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Plus className="h-4 w-4" />
+                  )}
+                  {isSubmittingRoom ? 'Adding Room...' : 'Add Room'}
+                </Button>
+                <Button 
+                  type="button"
+                  onClick={handleCancelAddRoom}
+                  variant="outline"
+                  disabled={isSubmittingRoom}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </form>
           </CardContent>
         </Card>
       )}

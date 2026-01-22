@@ -6,6 +6,7 @@ import { getApiUrl } from './env';
 const defaultHeaders = {
   'Content-Type': 'application/json',
   'Accept': 'application/json',
+  'ngrok-skip-browser-warning': 'true',
 };
 
 // Create a simple HTTP client
@@ -49,6 +50,7 @@ class ApiClient {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true',
         },
         body: JSON.stringify(refreshPayload)
       });
@@ -218,17 +220,17 @@ class ApiClient {
   }
 
   async postFormData(endpoint, formData, options = {}) {
-    // Remove Content-Type header to let browser set it with boundary for FormData
-    const headers = { ...this.defaultHeaders };
-    delete headers['Content-Type'];
+    // For FormData, only keep non-content-type headers (let browser set Content-Type with boundary)
+    const headers = {
+      'ngrok-skip-browser-warning': 'true',
+      ...(this.defaultHeaders['Authorization'] && { 'Authorization': this.defaultHeaders['Authorization'] }),
+      ...options.headers,
+    };
     
     return this.request(endpoint, {
       ...options,
       method: 'POST',
-      headers: {
-        ...headers,
-        ...options.headers,
-      },
+      headers,
       body: formData,
     });
   }
@@ -328,7 +330,7 @@ export const api = {
   // Room Service
   room: {
     getAllRooms: () => apiClient.get(API_CONFIG.ENDPOINTS.HOTEL.ALL_ROOMS),
-    getRoomsByHotel: (hotelId) => apiClient.get(`/rooms/hotel/${hotelId}`),
+    getRoomsByHotel: (hotelId) => apiClient.get(`/api/rooms/hotel/${hotelId}`),
     getRoom: (roomId) => apiClient.get(`/rooms/${roomId}`),
     createRoom: (roomData) => apiClient.post(API_CONFIG.ENDPOINTS.HOTEL.ALL_ROOMS, roomData),
     updateRoom: (roomId, roomData) => apiClient.put(`/rooms/${roomId}`, roomData),

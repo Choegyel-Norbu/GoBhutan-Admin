@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
 import { Textarea } from '@/components/ui/Textarea';
 import { Select } from '@/components/ui/Select';
-import { Building, MapPin, Phone, Mail, Star, Wifi, Car, Dumbbell, Coffee, Shield, Utensils, Plus, Trash2, Upload, Image as ImageIcon, Tv, Bath, Snowflake, Wind, Monitor, Clock, Coffee as CoffeeIcon } from 'lucide-react';
+import { Building, MapPin, Phone, Mail, Star, Wifi, Car, Dumbbell, Coffee, Shield, Utensils, Upload, Image as ImageIcon, Trash2 } from 'lucide-react';
 import { apiClient } from '@/lib/apiService';
 import { API_CONFIG } from '@/lib/api';
 import authAPI from '@/lib/authAPI';
@@ -14,48 +14,6 @@ import Swal from 'sweetalert2';
 const AddHotel = ({ hotelId = null }) => {
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [roomTypes, setRoomTypes] = useState([]);
-  const [isLoadingRoomTypes, setIsLoadingRoomTypes] = useState(false);
-
-  // Fetch room types on component mount
-  useEffect(() => {
-    const fetchRoomTypes = async (hotelId = null) => {
-      setIsLoadingRoomTypes(true);
-      try {
-        const token = authAPI.getStoredToken();
-        if (token) {
-          apiClient.setAuthToken(token);
-        }
-        
-        // Use hotel-specific endpoint if hotelId is provided, otherwise use general endpoint
-        const endpoint = hotelId 
-          ? `${API_CONFIG.ENDPOINTS.HOTEL.ROOM_TYPES_BY_HOTEL}/${hotelId}`
-          : API_CONFIG.ENDPOINTS.HOTEL.ROOM_TYPES;
-        
-        console.log('Fetching room types from:', endpoint);
-        const response = await apiClient.get(endpoint);
-        console.log('Room types response:', response);
-        
-        if (response && Array.isArray(response)) {
-          setRoomTypes(response);
-        } else if (response && response.data && Array.isArray(response.data)) {
-          setRoomTypes(response.data);
-        } else {
-          console.warn('Unexpected room types response format:', response);
-          setRoomTypes([]);
-        }
-      } catch (error) {
-        console.error('Error fetching room types:', error);
-        // Fallback to empty array if API fails
-        setRoomTypes([]);
-      } finally {
-        setIsLoadingRoomTypes(false);
-      }
-    };
-
-    // Use hotelId prop if available, otherwise use general endpoint for new hotels
-    fetchRoomTypes(hotelId);
-  }, [hotelId]);
 
   // Function to clear all form fields
   const clearForm = () => {
@@ -74,30 +32,7 @@ const AddHotel = ({ hotelId = null }) => {
       checkInTime: '',
       checkOutTime: '',
       images: [],
-      amenities: hotelAmenityOptions,
-      rooms: [{
-        id: 0,
-        roomNumber: '',
-        hotel: '',
-        roomType: {
-          id: 0,
-          name: '',
-          description: '',
-          bedCount: '',
-          bedType: '',
-          roomSize: ''
-        },
-        floor: '',
-        basePrice: '',
-        maxOccupancy: '',
-        status: 'AVAILABLE',
-        isActive: true,
-        description: '',
-        amenities: roomAmenityOptions,
-        images: [],
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      }]
+      amenities: hotelAmenityOptions
     });
     setErrors({});
   };
@@ -109,9 +44,9 @@ const AddHotel = ({ hotelId = null }) => {
       id: 1, 
       key: 'wifi', 
       name: 'Free WiFi', 
-      description: 'Complimentary high-speed internet access',
-      iconClass: 'wifi',
-      category: 'BASIC',
+      description: 'High-speed internet throughout the hotel',
+      iconClass: 'fa-wifi',
+      category: 'CONNECTIVITY',
       icon: Wifi,
       selected: false
     },
@@ -120,7 +55,7 @@ const AddHotel = ({ hotelId = null }) => {
       key: 'parking', 
       name: 'Free Parking', 
       description: 'Complimentary parking for guests',
-      iconClass: 'car',
+      iconClass: 'fa-car',
       category: 'BASIC',
       icon: Car,
       selected: false
@@ -129,8 +64,8 @@ const AddHotel = ({ hotelId = null }) => {
       id: 3, 
       key: 'pool', 
       name: 'Swimming Pool', 
-      description: 'Outdoor swimming pool facility',
-      iconClass: 'building',
+      description: 'Olympic-sized outdoor pool',
+      iconClass: 'fa-swimming-pool',
       category: 'RECREATION',
       icon: Building,
       selected: false
@@ -140,7 +75,7 @@ const AddHotel = ({ hotelId = null }) => {
       key: 'gym', 
       name: 'Fitness Center', 
       description: 'Well-equipped fitness center',
-      iconClass: 'dumbbell',
+      iconClass: 'fa-dumbbell',
       category: 'RECREATION',
       icon: Dumbbell,
       selected: false
@@ -149,9 +84,9 @@ const AddHotel = ({ hotelId = null }) => {
       id: 5, 
       key: 'spa', 
       name: 'Spa & Wellness', 
-      description: 'Relaxing spa and wellness services',
-      iconClass: 'building',
-      category: 'RECREATION',
+      description: 'Full-service spa with massage therapies',
+      iconClass: 'fa-spa',
+      category: 'WELLNESS',
       icon: Building,
       selected: false
     },
@@ -257,110 +192,6 @@ const AddHotel = ({ hotelId = null }) => {
     }
   ];
 
-  // Define room amenity options
-  const roomAmenityOptions = [
-    { 
-      id: 1, 
-      key: 'wifi', 
-      name: 'Free WiFi', 
-      description: 'Complimentary high-speed internet access',
-      iconClass: 'wifi',
-      category: 'BASIC',
-      icon: Wifi,
-      selected: false
-    },
-    { 
-      id: 2, 
-      key: 'tv', 
-      name: 'TV', 
-      description: 'Flat-screen television',
-      iconClass: 'tv',
-      category: 'ENTERTAINMENT',
-      icon: Tv,
-      selected: false
-    },
-    { 
-      id: 3, 
-      key: 'airConditioning', 
-      name: 'Air Conditioning', 
-      description: 'Climate control system',
-      iconClass: 'wind',
-      category: 'COMFORT',
-      icon: Wind,
-      selected: false
-    },
-    { 
-      id: 4, 
-      key: 'heating', 
-      name: 'Heating', 
-      description: 'Room heating system',
-      iconClass: 'snowflake',
-      category: 'COMFORT',
-      icon: Snowflake,
-      selected: false
-    },
-    { 
-      id: 5, 
-      key: 'minibar', 
-      name: 'Minibar', 
-      description: 'In-room minibar',
-      iconClass: 'coffee',
-      category: 'DINING',
-      icon: CoffeeIcon,
-      selected: false
-    },
-    { 
-      id: 6, 
-      key: 'safe', 
-      name: 'Safe', 
-      description: 'In-room safety deposit box',
-      iconClass: 'shield',
-      category: 'SECURITY',
-      icon: Shield,
-      selected: false
-    },
-    { 
-      id: 7, 
-      key: 'balcony', 
-      name: 'Balcony', 
-      description: 'Private balcony or terrace',
-      iconClass: 'building',
-      category: 'FEATURES',
-      icon: Building,
-      selected: false
-    },
-    { 
-      id: 8, 
-      key: 'bathtub', 
-      name: 'Bathtub', 
-      description: 'Private bathtub',
-      iconClass: 'bath',
-      category: 'BATHROOM',
-      icon: Bath,
-      selected: false
-    },
-    { 
-      id: 9, 
-      key: 'desk', 
-      name: 'Work Desk', 
-      description: 'Desk for work or study',
-      iconClass: 'monitor',
-      category: 'BUSINESS',
-      icon: Monitor,
-      selected: false
-    },
-    { 
-      id: 10, 
-      key: 'alarmClock', 
-      name: 'Alarm Clock', 
-      description: 'In-room alarm clock',
-      iconClass: 'clock',
-      category: 'CONVENIENCE',
-      icon: Clock,
-      selected: false
-    }
-  ];
-
   const [formData, setFormData] = useState({
     // Basic Information
     name: '',
@@ -387,31 +218,7 @@ const AddHotel = ({ hotelId = null }) => {
     images: [],
     
     // Amenities
-    amenities: hotelAmenityOptions,
-    
-    // Rooms
-    rooms: [{
-      id: 0,
-      roomNumber: '',
-      hotel: '',
-      roomType: {
-        id: 0,
-        name: '',
-        bedCount: '',
-        bedType: '',
-        roomSize: ''
-      },
-      floor: '',
-      basePrice: '',
-      maxOccupancy: '',
-      status: 'AVAILABLE',
-      isActive: true,
-      description: '',
-      amenities: roomAmenityOptions,
-      images: [],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    }]
+    amenities: hotelAmenityOptions
   });
 
   const validateField = (name, value) => {
@@ -628,110 +435,6 @@ const AddHotel = ({ hotelId = null }) => {
             : amenity
         )
       }));
-    } else if (name.startsWith('rooms.')) {
-      const parts = name.split('.');
-      const roomIndex = parseInt(parts[1]);
-      const fieldPath = parts.slice(2);
-      
-      setFormData(prev => ({
-        ...prev,
-        rooms: prev.rooms.map((room, index) => {
-          if (index === roomIndex) {
-            const newRoom = { ...room };
-            if (fieldPath.length === 1) {
-              // Direct room field
-              newRoom[fieldPath[0]] = type === 'checkbox' ? checked : value;
-            } else if (fieldPath.length === 2 && fieldPath[0] === 'roomType') {
-              // Room type field
-              newRoom.roomType = {
-                ...newRoom.roomType,
-                [fieldPath[1]]: type === 'checkbox' ? checked : value
-              };
-            } else if (fieldPath.length === 2 && fieldPath[0] === 'amenities') {
-              // Room amenities field
-              const amenityKey = fieldPath[1];
-              newRoom.amenities = newRoom.amenities.map(amenity => 
-                amenity.key === amenityKey 
-                  ? { ...amenity, selected: checked }
-                  : amenity
-              );
-            }
-            return newRoom;
-          }
-          return room;
-        })
-      }));
-      
-      // Validate room fields
-      if (fieldPath.length === 1) {
-        const newErrors = { ...errors };
-        const errorKey = `rooms_${roomIndex}_${fieldPath[0]}`;
-        const fieldValue = type === 'checkbox' ? checked : value;
-        
-        // Validate specific room fields
-        if (fieldPath[0] === 'roomNumber') {
-          if (!fieldValue || !fieldValue.trim()) {
-            newErrors[errorKey] = 'Room number is required';
-          } else if (fieldValue.trim().length > 20) {
-            newErrors[errorKey] = 'Room number must be less than 20 characters';
-          } else {
-            delete newErrors[errorKey];
-          }
-        } else if (fieldPath[0] === 'basePrice') {
-          if (!fieldValue || isNaN(fieldValue) || parseFloat(fieldValue) <= 0) {
-            newErrors[errorKey] = 'Base price must be a positive number';
-          } else {
-            delete newErrors[errorKey];
-          }
-        } else if (fieldPath[0] === 'maxOccupancy') {
-          if (!fieldValue || isNaN(fieldValue) || parseInt(fieldValue) <= 0) {
-            newErrors[errorKey] = 'Max occupancy must be a positive number';
-          } else {
-            delete newErrors[errorKey];
-          }
-        } else if (fieldPath[0] === 'floor') {
-          if (fieldValue && (isNaN(fieldValue) || parseInt(fieldValue) < 0)) {
-            newErrors[errorKey] = 'Floor must be zero or a positive number';
-          } else {
-            delete newErrors[errorKey];
-          }
-        } else {
-          // For other fields, just clear any existing errors
-          delete newErrors[errorKey];
-        }
-        
-        setErrors(newErrors);
-      } else if (fieldPath.length === 2 && fieldPath[0] === 'roomType') {
-        const newErrors = { ...errors };
-        const errorKey = `rooms_${roomIndex}_roomType_${fieldPath[1]}`;
-        const fieldValue = type === 'checkbox' ? checked : value;
-        
-        // Validate room type fields
-        if (fieldPath[1] === 'name') {
-          if (!fieldValue || !fieldValue.trim()) {
-            newErrors[errorKey] = 'Room type is required';
-          } else {
-            delete newErrors[errorKey];
-          }
-        } else if (fieldPath[1] === 'bedCount') {
-          if (!fieldValue || isNaN(fieldValue) || parseInt(fieldValue) <= 0) {
-            newErrors[errorKey] = 'Bed count must be a positive number';
-          } else {
-            delete newErrors[errorKey];
-          }
-        } else if (fieldPath[1] === 'bedType') {
-          if (!fieldValue || !fieldValue.trim()) {
-            newErrors[errorKey] = 'Bed type is required';
-          } else {
-            delete newErrors[errorKey];
-          }
-        } else {
-          // For other fields, just clear any existing errors
-          delete newErrors[errorKey];
-        }
-        
-        setErrors(newErrors);
-      }
     } else {
       setFormData(prev => ({
         ...prev,
@@ -740,76 +443,6 @@ const AddHotel = ({ hotelId = null }) => {
       
       // Validate the field
       validateField(name, type === 'checkbox' ? checked : value);
-    }
-  };
-
-  const addRoom = () => {
-    const newRoom = {
-      id: 0,
-      roomNumber: '',
-      hotel: '',
-      roomType: {
-        id: 0,
-        name: '',
-        bedCount: '',
-        bedType: '',
-        roomSize: ''
-      },
-      floor: '',
-      basePrice: '',
-      maxOccupancy: '',
-      status: 'AVAILABLE',
-      isActive: true,
-      description: '',
-      amenities: roomAmenityOptions,
-      images: [],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-    
-    setFormData(prev => ({
-      ...prev,
-      rooms: [...prev.rooms, newRoom]
-    }));
-  };
-
-  const removeRoom = (roomIndex) => {
-    if (formData.rooms.length > 1) {
-      setFormData(prev => ({
-        ...prev,
-        rooms: prev.rooms.filter((_, index) => index !== roomIndex)
-      }));
-      
-      // Clear validation errors for the removed room
-      const newErrors = { ...errors };
-      Object.keys(newErrors).forEach(key => {
-        if (key.includes(`rooms_${roomIndex}_`)) {
-          delete newErrors[key];
-        }
-      });
-      
-      // Adjust room indices for remaining rooms' errors
-      const adjustedErrors = {};
-      Object.keys(newErrors).forEach(key => {
-        if (key.includes('rooms_')) {
-          const parts = key.split('_');
-          const roomIdx = parseInt(parts[1]);
-          if (roomIdx > roomIndex) {
-            // Shift room index down by 1
-            const newKey = key.replace(`rooms_${roomIdx}_`, `rooms_${roomIdx - 1}_`);
-            adjustedErrors[newKey] = newErrors[key];
-          } else if (roomIdx < roomIndex) {
-            // Keep existing validation errors for rooms before removed room
-            adjustedErrors[key] = newErrors[key];
-          }
-          // Skip errors for the removed room (roomIdx === roomIndex)
-        } else {
-          // Keep non-room errors
-          adjustedErrors[key] = newErrors[key];
-        }
-      });
-      
-      setErrors(adjustedErrors);
     }
   };
 
@@ -837,137 +470,17 @@ const AddHotel = ({ hotelId = null }) => {
     }));
   };
 
-  const handleRoomImageUpload = (e, roomIndex) => {
-    const files = Array.from(e.target.files);
-    const imageFiles = files.map(file => ({
-      id: Date.now() + Math.random(),
-      file: file,
-      name: file.name,
-      size: file.size,
-      type: file.type,
-      url: URL.createObjectURL(file)
-    }));
-    
-    setFormData(prev => ({
-      ...prev,
-      rooms: prev.rooms.map((room, index) => {
-        if (index === roomIndex) {
-          return {
-            ...room,
-            images: [...room.images, ...imageFiles]
-          };
-        }
-        return room;
-      })
-    }));
-  };
-
-  const removeRoomImage = (roomIndex, imageId) => {
-    setFormData(prev => ({
-      ...prev,
-      rooms: prev.rooms.map((room, index) => {
-        if (index === roomIndex) {
-          return {
-            ...room,
-            images: room.images.filter(img => img.id !== imageId)
-          };
-        }
-        return room;
-      })
-    }));
-  };
-
-  const handleRoomTypeChange = (roomIndex, roomTypeId) => {
-    const selectedRoomType = roomTypes.find(roomType => roomType.id === parseInt(roomTypeId));
-    
-    if (selectedRoomType) {
-      setFormData(prev => ({
-        ...prev,
-        rooms: prev.rooms.map((room, index) => {
-          if (index === roomIndex) {
-            return {
-              ...room,
-              roomType: {
-                ...room.roomType,
-                id: selectedRoomType.id,
-                name: selectedRoomType.name,
-                description: selectedRoomType.description
-                // Note: bedCount, bedType, and roomSize are now user-editable fields
-                // and will not be auto-populated from the room type
-              }
-            };
-          }
-          return room;
-        })
-      }));
-      
-      // Clear validation errors for room type fields
-      const newErrors = { ...errors };
-      delete newErrors[`rooms_${roomIndex}_roomType_name`];
-      setErrors(newErrors);
-    }
-  };
-
   const validateForm = () => {
     const allErrors = {};
     
     // Validate all basic fields
     Object.keys(formData).forEach(key => {
-      if (key !== 'amenities' && key !== 'rooms') {
+      if (key !== 'amenities') {
         const fieldErrors = validateFieldSync(key, formData[key]);
         if (fieldErrors) {
           allErrors[key] = fieldErrors;
         }
       }
-    });
-    
-    // Validate rooms
-    const roomFieldPrefix = 'rooms_';
-    formData.rooms.forEach((room, roomIndex) => {
-      // Required room fields
-      const requiredRoomFields = ['roomNumber', 'basePrice', 'maxOccupancy'];
-      const optionalRoomFields = ['floor'];
-      const requiredRoomTypeFields = ['name', 'bedCount', 'bedType'];
-      
-      // Validate required room fields
-      requiredRoomFields.forEach(fieldName => {
-        const value = room[fieldName];
-        const errorKey = `${roomFieldPrefix}${roomIndex}_${fieldName}`;
-        
-        if (!value || (typeof value === 'string' && !value.trim())) {
-          allErrors[errorKey] = `${fieldName === 'roomNumber' ? 'Room number' : 
-                                fieldName === 'basePrice' ? 'Base price' : 
-                                'Max occupancy'} is required`;
-        } else if (fieldName === 'basePrice' && (isNaN(value) || parseFloat(value) <= 0)) {
-          allErrors[errorKey] = 'Base price must be a positive number';
-        } else if (fieldName === 'maxOccupancy' && (isNaN(value) || parseInt(value) <= 0)) {
-          allErrors[errorKey] = 'Max occupancy must be a positive number';
-        }
-      });
-      
-      // Validate optional room fields
-      optionalRoomFields.forEach(fieldName => {
-        const value = room[fieldName];
-        const errorKey = `${roomFieldPrefix}${roomIndex}_${fieldName}`;
-        
-        if (fieldName === 'floor' && value && (isNaN(value) || parseInt(value) < 0)) {
-          allErrors[errorKey] = 'Floor must be zero or a positive number';
-        }
-      });
-      
-      // Validate required room type fields
-      requiredRoomTypeFields.forEach(fieldName => {
-        const value = room.roomType[fieldName];
-        const errorKey = `${roomFieldPrefix}${roomIndex}_roomType_${fieldName}`;
-        
-        if (!value || (typeof value === 'string' && !value.trim())) {
-          allErrors[errorKey] = `${fieldName === 'name' ? 'Room type' : 
-                                fieldName === 'bedCount' ? 'Bed count' : 
-                                'Bed type'} is required`;
-        } else if (fieldName === 'bedCount' && (isNaN(value) || parseInt(value) <= 0)) {
-          allErrors[errorKey] = 'Bed count must be a positive number';
-        }
-      });
     });
     
     // Update errors state with all validation errors
@@ -987,73 +500,18 @@ const AddHotel = ({ hotelId = null }) => {
     if (errorKeys.length === 0) return;
     
     // Sort error keys to prioritize field order
+    const fieldOrder = ['name', 'description', 'starRating', 'address', 'city', 'state', 'country', 'postalCode', 'phoneNumber', 'email', 'website', 'checkInTime', 'checkOutTime'];
     const sortedErrorKeys = errorKeys.sort((a, b) => {
-      // Define field priority order
-      const fieldOrder = ['name', 'description', 'starRating', 'address', 'city', 'state', 'country', 'postalCode', 'phoneNumber', 'email', 'website', 'checkInTime', 'checkOutTime'];
-      
-      // Extract field name from error key
-      let fieldA = a.includes('rooms_') ? a.split('_')[0] : a;
-      let fieldB = b.includes('rooms_') ? b.split('_')[0] : b;
-      
-      const indexA = fieldOrder.indexOf(fieldA);
-      const indexB = fieldOrder.indexOf(fieldB);
-      
-      // If both fields are in the order, sort by that order
+      const indexA = fieldOrder.indexOf(a);
+      const indexB = fieldOrder.indexOf(b);
       if (indexA !== -1 && indexB !== -1) return indexA - indexB;
-      
-      // Basic fields come before room fields
-      if (!a.includes('rooms_') && b.includes('rooms_')) return -1;
-      if (a.includes('rooms_') && !b.includes('rooms_')) return 1;
-      
-      // Within room fields, sort by room index
-      if (a.includes('rooms_') && b.includes('rooms_')) {
-        const roomIndexA = parseInt(a.split('_')[1]);
-        const roomIndexB = parseInt(b.split('_')[1]);
-        if (roomIndexA !== roomIndexB) return roomIndexA - roomIndexB;
-        
-        // Within same room, sort by field type
-        const fieldOrderInRoom = ['roomNumber', 'basePrice', 'maxOccupancy', 'roomType_name', 'roomType_bedCount', 'roomType_bedType'];
-        const fieldA = a.split('_').pop();
-        const fieldB = b.split('_').pop();
-        const indexA = fieldOrderInRoom.indexOf(fieldA);
-        const indexB = fieldOrderInRoom.indexOf(fieldB);
-        if (indexA !== -1 && indexB !== -1) return indexA - indexB;
-      }
-      
+      if (indexA !== -1) return -1;
+      if (indexB !== -1) return 1;
       return a.localeCompare(b);
     });
     
     const firstErrorKey = sortedErrorKeys[0];
-    let elementToScroll = null;
-    
-    if (firstErrorKey.includes('rooms_')) {
-      // Room field error
-      const parts = firstErrorKey.split('_');
-      const roomIndex = parts[1];
-      const fieldName = parts[2] ? parts[2] : parts.slice(2).join('_');
-      
-      // Map field names to IDs
-      const fieldIdMap = {
-        'roomNumber': `room-${roomIndex}-roomNumber`,
-        'basePrice': `room-${roomIndex}-basePrice`,
-        'maxOccupancy': `room-${roomIndex}-maxOccupancy`,
-        'roomType_name': `room-${roomIndex}-roomType`,
-        'roomType_bedCount': `room-${roomIndex}-roomType-bedCount`,
-        'roomType_bedType': `room-${roomIndex}-roomType-bedType`,
-      };
-      
-      const elementId = fieldIdMap[firstErrorKey.replace(`rooms_${roomIndex}_`, '')];
-      elementToScroll = document.getElementById(elementId);
-      
-      // If direct ID doesn't work, try the parent room container
-      if (!elementToScroll) {
-        const roomContainer = document.querySelector(`input[name="rooms.${roomIndex}.roomNumber"]`)?.closest('.border.rounded-lg.p-4.mb-4');
-        elementToScroll = roomContainer;
-      }
-    } else {
-      // Basic field error
-      elementToScroll = document.getElementById(firstErrorKey);
-    }
+    const elementToScroll = document.getElementById(firstErrorKey);
     
     if (elementToScroll) {
       elementToScroll.scrollIntoView({
@@ -1189,72 +647,46 @@ const AddHotel = ({ hotelId = null }) => {
     // Validate form - this will also handle scrolling to first error
     if (validateForm()) {
       try {
-        // Create FormData for file uploads
+        // Create FormData for file uploads and form-data submission
         const formDataToSend = new FormData();
         
-        // Add hotel data as individual fields
+        // Add basic hotel information as flat form-data fields
         formDataToSend.append('name', formData.name);
-        formDataToSend.append('description', formData.description);
+        formDataToSend.append('description', formData.description || '');
         formDataToSend.append('address', formData.address);
         formDataToSend.append('city', formData.city);
-        formDataToSend.append('state', formData.state);
+        formDataToSend.append('state', formData.state || '');
         formDataToSend.append('country', formData.country);
-        formDataToSend.append('postalCode', formData.postalCode);
+        formDataToSend.append('postalCode', formData.postalCode || '');
         formDataToSend.append('phoneNumber', formData.phoneNumber);
         formDataToSend.append('email', formData.email);
-        formDataToSend.append('website', formData.website);
-        formDataToSend.append('starRating', parseInt(formData.starRating) || 0);
-        formDataToSend.append('checkInTime', formData.checkInTime);
-        formDataToSend.append('checkOutTime', formData.checkOutTime);
+        formDataToSend.append('website', formData.website || '');
+        formDataToSend.append('starRating', (parseInt(formData.starRating) || 0).toString());
         
-        // Add rooms as JSON string
-        const roomsData = formData.rooms.map((room) => ({
-          roomNumber: room.roomNumber,
-          roomType: {
-            name: room.roomType.name,
-            bedCount: room.roomType.bedCount ? parseInt(room.roomType.bedCount) : 0,
-            bedType: room.roomType.bedType,
-            roomSize: room.roomType.roomSize
-          },
-          floor: room.floor ? parseInt(room.floor) : 0,
-          basePrice: room.basePrice ? parseFloat(room.basePrice) : 0,
-          maxOccupancy: room.maxOccupancy ? parseInt(room.maxOccupancy) : 0,
-          status: room.status,
-          isActive: room.isActive,
-          description: room.description,
-          amenities: room.amenities.filter(amenity => amenity.selected).map(amenity => ({
-            name: amenity.name,
-            description: amenity.description,
-            iconClass: amenity.iconClass,
-            category: amenity.category
-          }))
-        }));
-        formDataToSend.append('rooms', JSON.stringify(roomsData));
-        
-        // Add amenities as JSON string
-        const amenitiesData = formData.amenities.filter(amenity => amenity.selected).map(amenity => ({
-          name: amenity.name,
-          description: amenity.description,
-          iconClass: amenity.iconClass,
-          category: amenity.category
-        }));
-        formDataToSend.append('amenities', JSON.stringify(amenitiesData));
-        
-        // Add hotel images as files
-        formData.images.forEach((image, index) => {
-          formDataToSend.append(`hotelImages`, image.file);
+        // Add amenities as indexed array entries
+        // Format: amenities[0].name, amenities[0].description, amenities[0].iconClass, amenities[0].category
+        const selectedAmenities = formData.amenities.filter(amenity => amenity.selected);
+        selectedAmenities.forEach((amenity, index) => {
+          formDataToSend.append(`amenities[${index}].name`, amenity.name);
+          formDataToSend.append(`amenities[${index}].description`, amenity.description);
+          // Map iconClass to the format expected by backend (fa-wifi, fa-swimming-pool, etc.)
+          const iconClass = amenity.iconClass.startsWith('fa-') 
+            ? amenity.iconClass 
+            : `fa-${amenity.iconClass}`;
+          formDataToSend.append(`amenities[${index}].iconClass`, iconClass);
+          formDataToSend.append(`amenities[${index}].category`, amenity.category);
         });
         
-        // Add room images as files
-        formData.rooms.forEach((room, roomIndex) => {
-          if (room.images && room.images.length > 0) {
-            room.images.forEach((image, imageIndex) => {
-              formDataToSend.append(`roomImages`, image.file);
-            });
-          }
+        // Add hotel images as files with key "hotelImages"
+        formData.images.forEach((image) => {
+          formDataToSend.append('hotelImages', image.file);
         });
 
         console.log('Hotel FormData:', formDataToSend);
+        // Log form data entries for debugging
+        for (const [key, value] of formDataToSend.entries()) {
+          console.log(`${key}:`, value instanceof File ? value.name : value);
+        }
         
         // Get stored token and set it on the API client
         const token = authAPI.getStoredToken();
@@ -1264,7 +696,6 @@ const AddHotel = ({ hotelId = null }) => {
         
         // Make API call to POST /api/v1/hotels with FormData
         console.log('Making API call to:', API_CONFIG.ENDPOINTS.HOTEL.HOTELS);
-        console.log('Request FormData:', formDataToSend);
         
         const response = await apiClient.postFormData(API_CONFIG.ENDPOINTS.HOTEL.HOTELS, formDataToSend);
         
@@ -1637,7 +1068,8 @@ const AddHotel = ({ hotelId = null }) => {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Check-in and Check-out fields commented out temporarily */}
+            {/* <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="checkInTime">Check-in Time</Label>
                 <Input
@@ -1666,7 +1098,7 @@ const AddHotel = ({ hotelId = null }) => {
                   <p className="text-sm text-red-500">{errors.checkOutTime}</p>
                 )}
               </div>
-            </div>
+            </div> */}
           </CardContent>
         </Card>
 
@@ -1700,332 +1132,6 @@ const AddHotel = ({ hotelId = null }) => {
                 );
               })}
             </div>
-          </CardContent>
-        </Card>
-
-        {/* Rooms */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-md">
-              <Building className="h-5 w-5" />
-              Rooms Management
-            </CardTitle>
-            <CardDescription>
-              Add and manage hotel rooms. At least one room is required.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {formData.rooms.map((room, roomIndex) => (
-              <div key={roomIndex} className="border rounded-lg p-4 mb-4 relative">
-                <div className="flex justify-between items-center mb-4">
-                  <h4 className="text-lg font-semibold">Room {roomIndex + 1}</h4>
-                  {formData.rooms.length > 1 && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => removeRoom(roomIndex)}
-                      className="text-red-600 hover:text-red-700"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                      Remove
-                    </Button>
-                  )}
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {/* Basic Room Details */}
-                  <div className="space-y-2">
-                    <Label htmlFor={`room-${roomIndex}-roomNumber`}>Room Number *</Label>
-                    <Input
-                      id={`room-${roomIndex}-roomNumber`}
-                      name={`rooms.${roomIndex}.roomNumber`}
-                      value={room.roomNumber}
-                      onChange={handleInputChange}
-                      placeholder="e.g., 101, A1, Suite-1"
-                      className={errors[`rooms_${roomIndex}_roomNumber`] ? 'border-red-500' : ''}
-                    />
-                    {errors[`rooms_${roomIndex}_roomNumber`] && (
-                      <p className="text-sm text-red-500">{errors[`rooms_${roomIndex}_roomNumber`]}</p>
-                    )}
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor={`room-${roomIndex}-floor`}>Floor</Label>
-                    <Input
-                      id={`room-${roomIndex}-floor`}
-                      name={`rooms.${roomIndex}.floor`}
-                      type="number"
-                      min="0"
-                      value={room.floor}
-                      onChange={handleInputChange}
-                      placeholder="Floor number (optional)"
-                      className={errors[`rooms_${roomIndex}_floor`] ? 'border-red-500' : ''}
-                    />
-                    {errors[`rooms_${roomIndex}_floor`] && (
-                      <p className="text-sm text-red-500">{errors[`rooms_${roomIndex}_floor`]}</p>
-                    )}
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor={`room-${roomIndex}-maxOccupancy`}>Max Occupancy *</Label>
-                    <Input
-                      id={`room-${roomIndex}-maxOccupancy`}
-                      name={`rooms.${roomIndex}.maxOccupancy`}
-                      type="number"
-                      min="1"
-                      value={room.maxOccupancy}
-                      onChange={handleInputChange}
-                      placeholder="Maximum guests"
-                      className={errors[`rooms_${roomIndex}_maxOccupancy`] ? 'border-red-500' : ''}
-                    />
-                    {errors[`rooms_${roomIndex}_maxOccupancy`] && (
-                      <p className="text-sm text-red-500">{errors[`rooms_${roomIndex}_maxOccupancy`]}</p>
-                    )}
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor={`room-${roomIndex}-basePrice`}>Base Price *</Label>
-                    <Input
-                      id={`room-${roomIndex}-basePrice`}
-                      name={`rooms.${roomIndex}.basePrice`}
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={room.basePrice}
-                      onChange={handleInputChange}
-                      placeholder="Price per night"
-                      className={errors[`rooms_${roomIndex}_basePrice`] ? 'border-red-500' : ''}
-                    />
-                    {errors[`rooms_${roomIndex}_basePrice`] && (
-                      <p className="text-sm text-red-500">{errors[`rooms_${roomIndex}_basePrice`]}</p>
-                    )}
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor={`room-${roomIndex}-status`}>Room Status</Label>
-                    <Select
-                      id={`room-${roomIndex}-status`}
-                      name={`rooms.${roomIndex}.status`}
-                      value={room.status}
-                      onChange={handleInputChange}
-                    >
-                      <option value="AVAILABLE">Available</option>
-                      <option value="OCCUPIED">Occupied</option>
-                      <option value="MAINTENANCE">Maintenance</option>
-                      <option value="OUT_OF_ORDER">Out of Order</option>
-                    </Select>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor={`room-${roomIndex}-isActive`}>Active Status</Label>
-                    <Select
-                      id={`room-${roomIndex}-isActive`}
-                      name={`rooms.${roomIndex}.isActive`}
-                      value={room.isActive}
-                      onChange={handleInputChange}
-                    >
-                      <option value={true}>Active</option>
-                      <option value={false}>Inactive</option>
-                    </Select>
-                  </div>
-                </div>
-                
-                {/* Room Type Details */}
-                <div className="mt-4">
-                  <h5 className="text-md font-medium mb-3">Room Type Details</h5>
-                  <p className="text-sm text-gray-600 mb-3">
-                    Select a room type and manually enter the bed count, bed type, and room size details.
-                    {hotelId ? ' Showing room types specific to this hotel.' : ' Showing all available room types.'}
-                  </p>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor={`room-${roomIndex}-roomType`}>Room Type *</Label>
-                      <Select
-                        id={`room-${roomIndex}-roomType`}
-                        value={room.roomType.id || ''}
-                        onChange={(e) => handleRoomTypeChange(roomIndex, e.target.value)}
-                        className={errors[`rooms_${roomIndex}_roomType_name`] ? 'border-red-500' : ''}
-                        disabled={isLoadingRoomTypes}
-                      >
-                        <option value="">
-                          {isLoadingRoomTypes ? 
-                            (hotelId ? 'Loading hotel room types...' : 'Loading room types...') : 
-                           roomTypes.length === 0 ? 'No room types available' : 
-                           'Select room type'}
-                        </option>
-                        {roomTypes.map((roomType) => (
-                          <option key={roomType.id} value={roomType.id}>
-                            {roomType.name}
-                          </option>
-                        ))}
-                      </Select>
-                      {errors[`rooms_${roomIndex}_roomType_name`] && (
-                        <p className="text-sm text-red-500">{errors[`rooms_${roomIndex}_roomType_name`]}</p>
-                      )}
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor={`room-${roomIndex}-roomType-bedCount`}>Bed Count *</Label>
-                      <Input
-                        id={`room-${roomIndex}-roomType-bedCount`}
-                        name={`rooms.${roomIndex}.roomType.bedCount`}
-                        type="number"
-                        min="1"
-                        value={room.roomType.bedCount}
-                        onChange={handleInputChange}
-                        placeholder="Number of beds"
-                        className={errors[`rooms_${roomIndex}_roomType_bedCount`] ? 'border-red-500' : ''}
-                      />
-                      {errors[`rooms_${roomIndex}_roomType_bedCount`] && (
-                        <p className="text-sm text-red-500">{errors[`rooms_${roomIndex}_roomType_bedCount`]}</p>
-                      )}
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor={`room-${roomIndex}-roomType-bedType`}>Bed Type *</Label>
-                      <Select
-                        id={`room-${roomIndex}-roomType-bedType`}
-                        name={`rooms.${roomIndex}.roomType.bedType`}
-                        value={room.roomType.bedType}
-                        onChange={handleInputChange}
-                        className={errors[`rooms_${roomIndex}_roomType_bedType`] ? 'border-red-500' : ''}
-                      >
-                        <option value="">Select bed type</option>
-                        <option value="SINGLE">Single</option>
-                        <option value="DOUBLE">Double</option>
-                        <option value="QUEEN">Queen</option>
-                        <option value="KING">King</option>
-                        <option value="TWIN">Twin</option>
-                        <option value="SOFA_BED">Sofa Bed</option>
-                      </Select>
-                      {errors[`rooms_${roomIndex}_roomType_bedType`] && (
-                        <p className="text-sm text-red-500">{errors[`rooms_${roomIndex}_roomType_bedType`]}</p>
-                      )}
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor={`room-${roomIndex}-roomType-roomSize`}>Room Size</Label>
-                      <Input
-                        id={`room-${roomIndex}-roomType-roomSize`}
-                        name={`rooms.${roomIndex}.roomType.roomSize`}
-                        value={room.roomType.roomSize}
-                        onChange={handleInputChange}
-                        placeholder="e.g., 25 sqm, 400 sq ft"
-                      />
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Room Amenities */}
-                <div className="mt-4">
-                  <h5 className="text-md font-medium mb-3">Room Amenities</h5>
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                    {room.amenities.map((amenity) => {
-                      const IconComponent = amenity.icon;
-                      return (
-                        <div key={amenity.key} className="flex items-center space-x-2">
-                          <input
-                            type="checkbox"
-                            id={`room-${roomIndex}-amenity-${amenity.key}`}
-                            name={`rooms.${roomIndex}.amenities.${amenity.key}`}
-                            checked={amenity.selected}
-                            onChange={handleInputChange}
-                            className="rounded border-gray-300"
-                          />
-                          <Label htmlFor={`room-${roomIndex}-amenity-${amenity.key}`} className="flex items-center gap-2 text-sm">
-                            <IconComponent className="h-4 w-4" />
-                            {amenity.name}
-                          </Label>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Room Images */}
-                <div className="mt-4">
-                  <h5 className="text-md font-medium mb-3">Room Images</h5>
-                  <div className="space-y-2">
-                    <Label htmlFor={`room-images-${roomIndex}`}>Upload Room Images</Label>
-                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
-                      <Upload className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                      <p className="text-sm text-gray-600 mb-2">
-                        Upload images for this room
-                      </p>
-                      <input
-                        id={`room-images-${roomIndex}`}
-                        type="file"
-                        multiple
-                        accept="image/*"
-                        onChange={(e) => handleRoomImageUpload(e, roomIndex)}
-                        className="hidden"
-                      />
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => document.getElementById(`room-images-${roomIndex}`).click()}
-                      >
-                        <Upload className="h-4 w-4 mr-2" />
-                        Choose Images
-                      </Button>
-                    </div>
-                  </div>
-                  
-                  {room.images && room.images.length > 0 && (
-                    <div className="mt-4 space-y-2">
-                      <Label>Selected Room Images ({room.images.length})</Label>
-                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                        {room.images.map((image) => (
-                          <div key={image.id} className="relative group">
-                            <img
-                              src={image.url}
-                              alt={image.name}
-                              className="w-full h-20 object-cover rounded-lg border"
-                            />
-                            <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
-                              <Button
-                                type="button"
-                                variant="destructive"
-                                size="sm"
-                                onClick={() => removeRoomImage(roomIndex, image.id)}
-                              >
-                                <Trash2 className="h-3 w-3" />
-                              </Button>
-                            </div>
-                            <p className="text-xs text-gray-500 mt-1 truncate">{image.name}</p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Room Description */}
-                <div className="mt-4 space-y-2">
-                  <Label htmlFor={`room-${roomIndex}-description`}>Room Description</Label>
-                  <Textarea
-                    id={`room-${roomIndex}-description`}
-                    name={`rooms.${roomIndex}.description`}
-                    value={room.description}
-                    onChange={handleInputChange}
-                    placeholder="Specific details about this particular room..."
-                    rows={2}
-                  />
-                </div>
-              </div>
-            ))}
-            
-            <Button
-              type="button"
-              variant="outline"
-              onClick={addRoom}
-              className="w-full mt-4"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add More Room
-            </Button>
           </CardContent>
         </Card>
 

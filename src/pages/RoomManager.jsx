@@ -10,6 +10,7 @@ import { Bed, Loader2, Edit, Trash2, Save, X, Plus, Upload, Image as ImageIcon }
 import { apiClient, api } from '@/lib/apiService';
 import { API_CONFIG } from '@/lib/api';
 import authAPI from '@/lib/authAPI';
+import { getRoomPrimaryImage, getRoomImageUrl } from '@/lib/utils';
 import Swal from 'sweetalert2';
 
 const RoomManager = () => {
@@ -212,6 +213,15 @@ const RoomManager = () => {
 
   // Edit room functions
   const handleEditRoom = (room) => {
+    console.log('Editing room:', room);
+    console.log('Room ID:', room.id, 'Type:', typeof room.id);
+    
+    if (!room || !room.id) {
+      console.error('Cannot edit room: room or ID is missing', room);
+      showToastNotification('Error: Cannot edit room. Room ID is missing.');
+      return;
+    }
+    
     setEditingRoom(room);
     setEditFormData({
       roomNumber: room.roomNumber || '',
@@ -220,7 +230,10 @@ const RoomManager = () => {
       maxOccupancy: room.maxOccupancy || '',
       status: room.status || 'AVAILABLE',
       isActive: room.isActive || true,
-      description: room.description || ''
+      description: room.description || '',
+      existingImages: room.images || [], // Store existing images (current state)
+      originalImages: room.images || [], // Store original images for comparison
+      newImages: [] // Store newly uploaded images
     });
   };
 
@@ -231,17 +244,121 @@ const RoomManager = () => {
     }));
   };
 
+  const handleEditImageUpload = (e) => {
+    const files = Array.from(e.target.files);
+    const imageFiles = files.map(file => ({
+      id: Date.now() + Math.random(),
+      file: file,
+      name: file.name,
+      size: file.size,
+      type: file.type,
+      url: URL.createObjectURL(file)
+    }));
+    
+    setEditFormData(prev => ({
+      ...prev,
+      newImages: [...prev.newImages, ...imageFiles]
+    }));
+  };
+
+  const removeEditImage = (imageId, isExisting = false) => {
+    if (isExisting) {
+      // Remove from existing images
+      setEditFormData(prev => ({
+        ...prev,
+        existingImages: prev.existingImages.filter(img => img.id !== imageId)
+      }));
+    } else {
+      // Remove from new images
+      setEditFormData(prev => ({
+        ...prev,
+        newImages: prev.newImages.filter(img => img.id !== imageId)
+      }));
+    }
+  };
+
   const handleSaveEdit = async () => {
     try {
       setIsEditLoading(true);
+      
+      // Validate that editingRoom and ID exist
+      if (!editingRoom || !editingRoom.id) {
+        console.error('Cannot update room: editingRoom or ID is missing', { editingRoom });
+        showToastNotification('Error: Room ID is missing. Please try again.');
+        return;
+      }
+      
+      const roomId = editingRoom.id;
+      console.log('Updating room with ID:', roomId, 'Room object:', editingRoom);
       
       const token = authAPI.getStoredToken();
       if (token) {
         apiClient.setAuthToken(token);
       }
       
-      // Use the dedicated room service method
-      const response = await api.room.updateRoom(editingRoom.id, editFormData);
+      // Create FormData for form-data submission (like room creation)
+      const formDataToSend = new FormData();
+      
+      // Add basic room information as flat form-data fields
+      formDataToSend.append('roomNumber', editFormData.roomNumber.trim());
+      if (editFormData.floor) {
+        formDataToSend.append('floor', editFormData.floor.toString());
+      }
+      formDataToSend.append('basePrice', parseFloat(editFormData.basePrice).toString());
+      formDataToSend.append('maxOccupancy', parseInt(editFormData.maxOccupancy).toString());
+      formDataToSend.append('status', editFormData.status);
+      formDataToSend.append('isActive', editFormData.isActive.toString());
+      if (editFormData.description && editFormData.description.trim()) {
+        formDataToSend.append('description', editFormData.description.trim());
+      }
+      
+      // Add new room images as files with key "roomImages" (matches @RequestPart name)
+      editFormData.newImages.forEach((image) => {
+        formDataToSend.append('roomImages', image.file);
+      });
+      
+      // Calculate deleted image IDs by comparing original images with current existing images
+      // Backend expects @RequestParam(required = false, name = "deleteImageIds") List<Long> deleteImageIds
+      // According to Swagger, deleteImageIds should be sent as query parameters, not form data
+      const originalImageIds = (editFormData.originalImages || []).map(img => img.id).filter(id => id != null);
+      const currentImageIds = (editFormData.existingImages || []).map(img => img.id).filter(id => id != null);
+      const deletedImageIds = originalImageIds.filter(id => !currentImageIds.includes(id));
+      
+      console.log('Image deletion tracking:', {
+        originalCount: originalImageIds.length,
+        currentCount: currentImageIds.length,
+        deletedCount: deletedImageIds.length,
+        deletedIds: deletedImageIds
+      });
+      
+      console.log('Update Room FormData:', formDataToSend);
+      // Log form data entries for debugging
+      for (const [key, value] of formDataToSend.entries()) {
+        console.log(`${key}:`, value instanceof File ? value.name : value);
+      }
+      
+      // Use putFormData for updating with FormData
+      // Ensure roomId is a number (backend expects Long)
+      const roomIdNumber = typeof roomId === 'string' ? parseInt(roomId, 10) : roomId;
+      if (isNaN(roomIdNumber)) {
+        console.error('Invalid room ID:', roomId);
+        showToastNotification('Error: Invalid room ID. Please try again.');
+        return;
+      }
+      
+      // Build endpoint with query parameters for deleteImageIds (as per Swagger spec)
+      let updateEndpoint = `/api/rooms/${roomIdNumber}`;
+      if (deletedImageIds.length > 0) {
+        // Add deleteImageIds as query parameters
+        const queryParams = deletedImageIds.map(id => `deleteImageIds=${id}`).join('&');
+        updateEndpoint = `${updateEndpoint}?${queryParams}`;
+      }
+      
+      console.log('Making API call to update:', updateEndpoint);
+      console.log('Room ID (original):', roomId, 'Room ID (parsed):', roomIdNumber);
+      console.log('Delete Image IDs (query params):', deletedImageIds);
+      
+      const response = await apiClient.putFormData(updateEndpoint, formDataToSend);
       
       console.log('Edit room response:', response);
       console.log('Response success:', response.success);
@@ -249,15 +366,19 @@ const RoomManager = () => {
       console.log('Response data:', response.data);
       
       // Check for success response
-      if (response.success) {
-        // Update the rooms list with the updated room data from API response
-        setRooms(prevRooms => 
-          prevRooms.map(room => 
-            room.id === editingRoom.id 
-              ? { ...room, ...response.data }
-              : room
-          )
-        );
+      if (response && response.success) {
+        // Refresh rooms list to get updated data
+        const roomsResponse = await api.room.getRoomsByHotel(selectedHotelId);
+        const responseData = roomsResponse.data || roomsResponse;
+        let roomsData = [];
+        
+        if (responseData.success && Array.isArray(responseData.data)) {
+          roomsData = responseData.data;
+        } else if (Array.isArray(responseData)) {
+          roomsData = responseData;
+        }
+        
+        setRooms(roomsData);
         
         // Close the edit modal
         setEditingRoom(null);
@@ -269,23 +390,32 @@ const RoomManager = () => {
         console.log('Room updated successfully');
       } else {
         console.log('Update failed - response:', response);
-        console.log('Update failed - success:', response.success);
-        showToastNotification(`Failed to update room: ${response.message || 'Unknown error'}`);
+        console.log('Update failed - success:', response?.success);
+        showToastNotification(`Failed to update room: ${response?.message || 'Unknown error'}`);
       }
     } catch (error) {
       console.error('Error updating room:', error);
+      console.error('Error details:', {
+        message: error.message,
+        status: error.status,
+        response: error.response,
+        stack: error.stack
+      });
       
       // Check if the error has success response despite being thrown
       if (error.success) {
-        // Update the rooms list with API response data even if an error was thrown
-        setRooms(prevRooms => 
-          prevRooms.map(room => 
-            room.id === editingRoom.id 
-              ? { ...room, ...error.data }
-              : room
-          )
-        );
+        // Refresh rooms list
+        const roomsResponse = await api.room.getRoomsByHotel(selectedHotelId);
+        const responseData = roomsResponse.data || roomsResponse;
+        let roomsData = [];
         
+        if (responseData.success && Array.isArray(responseData.data)) {
+          roomsData = responseData.data;
+        } else if (Array.isArray(responseData)) {
+          roomsData = responseData;
+        }
+        
+        setRooms(roomsData);
         setEditingRoom(null);
         setEditFormData({});
         
@@ -294,7 +424,15 @@ const RoomManager = () => {
         
         console.log('Room updated successfully (despite error thrown)');
       } else {
-        showToastNotification(`Failed to update room: ${error.message || 'Unknown error'}`);
+        let errorMessage = 'Failed to update room. Please try again.';
+        
+        if (error.response?.data?.message) {
+          errorMessage = error.response.data.message;
+        } else if (error.message) {
+          errorMessage = error.message;
+        }
+        
+        showToastNotification(errorMessage);
       }
     } finally {
       setIsEditLoading(false);
@@ -302,6 +440,14 @@ const RoomManager = () => {
   };
 
   const handleCancelEdit = () => {
+    // Clean up object URLs for new images to prevent memory leaks
+    if (editFormData.newImages && editFormData.newImages.length > 0) {
+      editFormData.newImages.forEach(image => {
+        if (image.url && image.url.startsWith('blob:')) {
+          URL.revokeObjectURL(image.url);
+        }
+      });
+    }
     setEditingRoom(null);
     setEditFormData({});
   };
@@ -747,6 +893,7 @@ const RoomManager = () => {
                 <table className="w-full text-xs md:text-sm">
                 <thead className="bg-gray-50">
                   <tr>
+                    <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-gray-700 whitespace-nowrap">Image</th>
                     <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-gray-700 whitespace-nowrap">Room #</th>
                     <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-gray-700 whitespace-nowrap">Hotel</th>
                     <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-gray-700 whitespace-nowrap">Room Type</th>
@@ -763,8 +910,31 @@ const RoomManager = () => {
 
 
                 <tbody className="divide-y divide-gray-200">
-                  {rooms.map((room, index) => (
+                  {rooms.map((room, index) => {
+                    const roomImageUrl = getRoomPrimaryImage(room.images);
+                    return (
                     <tr key={room.id || index} className="hover:bg-gray-50">
+                      <td className="px-2 md:px-4 py-2 md:py-3 whitespace-nowrap">
+                        <div className="w-12 h-12 md:w-16 md:h-16 rounded overflow-hidden bg-gray-100">
+                          {roomImageUrl ? (
+                            <img
+                              src={roomImageUrl}
+                              alt={`Room ${room.roomNumber || 'N/A'}`}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                e.target.style.display = 'none';
+                                e.target.nextSibling.style.display = 'flex';
+                              }}
+                            />
+                          ) : null}
+                          <div 
+                            className="w-full h-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center"
+                            style={{ display: roomImageUrl ? 'none' : 'flex' }}
+                          >
+                            <Bed className="h-5 w-5 md:h-6 md:w-6 text-primary/40" />
+                          </div>
+                        </div>
+                      </td>
                       <td className="px-2 md:px-4 py-2 md:py-3 whitespace-nowrap">
                         <span className="font-medium text-gray-900">
                           {room.roomNumber || 'N/A'}
@@ -840,7 +1010,8 @@ const RoomManager = () => {
                         </div>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
               </div>
@@ -1206,6 +1377,118 @@ const RoomManager = () => {
                 />
               </div>
               
+              {/* Room Images Section */}
+              <div className="space-y-2">
+                <Label className="text-sm font-medium flex items-center gap-2">
+                  <ImageIcon className="h-4 w-4" />
+                  Room Images
+                </Label>
+                
+                {/* Existing Images Preview */}
+                {editFormData.existingImages && editFormData.existingImages.length > 0 && (
+                  <div className="space-y-2">
+                    <Label className="text-xs text-gray-600">Existing Images ({editFormData.existingImages.length})</Label>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                      {editFormData.existingImages.map((image) => {
+                        const imageUrl = image.url ? getRoomImageUrl(image.url) : null;
+                        return (
+                          <div key={image.id} className="relative group">
+                            {imageUrl ? (
+                              <img
+                                src={imageUrl}
+                                alt={image.title || `Room image ${image.id}`}
+                                className="w-full h-24 object-cover rounded-lg border"
+                                onError={(e) => {
+                                  e.target.style.display = 'none';
+                                  if (e.target.nextSibling) {
+                                    e.target.nextSibling.style.display = 'flex';
+                                  }
+                                }}
+                              />
+                            ) : (
+                              <div className="w-full h-24 bg-gray-100 rounded-lg border flex items-center justify-center">
+                                <ImageIcon className="h-6 w-6 text-gray-400" />
+                              </div>
+                            )}
+                            <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
+                              <Button
+                                type="button"
+                                variant="destructive"
+                                size="sm"
+                                onClick={() => removeEditImage(image.id, true)}
+                                disabled={isEditLoading}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                            {image.title && (
+                              <p className="text-xs text-gray-500 mt-1 truncate">{image.title}</p>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Upload New Images */}
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+                  <Upload className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                  <p className="text-xs text-gray-600 mb-2">
+                    Add new images
+                  </p>
+                  <input
+                    id="editRoomImages"
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    onChange={handleEditImageUpload}
+                    className="hidden"
+                    disabled={isEditLoading}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => document.getElementById('editRoomImages').click()}
+                    disabled={isEditLoading}
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    Choose Images
+                  </Button>
+                </div>
+                
+                {/* New Images Preview */}
+                {editFormData.newImages && editFormData.newImages.length > 0 && (
+                  <div className="space-y-2 mt-4">
+                    <Label className="text-xs text-gray-600">New Images ({editFormData.newImages.length})</Label>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                      {editFormData.newImages.map((image) => (
+                        <div key={image.id} className="relative group">
+                          <img
+                            src={image.url}
+                            alt={image.name}
+                            className="w-full h-24 object-cover rounded-lg border"
+                          />
+                          <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
+                            <Button
+                              type="button"
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => removeEditImage(image.id, false)}
+                              disabled={isEditLoading}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                          <p className="text-xs text-gray-500 mt-1 truncate">{image.name}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+              
               <div className="flex flex-col sm:flex-row gap-2 md:gap-3 pt-4">
                 <Button 
                   onClick={handleSaveEdit}
@@ -1260,3 +1543,4 @@ const RoomManager = () => {
 };
 
 export default RoomManager;
+

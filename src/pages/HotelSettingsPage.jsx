@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/Textarea';
 import { Settings, Building2, Wifi, Car, Coffee, Shield, Utensils, Save, RefreshCw, MapPin, Loader2, ArrowLeft, Phone, Clock, Trash2 } from 'lucide-react';
 import { apiClient, api } from '@/lib/apiService';
 import authAPI from '@/lib/authAPI';
+import { getHotelPrimaryImage } from '@/lib/utils';
 import Swal from 'sweetalert2';
 
 const HotelSettingsPage = () => {
@@ -241,23 +242,24 @@ const HotelSettingsPage = () => {
   };
 
   // Helper function to convert amenities to API format
+  // Categories must match backend enum: BASIC, RECREATION, WELLNESS, DINING, BUSINESS
   const convertAmenitiesToAPIFormat = (amenities) => {
     const amenityMapping = {
-      wifi: { name: 'WiFi', description: 'Free WiFi internet access', iconClass: 'wifi', category: 'BASIC' },
-      parking: { name: 'Parking', description: 'Free parking available', iconClass: 'car', category: 'BASIC' },
-      pool: { name: 'Swimming Pool', description: 'Outdoor swimming pool', iconClass: 'pool', category: 'RECREATION' },
-      gym: { name: 'Fitness Center', description: '24/7 fitness center', iconClass: 'dumbbell', category: 'RECREATION' },
-      spa: { name: 'Spa Services', description: 'Full-service spa and wellness center', iconClass: 'spa', category: 'WELLNESS' },
-      restaurant: { name: 'Restaurant', description: 'On-site restaurant', iconClass: 'utensils', category: 'DINING' },
-      bar: { name: 'Bar', description: 'Cocktail bar and lounge', iconClass: 'wine-glass', category: 'DINING' },
-      businessCenter: { name: 'Business Center', description: 'Business center with meeting rooms', iconClass: 'briefcase', category: 'BUSINESS' },
-      roomService: { name: 'Room Service', description: '24/7 room service', iconClass: 'room-service', category: 'SERVICE' },
-      concierge: { name: 'Concierge', description: 'Concierge services', iconClass: 'concierge', category: 'SERVICE' },
-      laundry: { name: 'Laundry Service', description: 'Laundry and dry cleaning services', iconClass: 'tshirt', category: 'SERVICE' },
-      valet: { name: 'Valet Parking', description: 'Valet parking service', iconClass: 'valet', category: 'SERVICE' },
-      airportShuttle: { name: 'Airport Shuttle', description: 'Complimentary airport shuttle', iconClass: 'shuttle-van', category: 'TRANSPORTATION' },
-      petFriendly: { name: 'Pet Friendly', description: 'Pet-friendly accommodations', iconClass: 'paw', category: 'POLICY' },
-      smokingAllowed: { name: 'Smoking Allowed', description: 'Smoking rooms available', iconClass: 'smoking', category: 'POLICY' }
+      wifi: { name: 'WiFi', description: 'Free WiFi internet access', iconClass: 'fa-wifi', category: 'BASIC' },
+      parking: { name: 'Free Parking', description: 'Complimentary parking for guests', iconClass: 'fa-car', category: 'BASIC' },
+      pool: { name: 'Swimming Pool', description: 'Olympic-sized outdoor pool', iconClass: 'fa-swimming-pool', category: 'RECREATION' },
+      gym: { name: 'Fitness Center', description: 'Well-equipped fitness center', iconClass: 'fa-dumbbell', category: 'RECREATION' },
+      spa: { name: 'Spa & Wellness', description: 'Full-service spa with massage therapies', iconClass: 'fa-spa', category: 'WELLNESS' },
+      restaurant: { name: 'Restaurant', description: 'On-site dining restaurant', iconClass: 'utensils', category: 'DINING' },
+      bar: { name: 'Bar/Lounge', description: 'Bar and lounge area', iconClass: 'coffee', category: 'DINING' },
+      businessCenter: { name: 'Business Center', description: 'Business center with meeting facilities', iconClass: 'building', category: 'BUSINESS' },
+      roomService: { name: 'Room Service', description: '24/7 room service available', iconClass: 'utensils', category: 'BASIC' },
+      concierge: { name: 'Concierge', description: 'Professional concierge services', iconClass: 'shield', category: 'BASIC' },
+      laundry: { name: 'Laundry Service', description: 'Laundry and dry cleaning services', iconClass: 'building', category: 'BASIC' },
+      valet: { name: 'Valet Parking', description: 'Valet parking service', iconClass: 'car', category: 'BASIC' },
+      airportShuttle: { name: 'Airport Shuttle', description: 'Complimentary airport shuttle service', iconClass: 'car', category: 'BASIC' },
+      petFriendly: { name: 'Pet Friendly', description: 'Pet-friendly accommodations', iconClass: 'building', category: 'BASIC' },
+      smokingAllowed: { name: 'Smoking Allowed', description: 'Designated smoking areas', iconClass: 'building', category: 'BASIC' }
     };
 
     return Object.entries(amenities)
@@ -290,24 +292,41 @@ const HotelSettingsPage = () => {
         apiClient.setAuthToken(token);
       }
 
-      // Prepare hotel data for update - only include fields present in AddHotelPage
-      const hotelUpdateData = {
-        name: settings.hotelName,
-        description: settings.description || '',
-        address: settings.address,
-        city: settings.city,
-        state: settings.state,
-        country: settings.country,
-        postalCode: settings.postalCode,
-        phoneNumber: settings.phone,
-        email: settings.email,
-        website: settings.website,
-        starRating: parseInt(settings.starRating) || 0,
-        checkInTime: settings.checkInTime,
-        checkOutTime: settings.checkOutTime,
-        rooms: selectedHotel.rooms || [], // Keep existing rooms
-        amenities: convertAmenitiesToAPIFormat(settings.amenities)
-      };
+      // Create FormData with flat fields (same format as AddHotelPage)
+      const formData = new FormData();
+      
+      // Add basic hotel information as flat form-data fields
+      formData.append('name', settings.hotelName);
+      formData.append('description', settings.description || '');
+      formData.append('address', settings.address);
+      formData.append('city', settings.city);
+      formData.append('state', settings.state || '');
+      formData.append('country', settings.country);
+      formData.append('postalCode', settings.postalCode || '');
+      formData.append('phoneNumber', settings.phone);
+      formData.append('email', settings.email);
+      formData.append('website', settings.website || '');
+      formData.append('starRating', (parseInt(settings.starRating) || 0).toString());
+      formData.append('checkInTime', settings.checkInTime || '');
+      formData.append('checkOutTime', settings.checkOutTime || '');
+      
+      // Add amenities as indexed array entries
+      const selectedAmenities = convertAmenitiesToAPIFormat(settings.amenities);
+      selectedAmenities.forEach((amenity, index) => {
+        formData.append(`amenities[${index}].name`, amenity.name);
+        formData.append(`amenities[${index}].description`, amenity.description);
+        const iconClass = amenity.iconClass.startsWith('fa-') 
+          ? amenity.iconClass 
+          : `fa-${amenity.iconClass}`;
+        formData.append(`amenities[${index}].iconClass`, iconClass);
+        formData.append(`amenities[${index}].category`, amenity.category);
+      });
+
+      // Log form data entries for debugging
+      console.log('Update Hotel FormData:');
+      for (const [key, value] of formData.entries()) {
+        console.log(`${key}:`, value instanceof File ? value.name : value);
+      }
 
       // Show loading alert
       Swal.fire({
@@ -321,7 +340,8 @@ const HotelSettingsPage = () => {
         }
       });
 
-      const response = await api.hotel.updateHotel(selectedHotel.id, hotelUpdateData);
+      // Call API with FormData - no deleteImageIds for now
+      const response = await api.hotel.updateHotel(selectedHotel.id, formData, []);
       
       // Show success alert
       await Swal.fire({
@@ -336,6 +356,9 @@ const HotelSettingsPage = () => {
         type: 'success',
         message: 'Hotel settings updated successfully!'
       });
+      
+      // Refresh hotels list to get updated data
+      await fetchHotels();
       
     } catch (error) {
       console.error('Error updating hotel:', error);
@@ -529,57 +552,80 @@ const HotelSettingsPage = () => {
 
       {!isLoading && !error && hotels.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {hotels.map((hotel) => (
-            <Card 
-              key={hotel.id} 
-              className="cursor-pointer hover:shadow-lg transition-shadow"
-              onClick={() => handleHotelClick(hotel)}
-            >
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-md">
-                  <Building2 className="h-5 w-5" />
-                  {hotel.name}
-                </CardTitle>
-                <CardDescription>
-                  <div className="flex items-center gap-1 mb-2">
-                    <MapPin className="h-4 w-4" />
-                    {hotel.address || 'Address not available'}
+          {hotels.map((hotel) => {
+            const hotelImageUrl = getHotelPrimaryImage(hotel.images);
+            return (
+              <Card 
+                key={hotel.id} 
+                className="cursor-pointer hover:shadow-lg transition-shadow overflow-hidden"
+                onClick={() => handleHotelClick(hotel)}
+              >
+                {/* Hotel Image */}
+                <div className="aspect-video bg-muted overflow-hidden">
+                  {hotelImageUrl ? (
+                    <img
+                      src={hotelImageUrl}
+                      alt={hotel.name}
+                      className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                        e.target.nextSibling.style.display = 'flex';
+                      }}
+                    />
+                  ) : null}
+                  <div 
+                    className="w-full h-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center"
+                    style={{ display: hotelImageUrl ? 'none' : 'flex' }}
+                  >
+                    <Building2 className="h-12 w-12 text-primary/40" />
                   </div>
-                  {hotel.description && (
-                    <p className="text-sm">{hotel.description}</p>
-                  )}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {hotel.phoneNumber && (
-                    <div className="flex items-center gap-1">
-                      <span className="text-sm font-medium">Phone:</span>
-                      <span className="text-sm">{hotel.phoneNumber}</span>
-                    </div>
-                  )}
-                  {hotel.email && (
-                    <div className="flex items-center gap-1">
-                      <span className="text-sm font-medium">Email:</span>
-                      <span className="text-sm">{hotel.email}</span>
-                    </div>
-                  )}
-                  {hotel.category && (
-                    <div className="flex items-center gap-1">
-                      <span className="text-sm font-medium">Category:</span>
-                      <span className="text-sm">{hotel.category}</span>
-                    </div>
-                  )}
-                  {hotel.starRating && (
-                    <div className="flex items-center gap-1">
-                      <span className="text-sm font-medium">Rating:</span>
-                      <span className="text-sm">{hotel.starRating} Star{hotel.starRating !== 1 ? 's' : ''}</span>
-                    </div>
-                  )}
                 </div>
-              </CardContent>
-            </Card>
-          ))}
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-md">
+                    <Building2 className="h-5 w-5" />
+                    {hotel.name}
+                  </CardTitle>
+                  <CardDescription>
+                    <div className="flex items-center gap-1 mb-2">
+                      <MapPin className="h-4 w-4" />
+                      {hotel.address || 'Address not available'}
+                    </div>
+                    {hotel.description && (
+                      <p className="text-sm line-clamp-2">{hotel.description}</p>
+                    )}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    {hotel.phoneNumber && (
+                      <div className="flex items-center gap-1">
+                        <span className="text-sm font-medium">Phone:</span>
+                        <span className="text-sm">{hotel.phoneNumber}</span>
+                      </div>
+                    )}
+                    {hotel.email && (
+                      <div className="flex items-center gap-1">
+                        <span className="text-sm font-medium">Email:</span>
+                        <span className="text-sm">{hotel.email}</span>
+                      </div>
+                    )}
+                    {hotel.category && (
+                      <div className="flex items-center gap-1">
+                        <span className="text-sm font-medium">Category:</span>
+                        <span className="text-sm">{hotel.category}</span>
+                      </div>
+                    )}
+                    {hotel.starRating && (
+                      <div className="flex items-center gap-1">
+                        <span className="text-sm font-medium">Rating:</span>
+                        <span className="text-sm">{hotel.starRating} Star{hotel.starRating !== 1 ? 's' : ''}</span>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
     </div>
@@ -921,3 +967,4 @@ const HotelSettingsPage = () => {
 };
 
 export default HotelSettingsPage;
+

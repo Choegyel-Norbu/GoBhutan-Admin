@@ -6,10 +6,11 @@ import { Label } from '@/components/ui/Label';
 import { Textarea } from '@/components/ui/Textarea';
 import { Select } from '@/components/ui/Select';
 import { Badge } from '@/components/ui/Badge';
-import { Plus, Calendar, Users, MapPin, Clock, Building2, Bed, Loader2, ArrowLeft, MoreHorizontal, CheckCircle, XCircle, LogIn, LogOut } from 'lucide-react';
+import { Plus, Calendar, Users, MapPin, Clock, Building2, Bed, Loader2, ArrowLeft, MoreHorizontal, CheckCircle, XCircle, LogIn, LogOut, RefreshCw } from 'lucide-react';
 import { apiClient, api } from '@/lib/apiService';
 import { API_CONFIG } from '@/lib/api';
 import authAPI from '@/lib/authAPI';
+import { getHotelPrimaryImage } from '@/lib/utils';
 import Swal from 'sweetalert2';
 
 const BookHotelPage = () => {
@@ -31,6 +32,7 @@ const BookHotelPage = () => {
   const [error, setError] = useState(null);
   const [bookingsError, setBookingsError] = useState(null);
   const [openActionMenu, setOpenActionMenu] = useState(null);
+  const [menuPosition, setMenuPosition] = useState({ top: 0, right: 0, left: 'auto' });
   
   // Booking form states
   const [errors, setErrors] = useState({});
@@ -473,46 +475,69 @@ const BookHotelPage = () => {
 
       {!isLoading && !error && hotels.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {hotels.map((hotel) => (
-            <Card 
-              key={hotel.id} 
-              className="cursor-pointer hover:shadow-lg transition-shadow"
-              onClick={() => handleHotelClick(hotel)}
-            >
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-md">
-              {hotel.name}
-            </CardTitle>
-            <CardDescription>
-                  <div className="flex items-center gap-1 mb-2">
-                    <MapPin className="h-4 w-4" />
-                    {hotel.address || 'Address not available'}
+          {hotels.map((hotel) => {
+            const hotelImageUrl = getHotelPrimaryImage(hotel.images);
+            return (
+              <Card 
+                key={hotel.id} 
+                className="cursor-pointer hover:shadow-lg transition-shadow overflow-hidden"
+                onClick={() => handleHotelClick(hotel)}
+              >
+                {/* Hotel Image */}
+                <div className="aspect-video bg-muted overflow-hidden">
+                  {hotelImageUrl ? (
+                    <img
+                      src={hotelImageUrl}
+                      alt={hotel.name}
+                      className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                        e.target.nextSibling.style.display = 'flex';
+                      }}
+                    />
+                  ) : null}
+                  <div 
+                    className="w-full h-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center"
+                    style={{ display: hotelImageUrl ? 'none' : 'flex' }}
+                  >
+                    <Building2 className="h-12 w-12 text-primary/40" />
                   </div>
-                  {hotel.description && (
-                    <p className="text-sm">{hotel.description}</p>
-                  )}
-            </CardDescription>
-          </CardHeader>
-              <CardContent>
-              <div className="space-y-2">
-                  {hotel.phoneNumber && (
-                    <div className="flex items-center gap-1">
-                      <span className="text-sm font-medium">Phone:</span>
-                      <span className="text-sm">{hotel.phoneNumber}</span>
-                    </div>
-                  )}
-                  {hotel.email && (
-                    <div className="flex items-center gap-1">
-                      <span className="text-sm font-medium">Email:</span>
-                      <span className="text-sm">{hotel.email}</span>
-                    </div>
-                  )}
                 </div>
-              </CardContent>
-            </Card>
-          ))}
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-md">
+                    {hotel.name}
+                  </CardTitle>
+                  <CardDescription>
+                    <div className="flex items-center gap-1 mb-2">
+                      <MapPin className="h-4 w-4" />
+                      {hotel.address || 'Address not available'}
+                    </div>
+                    {hotel.description && (
+                      <p className="text-sm line-clamp-2">{hotel.description}</p>
+                    )}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    {hotel.phoneNumber && (
+                      <div className="flex items-center gap-1">
+                        <span className="text-sm font-medium">Phone:</span>
+                        <span className="text-sm">{hotel.phoneNumber}</span>
+                      </div>
+                    )}
+                    {hotel.email && (
+                      <div className="flex items-center gap-1">
+                        <span className="text-sm font-medium">Email:</span>
+                        <span className="text-sm">{hotel.email}</span>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
-                )}
+      )}
               </div>
   );
 
@@ -573,57 +598,80 @@ const BookHotelPage = () => {
 
       {!isLoading && !error && rooms.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {rooms.map((room) => (
-            <Card 
-              key={room.id} 
-              className="cursor-pointer hover:shadow-lg transition-shadow"
-              onClick={() => handleRoomClick(room)}
-            >
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-md">
-                  <Bed className="h-5 w-5" />
-                  Room {room.roomNumber}
-                </CardTitle>
-                <CardDescription>
-                  {room.roomTypeName && (
-                    <p className="font-medium">{room.roomTypeName}</p>
-                  )}
-                  {room.description && (
-                    <p className="text-sm mt-1">{room.description}</p>
-                  )}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-              <div className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium">Price:</span>
-                    <span className="text-lg font-bold text-green-600">
-                      Nu {room.basePrice || 'N/A'}
-                    </span>
+          {rooms.map((room) => {
+            const isOccupied = room.status === 'OCCUPIED';
+            return (
+              <Card 
+                key={room.id} 
+                className={`relative transition-all ${
+                  isOccupied 
+                    ? 'opacity-60 cursor-not-allowed bg-gray-50' 
+                    : 'cursor-pointer hover:shadow-lg'
+                }`}
+                onClick={() => !isOccupied && handleRoomClick(room)}
+              >
+                {isOccupied && (
+                  <div className="absolute inset-0 bg-gray-900/5 rounded-lg z-10 pointer-events-none" />
+                )}
+                <CardHeader>
+                  <CardTitle className={`flex items-center gap-2 text-md ${isOccupied ? 'text-gray-500' : ''}`}>
+                    <Bed className={`h-5 w-5 ${isOccupied ? 'text-gray-400' : ''}`} />
+                    Room {room.roomNumber}
+                    {isOccupied && (
+                      <span className="ml-auto px-2 py-1 text-xs rounded-full font-medium bg-red-100 text-red-800">
+                        OCCUPIED
+                      </span>
+                    )}
+                  </CardTitle>
+                  <CardDescription>
+                    {room.roomTypeName && (
+                      <p className={`font-medium ${isOccupied ? 'text-gray-400' : ''}`}>
+                        {room.roomTypeName}
+                      </p>
+                    )}
+                    {room.description && (
+                      <p className={`text-sm mt-1 ${isOccupied ? 'text-gray-400' : ''}`}>
+                        {room.description}
+                      </p>
+                    )}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className={`text-sm font-medium ${isOccupied ? 'text-gray-400' : ''}`}>Price:</span>
+                      <span className={`text-lg font-bold ${isOccupied ? 'text-gray-500' : 'text-green-600'}`}>
+                        Nu {room.basePrice || 'N/A'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className={`text-sm font-medium ${isOccupied ? 'text-gray-400' : ''}`}>Max Occupancy:</span>
+                      <span className={`text-sm ${isOccupied ? 'text-gray-400' : ''}`}>
+                        {room.maxOccupancy || 'N/A'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className={`text-sm font-medium ${isOccupied ? 'text-gray-400' : ''}`}>Floor:</span>
+                      <span className={`text-sm ${isOccupied ? 'text-gray-400' : ''}`}>
+                        {room.floor || 'N/A'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className={`text-sm font-medium ${isOccupied ? 'text-gray-400' : ''}`}>Status:</span>
+                      <span className={`px-2 py-1 text-xs rounded-full font-medium ${
+                        room.status === 'AVAILABLE' ? 'bg-green-100 text-green-800' :
+                        room.status === 'OCCUPIED' ? 'bg-red-100 text-red-800' :
+                        room.status === 'MAINTENANCE' ? 'bg-yellow-100 text-yellow-800' :
+                        'bg-gray-100 text-gray-800'
+                      }`}>
+                        {room.status || 'N/A'}
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium">Max Occupancy:</span>
-                    <span className="text-sm">{room.maxOccupancy || 'N/A'}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium">Floor:</span>
-                    <span className="text-sm">{room.floor || 'N/A'}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium">Status:</span>
-                    <span className={`px-2 py-1 text-xs rounded-full font-medium ${
-                      room.status === 'AVAILABLE' ? 'bg-green-100 text-green-800' :
-                      room.status === 'OCCUPIED' ? 'bg-red-100 text-red-800' :
-                      room.status === 'MAINTENANCE' ? 'bg-yellow-100 text-yellow-800' :
-                      'bg-gray-100 text-gray-800'
-                    }`}>
-                      {room.status || 'N/A'}
-                    </span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
     </div>
@@ -1000,145 +1048,255 @@ const BookHotelPage = () => {
 
           {/* Bookings Table */}
           {!isLoadingBookings && !bookingsError && bookings.length > 0 && selectedHotelForBookings && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Total Bookings</CardTitle>
-                <CardDescription>Manage hotel bookings and operations</CardDescription>
+            <Card className="border-none shadow-md overflow-hidden">
+              <CardHeader className="bg-white border-b px-6 py-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-lg font-semibold text-gray-900">Bookings</CardTitle>
+                    <CardDescription className="text-sm text-gray-500">
+                      {bookings.length} total booking{bookings.length !== 1 ? 's' : ''} found
+                    </CardDescription>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button variant="outline" size="sm" onClick={() => fetchBookings(selectedHotelForBookings.id)}>
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      Refresh
+                    </Button>
+                  </div>
+                </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-0">
                 <div className="overflow-x-auto">
-                  <table className="w-full border-collapse text-sm">
-                    <thead>
-                      <tr className="border-b">
-                        <th className="text-left p-3 font-medium">Reference</th>
-                        <th className="text-left p-3 font-medium">Room</th>
-                        <th className="text-left p-3 font-medium">Guest Name</th>
-                        <th className="text-left p-3 font-medium">CID</th>
-                        <th className="text-left p-3 font-medium">Status</th>
-                        <th className="text-left p-3 font-medium">Actions</th>
+                  <table className="w-full text-sm text-left">
+                    <thead className="text-xs text-gray-500 uppercase bg-gray-50 border-b">
+                      <tr>
+                        <th className="px-6 py-3 font-medium">Reference</th>
+                        <th className="px-6 py-3 font-medium">Guest</th>
+                        <th className="px-6 py-3 font-medium">Room</th>
+                        <th className="px-6 py-3 font-medium">Dates</th>
+                        <th className="px-6 py-3 font-medium">Status</th>
+                        <th className="px-6 py-3 font-medium text-right">Actions</th>
                       </tr>
                     </thead>
-                    <tbody>
+                    <tbody className="divide-y divide-gray-100 bg-white">
                       {bookings.map((booking) => (
-                        <tr key={booking.id} className="border-b hover:bg-muted/50">
-                          <td className="p-3 font-medium">{booking.bookingReference}</td>
-                          <td className="p-3">Room {booking.roomNumber}</td>
-                          <td className="p-3">{booking.guestName || 'N/A'}</td>
-                          <td className="p-3">{booking.cid || 'N/A'}</td>
-                          <td className="p-3">
-                            <Badge 
-                              variant={
-                                booking.status === 'CONFIRMED' ? 'default' :
-                                booking.status === 'PENDING' ? 'secondary' :
-                                booking.status === 'CANCELLED' ? 'destructive' :
-                                booking.status === 'CHECKED_IN' ? 'default' :
-                                booking.status === 'CHECKED_OUT' ? 'outline' :
-                                'secondary'
-                              }
-                            >
-                              {booking.status}
-                            </Badge>
+                        <tr key={booking.id} className="hover:bg-gray-50 transition-colors">
+                          <td className="px-6 py-4 font-medium text-gray-900">
+                            {booking.bookingReference}
+                            <div className="text-xs text-gray-500 mt-0.5">
+                              ID: {booking.id}
+                            </div>
                           </td>
-                          <td className="p-3">
-                            <div className="relative action-menu-container">
+                          <td className="px-6 py-4">
+                            <div className="font-medium text-gray-900">{booking.guestName || 'N/A'}</div>
+                            <div className="text-xs text-gray-500 mt-0.5">{booking.cid || 'No CID'}</div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-2">
+                              <span className="px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs font-medium">
+                                Room {booking.roomNumber}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 text-gray-500">
+                            <div className="flex flex-col gap-1 text-xs">
+                              <div className="flex items-center gap-1">
+                                <span className="font-medium text-gray-700">In:</span> 
+                                {new Date(booking.checkInDate).toLocaleDateString()}
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <span className="font-medium text-gray-700">Out:</span> 
+                                {new Date(booking.checkOutDate).toLocaleDateString()}
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${
+                              booking.status === 'CONFIRMED' ? 'bg-green-50 text-green-700 border-green-200' :
+                              booking.status === 'PENDING' ? 'bg-yellow-50 text-yellow-700 border-yellow-200' :
+                              booking.status === 'CANCELLED' ? 'bg-red-50 text-red-700 border-red-200' :
+                              booking.status === 'CHECKED_IN' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                              booking.status === 'CHECKED_OUT' ? 'bg-gray-50 text-gray-700 border-gray-200' :
+                              'bg-gray-50 text-gray-700 border-gray-200'
+                            }`}>
+                              {booking.status}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-right">
+                            <div className="relative inline-block text-left action-menu-container">
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => setOpenActionMenu(openActionMenu === booking.id ? null : booking.id)}
-                                className="h-8 w-8 p-0"
+                                className="h-8 w-8 p-0 rounded-full hover:bg-gray-100"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (openActionMenu === booking.id) {
+                                    setOpenActionMenu(null);
+                                  } else {
+                                    const buttonRect = e.currentTarget.getBoundingClientRect();
+                                    const menuWidth = 192; // w-48 = 12rem = 192px
+                                    const menuHeight = 200; // Approximate height
+                                    const viewportWidth = window.innerWidth;
+                                    const viewportHeight = window.innerHeight;
+                                    
+                                    // Calculate position: prefer above and to the left
+                                    let top = buttonRect.bottom + 4; // Try below first (reduced gap)
+                                    let right = viewportWidth - buttonRect.right;
+                                    let left = 'auto';
+                                    
+                                    // If not enough space below, position above
+                                    if (buttonRect.bottom + menuHeight + 4 > viewportHeight) {
+                                      top = buttonRect.top - menuHeight - 4;
+                                    }
+                                    
+                                    // If not enough space on right, position to the left
+                                    if (right < menuWidth && buttonRect.left > menuWidth) {
+                                      right = 'auto';
+                                      left = buttonRect.left - menuWidth - 4;
+                                    }
+                                    
+                                    setMenuPosition({ top, right, left });
+                                    setOpenActionMenu(booking.id);
+                                  }
+                                }}
                               >
-                                <MoreHorizontal className="h-4 w-4" />
+                                <MoreHorizontal className="h-4 w-4 text-gray-500" />
                               </Button>
                               
                               {openActionMenu === booking.id && (
-                                <div className="absolute right-0 top-8 z-50 w-48 bg-popover border border-border rounded-lg shadow-lg">
-                                  <div className="p-1">
-                                    <button 
-                                      className="flex items-center gap-2 w-full px-3 py-2 text-sm text-left hover:bg-accent rounded-md transition-colors"
-                                      onClick={async () => {
-                                        setOpenActionMenu(null);
-                                        try {
-                                          const response = await apiClient.put(`/bookings/${booking.id}/confirm`);
-                                          if (response.success) {
-                                            // Refresh bookings after successful action
-                                            if (selectedHotelForBookings) {
-                                              fetchBookings(selectedHotelForBookings.id);
-                                            }
-                                            console.log('Booking confirmed successfully');
-                                          }
-                                        } catch (error) {
-                                          console.error('Error confirming booking:', error);
-                                        }
-                                      }}
-                                    >
-                                      <CheckCircle className="h-4 w-4" />
-                                      Confirm
-                                    </button>
-                                    <button 
-                                      className="flex items-center gap-2 w-full px-3 py-2 text-sm text-left hover:bg-accent rounded-md transition-colors"
-                                      onClick={async () => {
-                                        setOpenActionMenu(null);
-                                        try {
-                                          const response = await apiClient.put(`/bookings/${booking.id}/checkin`);
-                                          if (response.success) {
-                                            // Refresh bookings after successful action
-                                            if (selectedHotelForBookings) {
-                                              fetchBookings(selectedHotelForBookings.id);
-                                            }
-                                            console.log('Booking checked-in successfully');
-                                          }
-                                        } catch (error) {
-                                          console.error('Error checking-in booking:', error);
-                                        }
-                                      }}
-                                    >
-                                      <LogIn className="h-4 w-4" />
-                                      Check-in
-                                    </button>
-                                    <button 
-                                      className="flex items-center gap-2 w-full px-3 py-2 text-sm text-left hover:bg-accent rounded-md transition-colors"
-                                      onClick={async () => {
-                                        setOpenActionMenu(null);
-                                        try {
-                                          const response = await apiClient.put(`/bookings/${booking.id}/checkout`);
-                                          if (response.success) {
-                                            // Refresh bookings after successful action
-                                            if (selectedHotelForBookings) {
-                                              fetchBookings(selectedHotelForBookings.id);
-                                            }
-                                            console.log('Booking checked-out successfully');
-                                          }
-                                        } catch (error) {
-                                          console.error('Error checking-out booking:', error);
-                                        }
-                                      }}
-                                    >
-                                      <LogOut className="h-4 w-4" />
-                                      Check-out
-                                    </button>
-                                    <button 
-                                      className="flex items-center gap-2 w-full px-3 py-2 text-sm text-left hover:bg-destructive hover:text-destructive-foreground rounded-md transition-colors"
-                                      onClick={async () => {
-                                        setOpenActionMenu(null);
-                                        try {
-                                          const response = await apiClient.put(`/bookings/${booking.id}/cancel`);
-                                          if (response.success) {
-                                            // Refresh bookings after successful action
-                                            if (selectedHotelForBookings) {
-                                              fetchBookings(selectedHotelForBookings.id);
-                                            }
-                                            console.log('Booking cancelled successfully');
-                                          }
-                                        } catch (error) {
-                                          console.error('Error cancelling booking:', error);
-                                        }
-                                      }}
-                                    >
-                                      <XCircle className="h-4 w-4" />
-                                      Cancel
-                                    </button>
+                                <>
+                                  <div 
+                                    className="fixed inset-0 z-[50] bg-transparent" 
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setOpenActionMenu(null);
+                                    }}
+                                  />
+                                  <div 
+                                    className="fixed z-[51] w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 divide-y divide-gray-100 focus:outline-none animate-in fade-in zoom-in-95 duration-100 origin-top-right" 
+                                    style={{ 
+                                      top: `${menuPosition.top}px`,
+                                      right: menuPosition.right === 'auto' ? 'auto' : `${menuPosition.right}px`,
+                                      left: menuPosition.left === 'auto' ? 'auto' : `${menuPosition.left}px`
+                                    }}
+                                  >
+                                    <div className="py-1">
+                                      <button
+                                        className="group flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setOpenActionMenu(null);
+                                          // Handle confirm logic
+                                          apiClient.put(`/bookings/${booking.id}/confirm`)
+                                            .then(res => {
+                                              if (res.success) {
+                                                if (selectedHotelForBookings) fetchBookings(selectedHotelForBookings.id);
+                                                Swal.fire({
+                                                  icon: 'success',
+                                                  title: 'Confirmed',
+                                                  text: 'Booking has been confirmed',
+                                                  toast: true,
+                                                  position: 'top-end',
+                                                  showConfirmButton: false,
+                                                  timer: 3000
+                                                });
+                                              }
+                                            })
+                                            .catch(err => console.error(err));
+                                        }}
+                                      >
+                                        <CheckCircle className="mr-3 h-4 w-4 text-green-500 group-hover:text-green-600" />
+                                        Confirm Booking
+                                      </button>
+                                      
+                                      <button
+                                        className="group flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setOpenActionMenu(null);
+                                          // Handle check-in logic
+                                          apiClient.put(`/bookings/${booking.id}/checkin`)
+                                            .then(res => {
+                                              if (res.success) {
+                                                if (selectedHotelForBookings) fetchBookings(selectedHotelForBookings.id);
+                                                Swal.fire({
+                                                  icon: 'success',
+                                                  title: 'Checked In',
+                                                  text: 'Guest has been checked in',
+                                                  toast: true,
+                                                  position: 'top-end',
+                                                  showConfirmButton: false,
+                                                  timer: 3000
+                                                });
+                                              }
+                                            })
+                                            .catch(err => console.error(err));
+                                        }}
+                                      >
+                                        <LogIn className="mr-3 h-4 w-4 text-blue-500 group-hover:text-blue-600" />
+                                        Check In
+                                      </button>
+                                      
+                                      <button
+                                        className="group flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setOpenActionMenu(null);
+                                          // Handle check-out logic
+                                          apiClient.put(`/bookings/${booking.id}/checkout`)
+                                            .then(res => {
+                                              if (res.success) {
+                                                if (selectedHotelForBookings) fetchBookings(selectedHotelForBookings.id);
+                                                Swal.fire({
+                                                  icon: 'success',
+                                                  title: 'Checked Out',
+                                                  text: 'Guest has been checked out',
+                                                  toast: true,
+                                                  position: 'top-end',
+                                                  showConfirmButton: false,
+                                                  timer: 3000
+                                                });
+                                              }
+                                            })
+                                            .catch(err => console.error(err));
+                                        }}
+                                      >
+                                        <LogOut className="mr-3 h-4 w-4 text-gray-500 group-hover:text-gray-600" />
+                                        Check Out
+                                      </button>
+                                    </div>
+                                    
+                                    <div className="py-1">
+                                      <button
+                                        className="group flex w-full items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 hover:text-red-700"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setOpenActionMenu(null);
+                                          // Handle cancel logic
+                                          apiClient.put(`/bookings/${booking.id}/cancel`)
+                                            .then(res => {
+                                              if (res.success) {
+                                                if (selectedHotelForBookings) fetchBookings(selectedHotelForBookings.id);
+                                                Swal.fire({
+                                                  icon: 'success',
+                                                  title: 'Cancelled',
+                                                  text: 'Booking has been cancelled',
+                                                  toast: true,
+                                                  position: 'top-end',
+                                                  showConfirmButton: false,
+                                                  timer: 3000
+                                                });
+                                              }
+                                            })
+                                            .catch(err => console.error(err));
+                                        }}
+                                      >
+                                        <XCircle className="mr-3 h-4 w-4 text-red-500 group-hover:text-red-600" />
+                                        Cancel Booking
+                                      </button>
+                                    </div>
                                   </div>
-                                </div>
+                                </>
                               )}
                             </div>
                           </td>
@@ -1183,3 +1341,4 @@ const BookHotelPage = () => {
 };
 
 export default BookHotelPage;
+

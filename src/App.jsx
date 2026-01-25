@@ -21,7 +21,6 @@ import BusPage from './pages/BusPage';
 import AddBusPage from './pages/AddBusPage';
 import BusManagementPage from './pages/BusManagementPage';
 import BusDetailsPage from './pages/BusDetailsPage';
-import BusSettingsPage from './pages/BusSettingsPage';
 import BusBookingPage from './pages/BusBookingPage';
 import TheaterPage from './pages/TheaterPage';
 import AddTheaterPage from './pages/AddTheaterPage';
@@ -63,7 +62,6 @@ function App() {
             <Route path="bus/add" element={<AddBusPage />} />
             <Route path="bus/manage" element={<BusManagementPage />} />
             <Route path="bus/details/:busId" element={<BusDetailsPage />} />
-            <Route path="bus/settings" element={<BusSettingsPage />} />
             <Route path="bus/booking" element={<BusBookingPage />} />
             <Route path="theater" element={<TheaterPage />} />
             <Route path="theater/add" element={<AddTheaterPage />} />

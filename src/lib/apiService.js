@@ -235,6 +235,22 @@ class ApiClient {
     });
   }
 
+  async putFormData(endpoint, formData, options = {}) {
+    // For FormData, only keep non-content-type headers (let browser set Content-Type with boundary)
+    const headers = {
+      'ngrok-skip-browser-warning': 'true',
+      ...(this.defaultHeaders['Authorization'] && { 'Authorization': this.defaultHeaders['Authorization'] }),
+      ...options.headers,
+    };
+    
+    return this.request(endpoint, {
+      ...options,
+      method: 'PUT',
+      headers,
+      body: formData,
+    });
+  }
+
   async put(endpoint, data, options = {}) {
     return this.request(endpoint, {
       ...options,
@@ -316,6 +332,7 @@ export const api = {
   // Hotel Service
   hotel: {
     getBookings: () => apiClient.get(API_CONFIG.ENDPOINTS.HOTEL.BOOKINGS),
+    getBookingsCount: () => apiClient.get('/bookings/hotel/count'),
     createBooking: (booking) => apiClient.post(API_CONFIG.ENDPOINTS.HOTEL.BOOKINGS, booking),
     updateBooking: (id, booking) => apiClient.put(`${API_CONFIG.ENDPOINTS.HOTEL.BOOKINGS}/${id}`, booking),
     deleteBooking: (id) => apiClient.delete(`${API_CONFIG.ENDPOINTS.HOTEL.BOOKINGS}/${id}`),
@@ -323,7 +340,16 @@ export const api = {
     getGuests: () => apiClient.get(API_CONFIG.ENDPOINTS.HOTEL.GUESTS),
     createHotel: (hotelData) => apiClient.post(API_CONFIG.ENDPOINTS.HOTEL.HOTELS, hotelData),
     getHotels: () => apiClient.get(API_CONFIG.ENDPOINTS.HOTEL.HOTELS),
-    updateHotel: (id, hotelData) => apiClient.put(`${API_CONFIG.ENDPOINTS.HOTEL.HOTELS}/${id}`, hotelData),
+    updateHotel: (id, formData, deleteImageIds = []) => {
+      // Build query string for deleteImageIds if provided
+      let endpoint = `${API_CONFIG.ENDPOINTS.HOTEL.HOTELS}/updateHotel/${id}`;
+      if (deleteImageIds.length > 0) {
+        const params = new URLSearchParams();
+        deleteImageIds.forEach(imageId => params.append('deleteImageIds', imageId));
+        endpoint += `?${params.toString()}`;
+      }
+      return apiClient.putFormData(endpoint, formData);
+    },
     deleteHotel: (id) => apiClient.delete(`${API_CONFIG.ENDPOINTS.HOTEL.HOTELS}/${id}`),
   },
 
@@ -331,10 +357,10 @@ export const api = {
   room: {
     getAllRooms: () => apiClient.get(API_CONFIG.ENDPOINTS.HOTEL.ALL_ROOMS),
     getRoomsByHotel: (hotelId) => apiClient.get(`/api/rooms/hotel/${hotelId}`),
-    getRoom: (roomId) => apiClient.get(`/rooms/${roomId}`),
+    getRoom: (roomId) => apiClient.get(`/api/rooms/${roomId}`),
     createRoom: (roomData) => apiClient.post(API_CONFIG.ENDPOINTS.HOTEL.ALL_ROOMS, roomData),
-    updateRoom: (roomId, roomData) => apiClient.put(`/rooms/${roomId}`, roomData),
-    deleteRoom: (roomId) => apiClient.delete(`/rooms/${roomId}`),
+    updateRoom: (roomId, roomData) => apiClient.put(`/api/rooms/${roomId}`, roomData),
+    deleteRoom: (roomId) => apiClient.delete(`/api/rooms/${roomId}`),
   },
 
   // Flight Service
@@ -359,7 +385,12 @@ export const api = {
 
   // Bus Service
   bus: {
-    getBookings: () => apiClient.get(API_CONFIG.ENDPOINTS.BUS.BOOKINGS),
+    getBookings: (userId = null) => {
+      const endpoint = userId 
+        ? `${API_CONFIG.ENDPOINTS.BUS.BOOKINGS}/${userId}`
+        : API_CONFIG.ENDPOINTS.BUS.BOOKINGS;
+      return apiClient.get(endpoint);
+    },
     createBooking: (booking) => apiClient.post(API_CONFIG.ENDPOINTS.BUS.BOOKINGS, booking),
     updateBooking: (id, booking) => apiClient.put(`${API_CONFIG.ENDPOINTS.BUS.BOOKINGS}/${id}`, booking),
     deleteBooking: (id) => apiClient.delete(`${API_CONFIG.ENDPOINTS.BUS.BOOKINGS}/${id}`),

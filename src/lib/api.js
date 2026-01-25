@@ -57,7 +57,7 @@ export const API_CONFIG = {
     },
     
     BUS: {
-      BOOKINGS: '/bus/bookings',
+      BOOKINGS: '/bookings/hotel/count',
       ROUTES: '/api/bus-routes',
       SCHEDULES: '/api/schedules',
       BUSES: '/api/buses',

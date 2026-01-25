@@ -112,13 +112,6 @@ export const navigationItems = [
         icon: Calendar,
         description: 'Manage bus bookings and reservations',
         clients: ['bus']
-      },
-      {
-        title: 'Bus Settings',
-        path: '/dashboard/bus/settings',
-        icon: Settings,
-        description: 'Configure bus preferences and details',
-        clients: ['bus']
       }
     ]
   },

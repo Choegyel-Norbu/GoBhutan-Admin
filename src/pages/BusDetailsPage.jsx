@@ -8,7 +8,9 @@ import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
 import { Select } from '@/components/ui/Select';
 import { Badge } from '@/components/ui/Badge';
-import { api } from '@/lib/apiService';
+import { api, apiClient } from '@/lib/apiService';
+import authAPI from '@/lib/authAPI';
+import { buildBusLockBookingPayload } from '@/lib/busBooking';
 import Swal from 'sweetalert2';
 
 function BusDetailsPage() {
@@ -612,18 +614,32 @@ function BusDetailsPage() {
     try {
       setSubmittingBooking(true);
       
-      const payload = {
-        scheduleId: parseInt(bookingFormData.scheduleId) || selectedScheduleForBooking.id,
-        seatNumbers: bookingFormData.seatNumbers.length > 0 ? bookingFormData.seatNumbers : selectedSeats.map(seat => seat.startNo || seat.seatNumber || seat.id),
-        seatLabels: bookingFormData.seatLabels.length > 0 ? bookingFormData.seatLabels : selectedSeats.map(seat => seat.seatLabel || seat.label || `Seat ${seat.id}`),
-        applicantCid: bookingFormData.applicantCid.trim(),
-        applicantMobile: bookingFormData.applicantMobile.trim(),
-        applicantEmail: bookingFormData.applicantEmail.trim(),
-        status: bookingFormData.status || 'PENDING'
-      };
+      const seatNumbersRaw =
+        bookingFormData.seatNumbers.length > 0
+          ? bookingFormData.seatNumbers
+          : selectedSeats.map((seat) => seat.startNo ?? seat.seatNumber ?? seat.id);
+      const seatLabelsRaw =
+        bookingFormData.seatLabels.length > 0
+          ? bookingFormData.seatLabels
+          : selectedSeats.map(
+              (seat) => seat.seatLabel || seat.label || `Seat ${seat.id ?? seat.seatNumber ?? ''}`
+            );
 
-      console.log('Booking payload:', payload);
-      
+      const payload = buildBusLockBookingPayload({
+        scheduleId: parseInt(bookingFormData.scheduleId, 10) || selectedScheduleForBooking?.id,
+        seatNumbers: seatNumbersRaw,
+        seatLabels: seatLabelsRaw,
+        applicantCid: bookingFormData.applicantCid,
+        applicantMobile: bookingFormData.applicantMobile,
+        applicantEmail: bookingFormData.applicantEmail,
+        status: bookingFormData.status || 'PENDING',
+      });
+
+      const token = authAPI.getStoredToken();
+      if (token) {
+        apiClient.setAuthToken(token);
+      }
+
       await api.bus.lockBooking(payload);
       
       await Swal.fire({
@@ -1290,21 +1306,6 @@ function BusDetailsPage() {
                                             <div className="flex gap-2 ml-4">
                                               <div className="relative group">
                                                 <Button
-                                                  variant="default"
-                                                  size="sm"
-                                                  onClick={() => handleBookSchedule(schedule)}
-                                                  disabled={loadingSeats}
-                                                >
-                                                  <Ticket className="h-4 w-4 mr-1" />
-                                                  Book
-                                                </Button>
-                                                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-900 rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50 w-max max-w-xs">
-                                                  Book Seats
-                                                  <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
-                                                </div>
-                                              </div>
-                                              <div className="relative group">
-                                                <Button
                                                   variant="outline"
                                                   size="sm"
                                                   onClick={() => handleEditSchedule(schedule)}
@@ -1456,7 +1457,7 @@ function BusDetailsPage() {
                       onChange={(e) => handleRouteInputChange('departureTime', e.target.value)}
                       placeholder="e.g., 10:30"
                     />
-                    <p className="text-sm text-muted-foreground">
+                    <p className="form-field-hint">
                       Default departure time for this route (format: HH:MM)
                     </p>
                     {errors.departureTime && (
@@ -1473,7 +1474,7 @@ function BusDetailsPage() {
                       onChange={(e) => handleRouteInputChange('customFare', e.target.value)}
                       placeholder="e.g., 200.00"
                     />
-                    <p className="text-sm text-muted-foreground">
+                    <p className="form-field-hint">
                       Optional custom fare override (leave empty to use base fare)
                     </p>
                     {errors.customFare && (
@@ -1493,7 +1494,7 @@ function BusDetailsPage() {
                         Active Route
                       </Label>
                     </div>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="form-field-hint">
                       Whether this route is currently active and available for booking
                     </p>
                   </div>
@@ -1547,7 +1548,7 @@ function BusDetailsPage() {
                       <p className="text-sm text-red-600">{errors.routeId}</p>
                     )}
                     {scheduleFormData.routeId && !editingSchedule && (
-                      <p className="text-sm text-muted-foreground">
+                      <p className="form-field-hint">
                         Route is pre-selected for this schedule
                       </p>
                     )}
@@ -1633,7 +1634,7 @@ function BusDetailsPage() {
                       min={new Date().toISOString().split('T')[0]}
                       required
                     />
-                    <p className="text-sm text-muted-foreground">
+                    <p className="form-field-hint">
                       Select the starting date for schedule generation
                     </p>
                   </div>
@@ -1651,7 +1652,7 @@ function BusDetailsPage() {
                       placeholder="e.g., 7"
                       required
                     />
-                    <p className="text-sm text-muted-foreground">
+                    <p className="form-field-hint">
                       Number of days to generate schedules for
                     </p>
                   </div>
@@ -1775,13 +1776,13 @@ function BusDetailsPage() {
                           </div>
                         </div>
                         {selectedSeats.length > 0 && (
-                          <p className="mt-2 text-sm text-muted-foreground">
+                          <p className="form-field-hint mt-2">
                             Selected: {selectedSeats.map(s => s.seatLabel || s.label || `S${s.id}`).join(', ')}
                           </p>
                         )}
                       </>
                     ) : (
-                      <p className="text-sm text-muted-foreground">No seats available for this schedule.</p>
+                      <p className="form-field-hint">No seats available for this schedule.</p>
                     )}
                   </div>
 
@@ -1795,7 +1796,7 @@ function BusDetailsPage() {
                         readOnly
                         className="bg-muted"
                       />
-                      <p className="text-xs text-muted-foreground">Auto-filled from selected schedule</p>
+                      <p className="form-field-hint">Auto-filled from selected schedule</p>
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="seatNumbers">Seat Numbers *</Label>
@@ -1806,7 +1807,7 @@ function BusDetailsPage() {
                         className="bg-muted"
                         placeholder="Select seats to auto-fill"
                       />
-                      <p className="text-xs text-muted-foreground">Auto-filled when seats are selected</p>
+                      <p className="form-field-hint">Auto-filled when seats are selected</p>
                     </div>
                     <div className="space-y-2 md:col-span-2">
                       <Label htmlFor="seatLabels">Seat Labels *</Label>
@@ -1817,7 +1818,7 @@ function BusDetailsPage() {
                         className="bg-muted"
                         placeholder="Select seats to auto-fill"
                       />
-                      <p className="text-xs text-muted-foreground">Auto-filled when seats are selected</p>
+                      <p className="form-field-hint">Auto-filled when seats are selected</p>
                     </div>
                   </div>
 

@@ -420,15 +420,31 @@ export const api = {
     getAvailableSeats: (scheduleId) => {
       return apiClient.get(`${API_CONFIG.ENDPOINTS.BUS.AVAILABLE_SEATS}/${scheduleId}/available-seats`);
     },
+    getScheduleSeats: (scheduleId) => {
+      return apiClient.get(`${API_CONFIG.ENDPOINTS.BUS.SCHEDULE_SEATS}/${scheduleId}/seats`);
+    },
     getSeatConfigs: (busId) => {
       return apiClient.get(`${API_CONFIG.ENDPOINTS.BUS.BUSES}/${busId}/seat-configs`);
     },
     generateSeats: (busId) => {
       return apiClient.post(`${API_CONFIG.ENDPOINTS.BUS.GENERATE_SEATS}/${busId}/seat-configs/generate-seats`);
     },
-    lockBooking: (bookingData) => {
-      return apiClient.post('/api/bookings/lock', bookingData);
-    },
+    lockBooking: (bookingData) =>
+      apiClient.post(API_CONFIG.ENDPOINTS.BUS.BOOKING_LOCK, bookingData),
+    getLockBookings: () => apiClient.get(API_CONFIG.ENDPOINTS.BUS.BOOKING_LOCK),
+    confirmBooking: (payload) =>
+      apiClient.post(API_CONFIG.ENDPOINTS.BUS.BOOKING_CONFIRM, payload),
+    getBookingTicket: (bookingId) =>
+      apiClient.get(`${API_CONFIG.ENDPOINTS.BUS.BOOKING_TICKET}/${bookingId}`),
+  },
+
+  // Wallet Service
+  wallet: {
+    getBalance: () => apiClient.get('/api/payment-int/wallet/balance'),
+    initiateTopup: (payload) => apiClient.post('/api/payment-int/wallet/topup/initiate', payload),
+    accountInquiryTopup: (payload) => apiClient.post('/api/payment-int/wallet/topup/account-inquiry', payload),
+    debitTopup: (payload) => apiClient.post('/api/payment-int/wallet/topup/debit', payload),
+    getLedger: () => apiClient.get('/api/payment-int/wallet/ledger'),
   },
 };
 

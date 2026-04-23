@@ -62,7 +62,15 @@ export const API_CONFIG = {
       SCHEDULES: '/api/schedules',
       BUSES: '/api/buses',
       AVAILABLE_SEATS: '/bus/bookings/schedule',
+      /** GET `{SCHEDULE_SEATS}/{scheduleId}/seats` → `/api/bookings/schedule/{scheduleId}/seats` */
+      SCHEDULE_SEATS: '/api/bookings/schedule',
       GENERATE_SEATS: '/api/buses',
+      /** Bus (and shared) seat lock — POST body: scheduleId, seatNumbers, seatLabels, applicant*, status */
+      BOOKING_LOCK: '/api/bookings/lock',
+      /** POST `{ bookingRef }` */
+      BOOKING_CONFIRM: '/api/bookings/confirm',
+      /** GET `/api/bookings/ticket/{bookingId}` */
+      BOOKING_TICKET: '/api/bookings/ticket',
     },
   },
   

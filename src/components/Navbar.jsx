@@ -58,7 +58,7 @@ function Navbar() {
         <div className="relative" ref={dropdownRef}>
           <Button
             variant="ghost"
-            className="flex items-center gap-2 h-9 md:h-10 px-2 md:px-3"
+            className="flex items-center gap-2 h-9 md:h-10 px-2 md:px-3 text-foreground hover:bg-transparent hover:text-foreground focus-visible:bg-transparent focus-visible:text-foreground"
             onClick={() => setIsProfileOpen(!isProfileOpen)}
             aria-expanded={isProfileOpen}
             aria-haspopup="true"
@@ -75,12 +75,12 @@ function Navbar() {
           </Button>
 
           {isProfileOpen && (
-            <div className="absolute right-0 mt-2 w-40 md:w-48 bg-popover border border-border rounded-lg shadow-lg z-50">
+            <div className="fixed left-3 right-3 top-16 w-auto bg-popover border border-border rounded-lg shadow-lg z-50 sm:absolute sm:left-auto sm:right-0 sm:top-auto sm:mt-2 sm:w-48">
               <div className="p-1">
                 <button 
                   onClick={handleSignOut}
                   disabled={isSigningOut}
-                  className="flex items-center gap-2 w-full px-2 md:px-3 py-2 text-xs md:text-sm text-left hover:bg-destructive hover:text-destructive-foreground rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex items-center gap-2 w-full px-3 py-2.5 text-sm text-left hover:bg-muted hover:text-foreground rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <LogOut className="h-3 w-3 md:h-4 md:w-4" />
                   {isSigningOut ? 'Signing out...' : 'Sign out'}

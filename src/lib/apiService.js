@@ -9,6 +9,16 @@ const defaultHeaders = {
   'ngrok-skip-browser-warning': 'true',
 };
 
+const getStoredAccessToken = () => {
+  try {
+    const authData = JSON.parse(localStorage.getItem('gobhutan_auth_data'));
+    return authData?.accessToken || null;
+  } catch (error) {
+    console.warn('Failed to read auth token from storage:', error);
+    return null;
+  }
+};
+
 // Create a simple HTTP client
 class ApiClient {
   constructor(baseURL = API_BASE_URL) {
@@ -62,7 +72,7 @@ class ApiClient {
           localStorage.removeItem('gobhutan_user_data');
           localStorage.removeItem('gobhutan_user_roles');
           console.warn('Refresh token expired. Redirecting to sign-in page.');
-          window.location.href = '/signin';
+          window.location.href = `${import.meta.env.BASE_URL}signin`;
           return;
         }
         throw new Error('Token refresh failed');
@@ -99,7 +109,7 @@ class ApiClient {
       // If refresh token returns 401, redirect to sign-in page
       if (error.message?.includes('401') || error.status === 401) {
         console.warn('Refresh token expired. Redirecting to sign-in page.');
-        window.location.href = '/signin';
+        window.location.href = `${import.meta.env.BASE_URL}signin`;
         return;
       }
       
@@ -139,6 +149,20 @@ class ApiClient {
   // Generic request method
   async request(endpoint, options = {}) {
     const url = endpoint.startsWith('http') ? endpoint : `${this.baseURL}${endpoint}`;
+    const latestAccessToken = getStoredAccessToken();
+    const hasAuthHeaderInOptions =
+      Object.prototype.hasOwnProperty.call(options?.headers || {}, 'Authorization');
+    const hasAuthHeaderInDefault = Object.prototype.hasOwnProperty.call(this.defaultHeaders, 'Authorization');
+
+    // Always sync Authorization header with the latest persisted token
+    // so requests after user-switch/login do not carry stale tokens.
+    if (!hasAuthHeaderInOptions) {
+      if (latestAccessToken) {
+        this.defaultHeaders['Authorization'] = `Bearer ${latestAccessToken}`;
+      } else if (hasAuthHeaderInDefault) {
+        delete this.defaultHeaders['Authorization'];
+      }
+    }
     
     const config = {
       headers: {
@@ -157,7 +181,23 @@ class ApiClient {
         if (response.status === 401 && !config._retry) {
           return this.handleUnauthorized(endpoint, options);
         }
-        throw new Error(`HTTP error! status: ${response.status}`);
+        // Preserve API-provided message (e.g. {"message":"Insufficient wallet balance"})
+        // so callers can show meaningful feedback instead of generic HTTP status errors.
+        let apiMessage = '';
+        const errorContentType = response.headers.get('content-type') || '';
+        try {
+          if (errorContentType.includes('application/json')) {
+            const errorJson = await response.json();
+            apiMessage = errorJson?.message || errorJson?.error || '';
+          } else {
+            const errorText = await response.text();
+            apiMessage = errorText?.trim() || '';
+          }
+        } catch {
+          apiMessage = '';
+        }
+
+        throw new Error(apiMessage || `HTTP error! status: ${response.status}`);
       }
       
       // For successful responses, handle different content types
@@ -316,7 +356,7 @@ export const api = {
     getProfile: () => apiClient.get(API_CONFIG.ENDPOINTS.AUTH.PROFILE),
     refreshToken: () => apiClient.post(API_CONFIG.ENDPOINTS.AUTH.REFRESH),
     updateUser: (userData) => apiClient.put(API_CONFIG.ENDPOINTS.AUTH.UPDATE_USER, userData),
-    updateClients: (userData) => apiClient.post(API_CONFIG.ENDPOINTS.AUTH.UPDATE_CLIENTS, userData),
+    updateProfile: (userData) => apiClient.post(API_CONFIG.ENDPOINTS.AUTH.UPDATE_PROFILE, userData),
   },
 
   // Taxi Service
@@ -351,6 +391,7 @@ export const api = {
       return apiClient.putFormData(endpoint, formData);
     },
     deleteHotel: (id) => apiClient.delete(`${API_CONFIG.ENDPOINTS.HOTEL.HOTELS}/${id}`),
+    registerStaff: (staffData) => apiClient.post(API_CONFIG.ENDPOINTS.HOTEL.REGISTER_STAFF, staffData),
   },
 
   // Room Service
@@ -385,15 +426,6 @@ export const api = {
 
   // Bus Service
   bus: {
-    getBookings: (userId = null) => {
-      const endpoint = userId 
-        ? `${API_CONFIG.ENDPOINTS.BUS.BOOKINGS}/${userId}`
-        : API_CONFIG.ENDPOINTS.BUS.BOOKINGS;
-      return apiClient.get(endpoint);
-    },
-    createBooking: (booking) => apiClient.post(API_CONFIG.ENDPOINTS.BUS.BOOKINGS, booking),
-    updateBooking: (id, booking) => apiClient.put(`${API_CONFIG.ENDPOINTS.BUS.BOOKINGS}/${id}`, booking),
-    deleteBooking: (id) => apiClient.delete(`${API_CONFIG.ENDPOINTS.BUS.BOOKINGS}/${id}`),
     getRoutes: (busId = null) => {
       const endpoint = busId ? `${API_CONFIG.ENDPOINTS.BUS.ROUTES}/bus/${busId}` : API_CONFIG.ENDPOINTS.BUS.ROUTES;
       return apiClient.get(endpoint);
@@ -408,18 +440,31 @@ export const api = {
     getSchedulesByRoute: (routeId) => {
       return apiClient.get(`${API_CONFIG.ENDPOINTS.BUS.SCHEDULES}/route/${routeId}`);
     },
-    createSchedule: (schedule) => apiClient.post(API_CONFIG.ENDPOINTS.BUS.SCHEDULES, schedule),
-    updateSchedule: (id, schedule) => apiClient.put(`${API_CONFIG.ENDPOINTS.BUS.SCHEDULES}/${id}`, schedule),
+    getScheduleById: (id) => apiClient.get(`${API_CONFIG.ENDPOINTS.BUS.SCHEDULES}/${id}`),
     deleteSchedule: (id) => apiClient.delete(`${API_CONFIG.ENDPOINTS.BUS.SCHEDULES}/${id}`),
+    toggleSchedule: (id) => apiClient.patch(`${API_CONFIG.ENDPOINTS.BUS.SCHEDULES}/${id}/toggle`),
     generateSchedules: (payload) => apiClient.post(`${API_CONFIG.ENDPOINTS.BUS.SCHEDULES}/bus/generate`, payload),
+    getSchedulesByDateRange: (start, end, includeInactive = false) =>
+      apiClient.get(`${API_CONFIG.ENDPOINTS.BUS.SCHEDULES}/date-range?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}&includeInactive=${includeInactive}`),
+    getAvailableSchedulesForApp: (routeId, date) =>
+      apiClient.get(`${API_CONFIG.ENDPOINTS.BUS.SCHEDULES}/app/route/${routeId}?date=${date}`),
+    getRouteMasters: (activeOnly) => {
+      const url = activeOnly !== undefined
+        ? `${API_CONFIG.ENDPOINTS.BUS.BUS_MASTERS}?activeOnly=${activeOnly}`
+        : API_CONFIG.ENDPOINTS.BUS.BUS_MASTERS;
+      return apiClient.get(url);
+    },
+    createRouteMaster: (payload) => apiClient.post(API_CONFIG.ENDPOINTS.BUS.BUS_MASTERS, payload),
+    updateRouteMaster: (id, payload) => apiClient.put(`${API_CONFIG.ENDPOINTS.BUS.BUS_MASTERS}/${id}`, payload),
+    disableRouteMaster: (id) => apiClient.patch(`${API_CONFIG.ENDPOINTS.BUS.BUS_MASTERS}/${id}/disable`),
     getBuses: () => apiClient.get(API_CONFIG.ENDPOINTS.BUS.BUSES),
     getBus: (busId) => apiClient.get(`${API_CONFIG.ENDPOINTS.BUS.BUSES}/bus/${busId}`),
     createBus: (bus) => apiClient.post(API_CONFIG.ENDPOINTS.BUS.BUSES, bus),
     updateBus: (id, bus) => apiClient.put(`${API_CONFIG.ENDPOINTS.BUS.BUSES}/${id}`, bus),
     deleteBus: (id) => apiClient.delete(`${API_CONFIG.ENDPOINTS.BUS.BUSES}/${id}`),
-    getAvailableSeats: (scheduleId) => {
-      return apiClient.get(`${API_CONFIG.ENDPOINTS.BUS.AVAILABLE_SEATS}/${scheduleId}/available-seats`);
-    },
+    searchActiveRoutes: (source, destination, date) =>
+      apiClient.get(`${API_CONFIG.ENDPOINTS.BUS.ROUTES}/active/search?source=${encodeURIComponent(source)}&destination=${encodeURIComponent(destination)}${date ? `&date=${date}` : ''}`),
+    getActiveBuses: () => apiClient.get(`${API_CONFIG.ENDPOINTS.BUS.BUSES}/active`),
     getScheduleSeats: (scheduleId) => {
       return apiClient.get(`${API_CONFIG.ENDPOINTS.BUS.SCHEDULE_SEATS}/${scheduleId}/seats`);
     },
@@ -431,11 +476,25 @@ export const api = {
     },
     lockBooking: (bookingData) =>
       apiClient.post(API_CONFIG.ENDPOINTS.BUS.BOOKING_LOCK, bookingData),
-    getLockBookings: () => apiClient.get(API_CONFIG.ENDPOINTS.BUS.BOOKING_LOCK),
+    /** POST `/api/bookings/confirm` — include `walletSettlement: true` (+ optional `amount`/`currency`) when the server should debit wallet balance then confirm the lock. */
     confirmBooking: (payload) =>
       apiClient.post(API_CONFIG.ENDPOINTS.BUS.BOOKING_CONFIRM, payload),
+    payBooking: (payload) =>
+      apiClient.post(API_CONFIG.ENDPOINTS.BUS.BOOKING_PAY, payload),
+    cancelBooking: (bookingId) =>
+      apiClient.post(`${API_CONFIG.ENDPOINTS.BUS.BOOKING_CANCEL}/${bookingId}`),
     getBookingTicket: (bookingId) =>
       apiClient.get(`${API_CONFIG.ENDPOINTS.BUS.BOOKING_TICKET}/${bookingId}`),
+    getBookingManifest: (scheduleId) =>
+      apiClient.get(`${API_CONFIG.ENDPOINTS.BUS.BOOKING_MANIFEST}/${scheduleId}/manifest`),
+    lockCashBooking: (bookingData) =>
+      apiClient.post(API_CONFIG.ENDPOINTS.BUS.BOOKING_CASH_LOCK, bookingData),
+    confirmCashBooking: (payload) =>
+      apiClient.post(API_CONFIG.ENDPOINTS.BUS.BOOKING_CASH_CONFIRM, payload),
+    cancelCashBooking: (bookingId) =>
+      apiClient.post(`${API_CONFIG.ENDPOINTS.BUS.BOOKING_CASH_CANCEL}/${bookingId}`),
+    getCashTicket: (bookingId) =>
+      apiClient.get(`${API_CONFIG.ENDPOINTS.BUS.BOOKING_CASH_TICKET}/${bookingId}`),
   },
 
   // Wallet Service

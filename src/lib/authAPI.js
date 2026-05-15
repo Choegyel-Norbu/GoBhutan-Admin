@@ -39,6 +39,52 @@ const removeSecureStorage = (key) => {
   }
 };
 
+const parseEmbeddedBackendError = (message) => {
+  if (typeof message !== 'string') return null;
+
+  const jsonStart = message.indexOf('{');
+  const jsonEnd = message.lastIndexOf('}');
+  if (jsonStart === -1 || jsonEnd <= jsonStart) return null;
+
+  const rawCandidate = message.slice(jsonStart, jsonEnd + 1);
+  const normalizedCandidate = rawCandidate.replace(/\\"/g, '"');
+
+  try {
+    const parsed = JSON.parse(normalizedCandidate);
+    if (!parsed || typeof parsed !== 'object') return null;
+
+    if (parsed.errorMessage && parsed.field) {
+      return `${parsed.field}: ${parsed.errorMessage}`;
+    }
+
+    if (typeof parsed.errorMessage === 'string') {
+      return parsed.errorMessage;
+    }
+
+    if (typeof parsed.message === 'string') {
+      return parsed.message;
+    }
+  } catch (_parseError) {
+    return null;
+  }
+
+  return null;
+};
+
+const getBackendErrorMessage = (error) => {
+  const backendMessage = error?.response?.data?.message;
+  if (typeof backendMessage === 'string' && backendMessage.trim()) {
+    return parseEmbeddedBackendError(backendMessage) || backendMessage;
+  }
+
+  const fallbackMessage = error?.response?.data?.errorMessage;
+  if (typeof fallbackMessage === 'string' && fallbackMessage.trim()) {
+    return fallbackMessage;
+  }
+
+  return null;
+};
+
 // Auth data management functions
 const storeAuthData = (authData) => {
   const dataToStore = {
@@ -165,6 +211,11 @@ export const authAPI = {
       
       return response;
     } catch (error) {
+      const backendErrorMessage = getBackendErrorMessage(error);
+      if (backendErrorMessage) {
+        throw new Error(backendErrorMessage);
+      }
+
       // Handle login errors with custom messages
       if (error.response?.status === 401) {
         throw new Error('The username or password you entered is incorrect. Please try again.');
@@ -226,6 +277,11 @@ export const authAPI = {
       
       return response;
     } catch (error) {
+      const backendErrorMessage = getBackendErrorMessage(error);
+      if (backendErrorMessage) {
+        throw new Error(backendErrorMessage);
+      }
+
       // Handle signup errors with custom messages
       if (error.response?.status === 400) {
         throw new Error('Please check that all fields are filled correctly.');
@@ -361,8 +417,7 @@ export const authAPI = {
       // If refresh token returns 401, redirect to sign-in page
       if (error.response?.status === 401) {
         console.warn('Refresh token expired. Redirecting to sign-in page.');
-        // Redirect to sign-in page
-        window.location.href = '/signin';
+        window.location.href = `${import.meta.env.BASE_URL}signin`;
         return;
       }
       
@@ -419,7 +474,41 @@ export const authAPI = {
    */
   getStoredUserRoles: () => {
     return getStoredUserRoles();
-  }
+  },
+
+  /**
+   * Send OTP to the user for forgot-password / first-time password setup
+   * @param {string} username
+   */
+  sendForgotPasswordOtp: async (username) => {
+    const response = await apiClient.post(API_CONFIG.ENDPOINTS.AUTH.FORGOT_PASSWORD_SEND_OTP, { username });
+    return response;
+  },
+
+  /**
+   * Verify OTP before allowing password reset
+   * @param {object} payload - { username, otp }
+   */
+  verifyForgotPasswordOtp: async ({ username, otp }) => {
+    const response = await apiClient.post(API_CONFIG.ENDPOINTS.AUTH.FORGOT_PASSWORD_VERIFY_OTP, {
+      username,
+      otp,
+    });
+    return response;
+  },
+
+  /**
+   * Reset password after OTP has been verified
+   * @param {object} payload - { username, otp, newPassword }
+   */
+  resetForgotPassword: async ({ username, otp, newPassword }) => {
+    const response = await apiClient.post(API_CONFIG.ENDPOINTS.AUTH.FORGOT_PASSWORD_RESET, {
+      username,
+      otp,
+      newPassword,
+    });
+    return response;
+  },
 };
 
 export default authAPI;

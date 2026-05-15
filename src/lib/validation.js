@@ -1,5 +1,7 @@
 // Validation utility functions
 
+import { BUS_OPERATING_WEEK, RecurrenceType } from './constants';
+
 // Email validation regex
 const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 
@@ -182,7 +184,7 @@ export const validateClients = (clients) => {
   }
 
   // Valid client options
-  const validClients = ['bus', 'hotel', 'flight', 'taxi', 'movie', 'all'];
+  const validClients = ['bus', 'hotel', 'theater', 'all'];
   
   // Check if all selected clients are valid
   const invalidClients = clients.filter(clientType => !validClients.includes(clientType));
@@ -346,13 +348,26 @@ export const sanitizeFormData = (formData) => {
  * @returns {object} - Sanitized and validated form data
  */
 export const sanitizeSignUpFormData = (formData) => {
+  // Define all available services
+  const allServices = ['bus', 'hotel', 'theater'];
+  
+  // Process clients array: if "all" is selected, replace with individual services
+  let clients = formData.clients || [];
+  if (clients.includes('all')) {
+    // If "all" is selected, return only the individual services (without "all")
+    clients = allServices;
+  } else {
+    // Otherwise, just filter out "all" if it somehow exists
+    clients = clients.filter(client => client !== 'all');
+  }
+  
   return {
     username: sanitizeInput(formData.username),
     email: sanitizeInput(formData.email),
     password: sanitizeInput(formData.password),
     firstName: sanitizeInput(formData.firstName),
     lastName: sanitizeInput(formData.lastName),
-    clients: formData.clients // Array doesn't need sanitization, but validate it's an array
+    clients: clients
   };
 };
 
@@ -656,6 +671,89 @@ export const validateBusAmenities = (amenities) => {
 };
 
 /**
+ * For ALTERNATE recurrence: weekdays every two days in calendar order, anchored at
+ * `date`'s weekday (Mon-first API names). Example: if `date` is Wednesday →
+ * WED, FRI, SUN, TUE.
+ */
+export const alternateOperatingDaysFromDate = (date = new Date()) => {
+  const jsDay = date.getDay();
+  const startIdx = jsDay === 0 ? 6 : jsDay - 1;
+  const rotated = [];
+  for (let i = 0; i < 7; i += 1) {
+    rotated.push(BUS_OPERATING_WEEK[(startIdx + i) % 7]);
+  }
+  const picked = [];
+  for (let i = 0; i < 7; i += 2) {
+    picked.push(rotated[i]);
+  }
+  return picked;
+};
+
+/**
+ * Resolves `operatingDays` for the bus API (same values shown in the form hint).
+ */
+export const computeBusOperatingDays = (formData) => {
+  const recurrence = formData.recurrenceType || '';
+  const raw = formData.operatingDays ?? formData.operating_days;
+
+  if (recurrence === RecurrenceType.ALTERNATE || recurrence === 'ALTERNATE') {
+    return alternateOperatingDaysFromDate(new Date());
+  }
+
+  if (recurrence === RecurrenceType.DAILY || recurrence === 'DAILY') {
+    return [...BUS_OPERATING_WEEK];
+  }
+
+  if (recurrence === RecurrenceType.CUSTOM || recurrence === 'CUSTOM') {
+    if (Array.isArray(raw) && raw.length > 0 && raw.every((d) => typeof d === 'string' && d.trim())) {
+      return raw.map((d) => d.trim().toUpperCase());
+    }
+    return [...BUS_OPERATING_WEEK];
+  }
+
+  if (Array.isArray(raw) && raw.length > 0 && raw.every((d) => typeof d === 'string' && d.trim())) {
+    return raw.map((d) => d.trim().toUpperCase());
+  }
+
+  return [...BUS_OPERATING_WEEK];
+};
+
+/**
+ * Body for POST/PUT `/api/buses` — matches backend contract (camelCase + `operatingDays`).
+ *
+ * @param {object} formData - Bus form fields after client validation
+ */
+export const buildBusApiPayload = (formData) => {
+  const busNumber = sanitizeInput(formData.busNumber);
+  const busName = sanitizeInput(formData.busName);
+  const busType = formData.busType;
+  const totalSeats = parseInt(formData.totalSeats, 10);
+  const description = formData.description?.trim()
+    ? sanitizeInput(formData.description)
+    : '';
+  const amenities = formData.amenities?.trim()
+    ? sanitizeInput(formData.amenities)
+    : '';
+  const layoutType = formData.layoutType ? sanitizeInput(formData.layoutType) : '';
+  const recurrenceType = formData.recurrenceType || '';
+  const today = new Date();
+  const scheduleAnchorDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+  return {
+    busNumber,
+    busName,
+    busType,
+    totalSeats,
+    description,
+    amenities,
+    layoutType,
+    recurrenceType,
+    scheduleAnchorDate,
+    operatingDays: computeBusOperatingDays(formData),
+  };
+};
+
+/**
  * Validates bus form data
  * @param {object} formData - Form data containing bus details
  * @returns {object} - Validation result with isValid, errors, and messages
@@ -748,5 +846,8 @@ export default {
   validateRecurrenceType,
   validateBusDescription,
   validateBusAmenities,
-  validateBusForm
+  validateBusForm,
+  buildBusApiPayload,
+  computeBusOperatingDays,
+  alternateOperatingDaysFromDate
 };

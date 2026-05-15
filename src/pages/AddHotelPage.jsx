@@ -1,19 +1,76 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
 import { Textarea } from '@/components/ui/Textarea';
 import { Select } from '@/components/ui/Select';
-import { Building, MapPin, Phone, Mail, Star, Wifi, Car, Dumbbell, Coffee, Shield, Utensils, Upload, Image as ImageIcon, Trash2 } from 'lucide-react';
+import { Building, MapPin, Phone, Mail, Star, Wifi, Car, Dumbbell, Coffee, Shield, Utensils, Upload, Image as ImageIcon, Trash2, Wallet } from 'lucide-react';
+import PageWrapper from '@/components/PageWrapper';
 import { apiClient } from '@/lib/apiService';
 import { API_CONFIG } from '@/lib/api';
 import authAPI from '@/lib/authAPI';
+import { useWallet } from '@/contexts/WalletContext';
 import Swal from 'sweetalert2';
 
 const AddHotel = ({ hotelId = null }) => {
+  const navigate = useNavigate();
+  const { walletBalance, isWalletLoading, refreshWalletBalance } = useWallet();
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [hasWalletLoaded, setHasWalletLoaded] = useState(false);
+
+  useEffect(() => {
+    const loadWalletBalance = async () => {
+      await refreshWalletBalance();
+      setHasWalletLoaded(true);
+    };
+
+    loadWalletBalance();
+  }, [refreshWalletBalance]);
+
+  // Check wallet balance on component mount
+  useEffect(() => {
+    if (isWalletLoading || !hasWalletLoaded) {
+      return;
+    }
+
+    if (walletBalance < 1000) {
+      const formatCurrency = (amount) => {
+        return new Intl.NumberFormat('en-BT', {
+          style: 'currency',
+          currency: 'BTN',
+          minimumFractionDigits: 2
+        }).format(amount);
+      };
+
+      Swal.fire({
+        icon: 'warning',
+        title: 'Insufficient Funds',
+        html: `
+          <div style="text-align: center;">
+            <p style="margin-bottom: 16px; font-size: 16px;">
+              Your wallet balance is <strong>${formatCurrency(walletBalance)}</strong>, which is below the minimum required amount of <strong>${formatCurrency(1000)}</strong>.
+            </p>
+            <p style="margin-bottom: 20px; color: #6b7280;">
+              Please refill your wallet to register a new hotel.
+            </p>
+          </div>
+        `,
+        showCancelButton: false,
+        confirmButtonText: 'Go to Wallet',
+        confirmButtonColor: '#10b981',
+        reverseButtons: false,
+        allowOutsideClick: false,
+        allowEscapeKey: false
+      }).then((result) => {
+        if (result.isConfirmed) {
+          navigate('/dashboard/wallet');
+        }
+      });
+    }
+  }, [walletBalance, isWalletLoading, hasWalletLoaded, navigate]);
 
   // Function to clear all form fields
   const clearForm = () => {
@@ -244,10 +301,10 @@ const AddHotel = ({ hotelId = null }) => {
           delete newErrors.description;
         }
         break;
-        
+
       case 'starRating':
-        if (value && (isNaN(value) || value < 0 || value > 5)) {
-          newErrors.starRating = 'Star rating must be between 0 and 5';
+        if (value && (isNaN(value) || value < 0 || value > 9)) {
+          newErrors.starRating = 'Please select a valid category option';
         } else {
           delete newErrors.starRating;
         }
@@ -546,10 +603,10 @@ const AddHotel = ({ hotelId = null }) => {
           return 'Description must be less than 1000 characters';
         }
         break;
-        
+
       case 'starRating':
-        if (value && (isNaN(value) || value < 0 || value > 5)) {
-          return 'Star rating must be between 0 and 5';
+        if (value && (isNaN(value) || value < 0 || value > 9)) {
+          return 'Please select a valid category option';
         }
         break;
         
@@ -766,18 +823,10 @@ const AddHotel = ({ hotelId = null }) => {
   };
 
   return (
-    <div className="container mx-auto p-0 md:p-6">
-
-      <div className="mb-6">
-        <h1 className="text-xl font-bold flex items-center gap-2">
-          Add New Hotel
-        </h1>
-        <p className="text-muted-foreground mt-2">
-          Complete the form below to add a new hotel to the system
-        </p>
-      </div>
-
-
+    <PageWrapper
+      title="Add New Hotel"
+      description="Complete the form below to add a new hotel to the system"
+    >
       <form onSubmit={handleSubmit} className="space-y-8">
         {/* Basic Information */}
         <Card>
@@ -804,7 +853,7 @@ const AddHotel = ({ hotelId = null }) => {
                 )}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="starRating">Star Rating</Label>
+                <Label htmlFor="starRating">Category</Label>
                 <Select
                   id="starRating"
                   name="starRating"
@@ -812,12 +861,14 @@ const AddHotel = ({ hotelId = null }) => {
                   onChange={handleInputChange}
                   className={errors.starRating ? 'border-red-500' : ''}
                 >
-                  <option value={0}>Select rating</option>
-                  <option value={1}>1 Star</option>
-                  <option value={2}>2 Stars</option>
-                  <option value={3}>3 Stars</option>
-                  <option value={4}>4 Stars</option>
-                  <option value={5}>5 Stars</option>
+                  <option value={0}>Select category</option>
+                  <option value={1}>Farm House</option>
+                  <option value={2}>Homestay</option>
+                  <option value={3}>Budget</option>
+                  <option value={4}>Local Hotel</option>
+                  <option value={7}>3 Star</option>
+                  <option value={8}>4 Star</option>
+                  <option value={9}>5 Star</option>
                 </Select>
                 {errors.starRating && (
                   <p className="text-sm text-red-500">{errors.starRating}</p>
@@ -1145,7 +1196,7 @@ const AddHotel = ({ hotelId = null }) => {
           </Button>
         </div>
       </form>
-    </div>
+    </PageWrapper>
   );
 };
 

@@ -44,6 +44,7 @@ function BusBookingPage() {
   const bookingFormRef = useRef(null);
   const scheduleCardRef = useRef(null);
   const lockDetailsRef = useRef(null);
+  const routesCardRef = useRef(null);
 
   const extractArrayData = (response, keys = []) => {
     if (Array.isArray(response)) return response;
@@ -71,6 +72,14 @@ function BusBookingPage() {
     const raw = response?.data ?? response;
     if (raw?.bookingId || raw?.bookingRef) return raw;
     if (raw?.data?.bookingId || raw?.data?.bookingRef) return raw.data;
+    return null;
+  };
+
+  const extractConfirmBookingResult = (response) => {
+    if (!response) return null;
+    const raw = response?.data ?? response;
+    if (raw?.bookingRef || Array.isArray(raw?.seats)) return raw;
+    if (raw?.data?.bookingRef || Array.isArray(raw?.data?.seats)) return raw.data;
     return null;
   };
 
@@ -212,6 +221,12 @@ function BusBookingPage() {
     }
 
     doc.save(`yaya-ticket-${bookingRef}.pdf`);
+  };
+
+  const parseLockTotalAmount = (lockResult) => {
+    const raw = lockResult?.totalAmount ?? lockResult?.total ?? lockResult?.amount;
+    const n = parseFloat(String(raw ?? '').replace(/,/g, ''));
+    return Number.isFinite(n) && n > 0 ? n : 0;
   };
 
   const getBusId = (bus) => bus?.id || bus?.busId || bus?.bus_id || null;
@@ -550,13 +565,22 @@ function BusBookingPage() {
     }
   }, [activeView, buses.length]);
 
+  // Scroll to routes section when a bus is selected
+  useEffect(() => {
+    if (selectedBus && routesCardRef.current) {
+      setTimeout(() => {
+        routesCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 150);
+    }
+  }, [selectedBus]);
+
   // Scroll to schedule section when route is selected
   useEffect(() => {
     if (selectedRoute && scheduleCardRef.current) {
       setTimeout(() => {
-        scheduleCardRef.current?.scrollIntoView({ 
-          behavior: 'smooth', 
-          block: 'start' 
+        scheduleCardRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start'
         });
       }, 150);
     }
@@ -813,8 +837,15 @@ function BusBookingPage() {
         apiClient.setAuthToken(token);
       }
 
-      await api.bus.confirmBooking({ bookingRef });
+      const confirmRes = await api.bus.confirmBooking({ bookingRef });
+      const confirmResult = extractConfirmBookingResult(confirmRes);
+      const isConfirmSuccess = confirmRes?.success === true || Boolean(confirmResult);
+      if (!isConfirmSuccess) {
+        throw new Error(confirmRes?.message || 'Failed to confirm booking.');
+      }
+      const confirmedBookingRef = String(confirmResult?.bookingRef || bookingRef).trim();
       const bookingId = Number(
+        confirmResult?.seats?.find((s) => s?.bookingId != null)?.bookingId ??
         seat?.id ??
         lockBookingResult?.seats?.find((s) => s?.id != null)?.id
       );
@@ -829,11 +860,11 @@ function BusBookingPage() {
         }
       }
 
-      const ticketHtml = ticketData ? buildTicketMarkup(ticketData, bookingRef) : '';
+      const ticketHtml = ticketData ? buildTicketMarkup(ticketData, confirmedBookingRef) : '';
       const result = await Swal.fire({
         icon: 'success',
         title: 'Booking Confirmed',
-        html: ticketData ? ticketHtml : `Booking ${bookingRef} has been confirmed. Ticket is not available yet.`,
+        html: ticketData ? ticketHtml : `Booking ${confirmedBookingRef} has been confirmed. Ticket is not available yet.`,
         confirmButtonText: ticketData ? 'Close' : 'OK',
         showDenyButton: !!ticketData,
         denyButtonText: 'Download PDF',
@@ -842,7 +873,7 @@ function BusBookingPage() {
         width: ticketData ? 560 : undefined,
       });
       if (result.isDenied && ticketData) {
-        downloadTicketAsPdf(ticketData, bookingRef);
+        downloadTicketAsPdf(ticketData, confirmedBookingRef);
       }
 
       setLockBookingResult(null);
@@ -853,8 +884,8 @@ function BusBookingPage() {
       console.error('Error confirming locked booking:', error);
       Swal.fire({
         icon: 'error',
-        title: 'Confirm Failed',
-        text: error?.response?.data?.message || 'Failed to confirm booking. Please try again.',
+        title: 'Booking Failed',
+        text: error?.response?.data?.message || error?.message || 'Failed to confirm booking. Please try again.',
         confirmButtonText: 'OK'
       });
     } finally {
@@ -995,7 +1026,7 @@ function BusBookingPage() {
 
             {/* Routes for Selected Bus */}
             {selectedBus && (
-              <Card>
+              <Card ref={routesCardRef}>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <MapPin className="h-5 w-5" />
@@ -1450,7 +1481,17 @@ function BusBookingPage() {
               </div>
               {lockBookingResult && (
                 <div ref={lockDetailsRef} className="mt-6 rounded-lg border border-emerald-200 bg-emerald-50/60 p-4">
-                  <h4 className="text-base font-semibold text-emerald-800">Locked Seat Details</h4>
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <h4 className="text-base font-semibold text-emerald-800">Locked Seat Details</h4>
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={() => handleConfirmLockedBooking()}
+                      disabled={isConfirmingBooking}
+                    >
+                      {isConfirmingBooking ? 'Confirming…' : 'Confirm All Locked Seats'}
+                    </Button>
+                  </div>
                   <div className="mt-3 grid gap-2 text-sm md:grid-cols-2">
                     <p><span className="font-medium">Booking Ref:</span> {lockBookingResult.bookingRef || 'N/A'}</p>
                     <p><span className="font-medium">Expires At:</span> {formatDateTime(lockBookingResult.expiresAt)}</p>
@@ -1470,19 +1511,7 @@ function BusBookingPage() {
                               {seat?.seatLabel || `Seat ${seat?.seatNumber || 'N/A'}`}
                               {seat?.seatNumber ? ` (#${seat.seatNumber})` : ''}
                             </p>
-                            <div className="flex flex-wrap items-center gap-2">
-                              <Badge variant="outline">{getSeatStatus(seat) || 'LOCKED'}</Badge>
-                              {getSeatStatus(seat) === 'LOCKED' && (
-                                <Button
-                                  type="button"
-                                  size="sm"
-                                  onClick={() => handleConfirmLockedBooking(seat)}
-                                  disabled={isConfirmingBooking}
-                                >
-                                  {isConfirmingBooking ? 'Confirming…' : 'Confirm'}
-                                </Button>
-                              )}
-                            </div>
+                            <Badge variant="outline">{getSeatStatus(seat) || 'LOCKED'}</Badge>
                           </div>
                           <div className="mt-1 grid gap-1 text-xs text-muted-foreground md:grid-cols-2">
                             <p>CID: {seat?.applicantCid || 'N/A'}</p>

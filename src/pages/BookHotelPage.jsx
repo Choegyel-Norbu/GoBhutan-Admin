@@ -11,6 +11,7 @@ import { apiClient, api } from '@/lib/apiService';
 import { API_CONFIG } from '@/lib/api';
 import authAPI from '@/lib/authAPI';
 import { getHotelPrimaryImage } from '@/lib/utils';
+import AuthenticatedImage from '@/components/AuthenticatedImage';
 import Swal from 'sweetalert2';
 
 const BookHotelPage = () => {
@@ -432,8 +433,8 @@ const BookHotelPage = () => {
     <div className="space-y-6">
       <div className="flex items-center gap-3">
         <div>
-          <h1 className="text-xl font-bold">Booking Management</h1>
-          <p className="text-muted-foreground">Select a hotel to manage bookings and reservations</p>
+          <h1 className="text-lg font-bold">Booking Management</h1>
+          <p className="form-field-hint md:text-sm">Select a hotel to manage bookings and reservations</p>
         </div>
       </div>
 
@@ -486,13 +487,19 @@ const BookHotelPage = () => {
                 {/* Hotel Image */}
                 <div className="aspect-video bg-muted overflow-hidden">
                   {hotelImageUrl ? (
-                    <img
+                    <AuthenticatedImage
                       src={hotelImageUrl}
                       alt={hotel.name}
                       className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
                       onError={(e) => {
-                        e.target.style.display = 'none';
-                        e.target.nextSibling.style.display = 'flex';
+                        const imgElement = e.target;
+                        if (imgElement) {
+                          imgElement.style.display = 'none';
+                          const nextSibling = imgElement.nextSibling;
+                          if (nextSibling) {
+                            nextSibling.style.display = 'flex';
+                          }
+                        }
                       }}
                     />
                   ) : null}
@@ -547,7 +554,7 @@ const BookHotelPage = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold">Rooms - {selectedHotel?.name}</h1>
-          <p className="text-muted-foreground">Select a room to create a booking</p>
+          <p className="form-field-hint md:text-sm">Select a room to create a booking</p>
         </div>
         <Button 
           variant="outline" 
@@ -683,7 +690,7 @@ const BookHotelPage = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold">Create Booking</h1>
-          <p className="text-muted-foreground">
+          <p className="form-field-hint md:text-sm">
             {selectedHotel?.name} - Room {selectedRoom?.roomNumber}
           </p>
         </div>
@@ -967,7 +974,7 @@ const BookHotelPage = () => {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-xl font-bold">Booking Management</h1>
-              <p className="text-muted-foreground">Manage hotel bookings and reservations</p>
+              <p className="form-field-hint md:text-sm">Manage hotel bookings and reservations</p>
             </div>
           </div>
 

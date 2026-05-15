@@ -2,84 +2,105 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+  Design tokens — HSL components only (no hsl() wrapper) for Tailwind:
+  theme colors use `hsl(var(--token) / <alpha-value>)`.
+  Hex equivalents live in `src/lib/colors.js` as `Colors`.
+*/
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* Core palette */
+    --app-primary: 0 0% 50.2%;
+    --app-secondary: 218 38% 47%;
+    --app-accent: 14 100% 60%;
+    --app-background: 210 40% 98%;
+    --app-foreground: 219 23% 23%;
+    --app-light-text: 214 14% 51%;
+    --app-white: 0 0% 100%;
+    --app-gray: 214 32% 91%;
+    --app-dark-gray: 216 14% 35%;
+    --app-error: 0 73% 57%;
+    /* #202020 at ~71% opacity — use Tailwind `app-black` or Colors.black in JS */
+    --app-black: 0 0% 12.5%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    /* shadcn / Tailwind semantic mapping */
+    --background: var(--app-background);
+    --foreground: var(--app-foreground);
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --card: var(--app-white);
+    --card-foreground: var(--app-foreground);
 
-    --primary: 210 100% 60%;
-    --primary-foreground: 0 0% 100%;
+    --popover: var(--app-white);
+    --popover-foreground: var(--app-foreground);
 
-    --secondary: 48 100% 45%;
-    --secondary-foreground: 0 0% 100%;
+    --primary: var(--app-primary);
+    --primary-foreground: var(--app-white);
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --secondary: var(--app-secondary);
+    --secondary-foreground: var(--app-white);
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --muted: var(--app-gray);
+    --muted-foreground: var(--app-light-text);
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --accent: var(--app-accent);
+    --accent-foreground: var(--app-white);
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    --destructive: var(--app-error);
+    --destructive-foreground: var(--app-white);
+
+    --border: var(--app-gray);
+    --input: var(--app-gray);
+    --ring: var(--app-secondary);
 
     --radius: 0.5rem;
 
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 210 100% 60%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 210 100% 60%;
+    --sidebar-background: 220 18% 14%;
+    --sidebar-foreground: 210 20% 96%;
+    --sidebar-primary: var(--app-secondary);
+    --sidebar-primary-foreground: var(--app-white);
+    --sidebar-accent: 220 16% 20%;
+    --sidebar-accent-foreground: 210 20% 96%;
+    --sidebar-border: 220 14% 22%;
+    --sidebar-ring: var(--app-secondary);
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
+    --background: 220 18% 10%;
+    --foreground: 210 25% 96%;
 
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
+    --card: 220 18% 12%;
+    --card-foreground: 210 25% 96%;
 
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 220 18% 12%;
+    --popover-foreground: 210 25% 96%;
 
-    --primary: 210 100% 60%;
+    --primary: var(--app-primary);
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 48 100% 45%;
+    --secondary: var(--app-secondary);
     --secondary-foreground: 0 0% 100%;
 
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --muted: 220 14% 20%;
+    --muted-foreground: 214 14% 65%;
 
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+    --accent: var(--app-accent);
+    --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: var(--app-error);
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 210 100% 60%;
+    --border: 220 14% 22%;
+    --input: 220 14% 22%;
+    --ring: var(--app-secondary);
+
+    --sidebar-background: 220 20% 8%;
+    --sidebar-foreground: 210 20% 96%;
+    --sidebar-primary: var(--app-secondary);
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 210 100% 60%;
+    --sidebar-accent: 220 16% 16%;
+    --sidebar-accent-foreground: 210 20% 96%;
+    --sidebar-border: 220 14% 18%;
+    --sidebar-ring: var(--app-secondary);
   }
 }
 
@@ -135,5 +156,12 @@
   img {
     max-width: 100%;
     height: auto;
+  }
+}
+
+@layer components {
+  /** Helper copy under labels/inputs (smaller + italic than body) */
+  .form-field-hint {
+    @apply text-xs italic text-muted-foreground leading-relaxed [&_a]:not-italic;
   }
 }

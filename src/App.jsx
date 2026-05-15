@@ -1,43 +1,39 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
+import { WalletProvider } from './contexts/WalletContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import DashboardLayout from './layouts/DashboardLayout';
 import DashboardPage from './pages/DashboardPage';
 import TaxiPage from './pages/TaxiPage';
-import HotelPage from './pages/HotelPage';
 import AddHotelPage from './pages/AddHotelPage';
 import AddRoomTypePage from './pages/AddRoomTypePage';
 import RoomManager from './pages/RoomManager';
 import BookHotelPage from './pages/BookHotelPage';
-import SearchHotelsPage from './pages/SearchHotelsPage';
-import ViewBookingsPage from './pages/ViewBookingsPage';
-import EditBookingsPage from './pages/EditBookingsPage';
-import CancelBookingsPage from './pages/CancelBookingsPage';
 import HotelSettingsPage from './pages/HotelSettingsPage';
-import HotelReportsPage from './pages/HotelReportsPage';
-import FlightPage from './pages/FlightPage';
-import MoviePage from './pages/MoviePage';
-import BusPage from './pages/BusPage';
+import AddStaffPage from './pages/AddStaffPage';
 import AddBusPage from './pages/AddBusPage';
 import BusManagementPage from './pages/BusManagementPage';
 import BusDetailsPage from './pages/BusDetailsPage';
 import BusBookingPage from './pages/BusBookingPage';
 import TheaterPage from './pages/TheaterPage';
-import AddTheaterPage from './pages/AddTheaterPage';
-import TheaterSitConfigPage from './pages/TheaterSitConfigPage';
 import AddMoviePage from './pages/AddMoviePage';
+import TheaterBookingManagementPage from './pages/TheaterBookingManagementPage';
+import WalletPage from './pages/WalletPage';
 import UserSettingsPage from './pages/UserSettingsPage';
 import SignInPage from './pages/SignInPage';
 import SignUpPage from './pages/SignUpPage';
+import SetPasswordPage from './pages/SetPasswordPage';
 
 function App() {
   return (
     <AuthProvider>
+      <WalletProvider>
       <Router basename="/go-bhutan-admin" future={{ v7_relativeSplatPath: true }}>
         <Routes>
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/signin" element={<SignInPage />} />
           <Route path="/signup" element={<SignUpPage />} />
+          <Route path="/set-password" element={<SetPasswordPage />} />
           <Route path="/dashboard" element={
             <ProtectedRoute>
               <DashboardLayout />
@@ -45,36 +41,25 @@ function App() {
           }>
             <Route index element={<DashboardPage />} />
             <Route path="taxi" element={<TaxiPage />} />
-            <Route path="hotel" element={<HotelPage />} />
             <Route path="hotel/add" element={<AddHotelPage />} />
             <Route path="hotel/add-rooms" element={<RoomManager />} />
             <Route path="hotel/room-types" element={<AddRoomTypePage />} />
             <Route path="hotel/book" element={<BookHotelPage />} />
-            <Route path="hotel/search" element={<SearchHotelsPage />} />
-            <Route path="hotel/bookings" element={<ViewBookingsPage />} />
-            <Route path="hotel/edit" element={<EditBookingsPage />} />
-            <Route path="hotel/cancel" element={<CancelBookingsPage />} />
             <Route path="hotel/settings" element={<HotelSettingsPage />} />
-            <Route path="hotel/reports" element={<HotelReportsPage />} />
-            <Route path="flight" element={<FlightPage />} />
-            <Route path="movie-ticketing" element={<MoviePage />} />
-            <Route path="bus" element={<BusPage />} />
+            <Route path="staff" element={<AddStaffPage />} />
             <Route path="bus/add" element={<AddBusPage />} />
             <Route path="bus/manage" element={<BusManagementPage />} />
             <Route path="bus/details/:busId" element={<BusDetailsPage />} />
             <Route path="bus/booking" element={<BusBookingPage />} />
             <Route path="theater" element={<TheaterPage />} />
-            <Route path="theater/add" element={<AddTheaterPage />} />
-            <Route path="theater/sitconfig" element={<TheaterSitConfigPage />} />
             <Route path="theater/movie" element={<AddMoviePage />} />
+            <Route path="theater/bookings" element={<TheaterBookingManagementPage />} />
+            <Route path="wallet" element={<WalletPage />} />
             <Route path="settings" element={<UserSettingsPage />} />
-            {/* Redirect old routes to new structure */}
-            <Route path="bus/routes" element={<Navigate to="/dashboard/bus/manage" replace />} />
-            <Route path="bus/schedules" element={<Navigate to="/dashboard/bus/manage" replace />} />
-            <Route path="bus-ticket-booking" element={<Navigate to="/dashboard/bus" replace />} />
           </Route>
         </Routes>
       </Router>
+      </WalletProvider>
     </AuthProvider>
   );
 }

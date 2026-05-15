@@ -4,11 +4,8 @@ import { validateSignUpForm, sanitizeSignUpFormData } from '../lib/validation';
 import authAPI from '../lib/authAPI';
 import { Eye, EyeOff, ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
-
-// Helper function to merge class names
-const cn = (...classes) => {
-  return classes.filter(Boolean).join(" ");
-};
+import { Colors, colorsRgb } from '../lib/colors';
+import yayaLogo from '@/assets/images/yaya-logo.png';
 
 // DotMap Component for animated background
 const DotMap = () => {
@@ -20,22 +17,22 @@ const DotMap = () => {
     {
       start: { x: 100, y: 150, delay: 0 },
       end: { x: 200, y: 80, delay: 2 },
-      color: "#2563eb",
+      color: Colors.primary,
     },
     {
       start: { x: 200, y: 80, delay: 2 },
       end: { x: 260, y: 120, delay: 4 },
-      color: "#2563eb",
+      color: Colors.primary,
     },
     {
       start: { x: 50, y: 50, delay: 1 },
       end: { x: 150, y: 180, delay: 3 },
-      color: "#2563eb",
+      color: Colors.primary,
     },
     {
       start: { x: 280, y: 60, delay: 0.5 },
       end: { x: 180, y: 180, delay: 2.5 },
-      color: "#2563eb",
+      color: Colors.primary,
     },
   ];
 
@@ -112,7 +109,7 @@ const DotMap = () => {
       dots.forEach(dot => {
         ctx.beginPath();
         ctx.arc(dot.x, dot.y, dot.radius, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(37, 99, 235, ${dot.opacity})`;
+        ctx.fillStyle = `rgba(${colorsRgb.primary.r}, ${colorsRgb.primary.g}, ${colorsRgb.primary.b}, ${dot.opacity})`;
         ctx.fill();
       });
     }
@@ -148,13 +145,13 @@ const DotMap = () => {
         // Draw the moving point
         ctx.beginPath();
         ctx.arc(x, y, 3, 0, Math.PI * 2);
-        ctx.fillStyle = "#3b82f6";
+        ctx.fillStyle = Colors.primary;
         ctx.fill();
         
         // Add glow effect to the moving point
         ctx.beginPath();
         ctx.arc(x, y, 6, 0, Math.PI * 2);
-        ctx.fillStyle = "rgba(59, 130, 246, 0.4)";
+        ctx.fillStyle = `rgba(${colorsRgb.primary.r}, ${colorsRgb.primary.g}, ${colorsRgb.primary.b}, 0.35)`;
         ctx.fill();
         
         // If the route is complete, draw the end point
@@ -329,7 +326,7 @@ const SignUpPage = () => {
         // Redirect to sign-in page with success message
         navigate('/signin', { 
           state: { 
-            message: 'Account created successfully! Please sign in to continue.',
+            message: 'Account created successfully! You can sign in to continue.',
             autoFill: true 
           } 
         });
@@ -363,7 +360,7 @@ const SignUpPage = () => {
     const { value, checked } = e.target;
     
     // Define all available services (removed flight)
-    const allServices = ['bus', 'hotel', 'taxi', 'movie'];
+    const allServices = ['bus', 'hotel', 'theater'];
     
     if (value === 'all') {
       // If "All Services Client" is checked, select all services
@@ -419,72 +416,84 @@ const SignUpPage = () => {
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+    <div className="min-h-screen w-full flex items-center justify-center bg-background p-4">
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.5 }}
-        className="w-full max-w-4xl overflow-hidden rounded-2xl flex bg-white shadow-xl"
+        className="w-full max-w-4xl overflow-hidden rounded-2xl flex bg-card text-card-foreground shadow-xl border border-border"
       >
         {/* Left side - Map */}
-        <div className="hidden md:block w-1/2 h-[800px] relative overflow-hidden border-r border-gray-100">
-          <div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-indigo-100">
+        <div className="hidden md:block w-1/2 h-[800px] relative overflow-hidden border-r border-border">
+          <div className="absolute inset-0 bg-background">
             <DotMap />
             
-            {/* Logo and text overlay */}
+            {/* Logo and text overlay — frosted panel so copy stays readable over the map */}
             <div className="absolute inset-0 flex flex-col items-center justify-center p-8 z-10">
-              <motion.div 
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.6, duration: 0.5 }}
-                className="mb-8"
-              >
-                <div className="h-16 w-16 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-xl shadow-blue-200">
-                  <ArrowRight className="text-white h-8 w-8" />
-                </div>
-              </motion.div>
-              <motion.h2 
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.7, duration: 0.5 }}
-                className="text-4xl font-bold mb-4 text-center text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600"
-              >
-                GoBhutan Admin
-              </motion.h2>
-              <motion.p 
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.8, duration: 0.5 }}
-                className="text-base text-center text-gray-600 max-w-sm leading-relaxed"
-              >
-                Create your account to access the GoBhutan admin dashboard and manage travel reservations across Bhutan
-              </motion.p>
+              <div className="w-full max-w-md rounded-2xl border border-border/80 bg-background/90 px-8 py-10 backdrop-blur-md supports-[backdrop-filter]:bg-background/80">
+                <motion.div 
+                  initial={{ opacity: 0, y: -20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.6, duration: 0.5 }}
+                  className="mb-8 flex justify-center"
+                >
+                  <img
+                    src={yayaLogo}
+                    alt="YaYa logo"
+                    className="h-32 w-auto max-w-[min(100%,300px)] md:h-44 md:max-w-[min(100%,380px)] rounded-xl object-contain border border-border/50 bg-card/50 p-2"
+                  />
+                </motion.div>
+                <motion.h2 
+                  initial={{ opacity: 0, y: -20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.7, duration: 0.5 }}
+                  className="text-4xl md:text-5xl font-bold mb-4 text-center text-foreground tracking-tight"
+                >
+                  YaYa Admin
+                </motion.h2>
+                <motion.p 
+                  initial={{ opacity: 0, y: -20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.8, duration: 0.5 }}
+                  className="text-sm md:text-base text-center text-foreground/90 max-w-sm mx-auto leading-relaxed"
+                >
+                  Create your account to access the YaYa admin dashboard and manage travel reservations across Bhutan
+                </motion.p>
+              </div>
             </div>
           </div>
         </div>
         
         {/* Right side - Sign Up Form */}
-        <div className="w-full md:w-1/2 h-[800px] p-8 md:p-10 flex flex-col justify-start bg-white overflow-y-auto">
+        <div className="w-full md:w-1/2 h-[800px] p-8 md:p-10 flex flex-col justify-start bg-card overflow-y-auto">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <h1 className="text-2xl md:text-2xl font-bold mb-1 text-gray-800">Create Account</h1>
-            <p className="text-gray-500 mb-8 text-sm">Join GoBhutan Admin and start managing travel reservations across Bhutan!</p>
+            <div className="mb-6 flex flex-col items-center gap-3 md:hidden">
+              <img
+                src={yayaLogo}
+                alt="YaYa logo"
+                className="h-24 w-auto max-w-[260px] rounded-xl object-contain border border-border bg-card/40 p-2"
+              />
+              <p className="text-lg font-semibold text-foreground">YaYa Admin</p>
+            </div>
+            <h1 className="text-2xl md:text-2xl font-bold mb-1 text-foreground">Create Account</h1>
+            <p className="text-foreground/85 mb-8 text-xs md:text-sm">Join YaYa Admin and start managing travel reservations across Bhutan!</p>
             
             <form onSubmit={handleSubmit}>
               {/* Submit Error Display */}
               {submitError && (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+                <div className="bg-destructive/10 border border-destructive/25 rounded-lg p-4 mb-6">
                   <div className="flex">
                     <div className="flex-shrink-0">
-                      <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                      <svg className="h-5 w-5 text-destructive" viewBox="0 0 20 20" fill="currentColor">
                         <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                       </svg>
                     </div>
                     <div className="ml-3">
-                      <p className="text-sm text-red-800">{submitError}</p>
+                      <p className="text-sm text-destructive">{submitError}</p>
                     </div>
                   </div>
                 </div>
@@ -499,9 +508,9 @@ const SignUpPage = () => {
                   <div>
                     <label 
                       htmlFor="firstName" 
-                      className="block text-sm font-medium text-gray-700 mb-1"
+                      className="block text-sm font-medium text-foreground mb-1"
                     >
-                      First Name <span className="text-blue-500">*</span>
+                      First Name <span className="text-primary">*</span>
                     </label>
                     <input
                       id="firstName"
@@ -511,17 +520,17 @@ const SignUpPage = () => {
                       value={formData.firstName}
                       onChange={handleInputChange}
                       onBlur={handleInputBlur}
-                      className={`flex h-10 w-full rounded-md border bg-background px-3 py-2 text-sm text-gray-800 ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
+                      className={`flex h-10 w-full rounded-md border bg-background px-3 py-2 text-sm text-foreground ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
                         touched.firstName && validationErrors.firstName 
-                          ? 'border-red-300 focus:ring-red-500 focus:border-red-500' 
-                          : 'border-gray-200'
+                          ? 'border-destructive/60 focus-visible:ring-destructive' 
+                          : 'border-border'
                       }`}
                       placeholder="First name"
                       aria-describedby="firstName-error"
                       disabled={isLoading}
                     />
                     {touched.firstName && validationErrors.firstName && (
-                      <p id="firstName-error" className="mt-1 text-sm text-red-600">
+                      <p id="firstName-error" className="mt-1 text-sm text-destructive">
                         {validationErrors.firstName}
                       </p>
                     )}
@@ -531,7 +540,7 @@ const SignUpPage = () => {
                   <div>
                     <label 
                       htmlFor="lastName" 
-                      className="block text-sm font-medium text-gray-700 mb-1"
+                      className="block text-sm font-medium text-foreground mb-1"
                     >
                       Last Name
                     </label>
@@ -543,17 +552,17 @@ const SignUpPage = () => {
                       value={formData.lastName}
                       onChange={handleInputChange}
                       onBlur={handleInputBlur}
-                      className={`flex h-10 w-full rounded-md border bg-background px-3 py-2 text-sm text-gray-800 ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
+                      className={`flex h-10 w-full rounded-md border bg-background px-3 py-2 text-sm text-foreground ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
                         touched.lastName && validationErrors.lastName 
-                          ? 'border-red-300 focus:ring-red-500 focus:border-red-500' 
-                          : 'border-gray-200'
+                          ? 'border-destructive/60 focus-visible:ring-destructive' 
+                          : 'border-border'
                       }`}
                       placeholder="Last name"
                       aria-describedby="lastName-error"
                       disabled={isLoading}
                     />
                     {touched.lastName && validationErrors.lastName && (
-                      <p id="lastName-error" className="mt-1 text-sm text-red-600">
+                      <p id="lastName-error" className="mt-1 text-sm text-destructive">
                         {validationErrors.lastName}
                       </p>
                     )}
@@ -564,9 +573,9 @@ const SignUpPage = () => {
                 <div>
                   <label 
                     htmlFor="username" 
-                    className="block text-sm font-medium text-gray-700 mb-1"
+                    className="block text-sm font-medium text-foreground mb-1"
                   >
-                    Username <span className="text-blue-500">*</span>
+                    Username <span className="text-primary">*</span>
                   </label>
                   <input
                     id="username"
@@ -576,17 +585,17 @@ const SignUpPage = () => {
                     value={formData.username}
                     onChange={handleInputChange}
                     onBlur={handleInputBlur}
-                    className={`flex h-10 w-full rounded-md border bg-background px-3 py-2 text-sm text-gray-800 ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
+                    className={`flex h-10 w-full rounded-md border bg-background px-3 py-2 text-sm text-foreground ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
                       touched.username && validationErrors.username 
-                        ? 'border-red-300 focus:ring-red-500 focus:border-red-500' 
-                        : 'border-gray-200'
+                        ? 'border-destructive/60 focus-visible:ring-destructive' 
+                        : 'border-border'
                     }`}
                     placeholder="Enter your username"
                     aria-describedby="username-error"
                     disabled={isLoading}
                   />
                   {touched.username && validationErrors.username && (
-                    <p id="username-error" className="mt-1 text-sm text-red-600">
+                    <p id="username-error" className="mt-1 text-sm text-destructive">
                       {validationErrors.username}
                     </p>
                   )}
@@ -596,9 +605,9 @@ const SignUpPage = () => {
                 <div>
                   <label 
                     htmlFor="email" 
-                    className="block text-sm font-medium text-gray-700 mb-1"
+                    className="block text-sm font-medium text-foreground mb-1"
                   >
-                    Email address <span className="text-blue-500">*</span>
+                    Email address <span className="text-primary">*</span>
                   </label>
                   <input
                     id="email"
@@ -608,17 +617,17 @@ const SignUpPage = () => {
                     value={formData.email}
                     onChange={handleInputChange}
                     onBlur={handleInputBlur}
-                    className={`flex h-10 w-full rounded-md border bg-background px-3 py-2 text-sm text-gray-800 ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
+                    className={`flex h-10 w-full rounded-md border bg-background px-3 py-2 text-sm text-foreground ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
                       touched.email && validationErrors.email 
-                        ? 'border-red-300 focus:ring-red-500 focus:border-red-500' 
-                        : 'border-gray-200'
+                        ? 'border-destructive/60 focus-visible:ring-destructive' 
+                        : 'border-border'
                     }`}
                     placeholder="Enter your email"
                     aria-describedby="email-error"
                     disabled={isLoading}
                   />
                   {touched.email && validationErrors.email && (
-                    <p id="email-error" className="mt-1 text-sm text-red-600">
+                    <p id="email-error" className="mt-1 text-sm text-destructive">
                       {validationErrors.email}
                     </p>
                   )}
@@ -629,9 +638,9 @@ const SignUpPage = () => {
                 <div>
                   <label 
                     htmlFor="password" 
-                    className="block text-sm font-medium text-gray-700 mb-1"
+                    className="block text-sm font-medium text-foreground mb-1"
                   >
-                    Password <span className="text-blue-500">*</span>
+                    Password <span className="text-primary">*</span>
                   </label>
                   <div className="relative">
                     <input
@@ -642,10 +651,10 @@ const SignUpPage = () => {
                       value={formData.password}
                       onChange={handleInputChange}
                       onBlur={handleInputBlur}
-                      className={`flex h-10 w-full rounded-md border bg-background px-3 py-2 pr-10 text-sm text-gray-800 ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
+                      className={`flex h-10 w-full rounded-md border bg-background px-3 py-2 pr-10 text-sm text-foreground ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
                         touched.password && validationErrors.password 
-                          ? 'border-red-300 focus:ring-red-500 focus:border-red-500' 
-                          : 'border-gray-200'
+                          ? 'border-destructive/60 focus-visible:ring-destructive' 
+                          : 'border-border'
                       }`}
                       placeholder="Create a password"
                       aria-describedby="password-error"
@@ -655,14 +664,14 @@ const SignUpPage = () => {
                       type="button"
                       onClick={togglePasswordVisibility}
                       disabled={isLoading}
-                      className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 hover:text-gray-700"
+                      className="absolute inset-y-0 right-0 flex items-center pr-3 text-muted-foreground hover:text-foreground"
                       aria-label={showPassword ? "Hide password" : "Show password"}
                     >
                       {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                     </button>
                   </div>
                   {touched.password && validationErrors.password && (
-                    <p id="password-error" className="mt-1 text-sm text-red-600">
+                    <p id="password-error" className="mt-1 text-sm text-destructive">
                       {validationErrors.password}
                     </p>
                   )}
@@ -672,9 +681,9 @@ const SignUpPage = () => {
                 <div>
                   <label 
                     htmlFor="confirmPassword" 
-                    className="block text-sm font-medium text-gray-700 mb-1"
+                    className="block text-sm font-medium text-foreground mb-1"
                   >
-                    Confirm Password <span className="text-blue-500">*</span>
+                    Confirm Password <span className="text-primary">*</span>
                   </label>
                   <div className="relative">
                     <input
@@ -685,10 +694,10 @@ const SignUpPage = () => {
                       value={formData.confirmPassword}
                       onChange={handleInputChange}
                       onBlur={handleInputBlur}
-                      className={`flex h-10 w-full rounded-md border bg-background px-3 py-2 pr-10 text-sm text-gray-800 ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
+                      className={`flex h-10 w-full rounded-md border bg-background px-3 py-2 pr-10 text-sm text-foreground ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
                         touched.confirmPassword && validationErrors.confirmPassword 
-                          ? 'border-red-300 focus:ring-red-500 focus:border-red-500' 
-                          : 'border-gray-200'
+                          ? 'border-destructive/60 focus-visible:ring-destructive' 
+                          : 'border-border'
                       }`}
                       placeholder="Confirm your password"
                       aria-describedby="confirmPassword-error"
@@ -698,14 +707,14 @@ const SignUpPage = () => {
                       type="button"
                       onClick={togglePasswordVisibility}
                       disabled={isLoading}
-                      className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 hover:text-gray-700"
+                      className="absolute inset-y-0 right-0 flex items-center pr-3 text-muted-foreground hover:text-foreground"
                       aria-label={showPassword ? "Hide password" : "Show password"}
                     >
                       {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                     </button>
                   </div>
                   {touched.confirmPassword && validationErrors.confirmPassword && (
-                    <p id="confirmPassword-error" className="mt-1 text-sm text-red-600">
+                    <p id="confirmPassword-error" className="mt-1 text-sm text-destructive">
                       {validationErrors.confirmPassword}
                     </p>
                   )}
@@ -713,11 +722,11 @@ const SignUpPage = () => {
 
                 {/* Clients Selection Field */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-3">
-                    Services <span className="text-blue-500">*</span>
+                  <label className="block text-sm font-medium text-foreground mb-3">
+                    Services <span className="text-primary">*</span>
                   </label>
                   <div className="space-y-3">
-                    {/* First Row: Bus, Hotel, Taxi, Movie */}
+                    {/* First Row: Bus, Hotel, Theater */}
                     <div className="flex items-center space-x-6">
                       <div className="flex items-center">
                         <input
@@ -728,10 +737,10 @@ const SignUpPage = () => {
                           checked={formData.clients.includes('bus')}
                           onChange={handleClientsChange}
                           onBlur={handleInputBlur}
-                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded disabled:opacity-50"
+                          className="h-4 w-4 text-primary focus:ring-primary border-border rounded disabled:opacity-50"
                           disabled={isLoading}
                         />
-                        <label htmlFor="bus-client" className="ml-2 block text-sm text-gray-900">
+                        <label htmlFor="bus-client" className="ml-2 block text-sm text-foreground">
                           Bus
                         </label>
                       </div>
@@ -744,43 +753,27 @@ const SignUpPage = () => {
                           checked={formData.clients.includes('hotel')}
                           onChange={handleClientsChange}
                           onBlur={handleInputBlur}
-                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded disabled:opacity-50"
+                          className="h-4 w-4 text-primary focus:ring-primary border-border rounded disabled:opacity-50"
                           disabled={isLoading}
                         />
-                        <label htmlFor="hotel-client" className="ml-2 block text-sm text-gray-900">
+                        <label htmlFor="hotel-client" className="ml-2 block text-sm text-foreground">
                           Hotel
                         </label>
                       </div>
                       <div className="flex items-center">
                         <input
-                          id="taxi-client"
+                          id="theater-client"
                           name="clients"
                           type="checkbox"
-                          value="taxi"
-                          checked={formData.clients.includes('taxi')}
+                          value="theater"
+                          checked={formData.clients.includes('theater')}
                           onChange={handleClientsChange}
                           onBlur={handleInputBlur}
-                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded disabled:opacity-50"
+                          className="h-4 w-4 text-primary focus:ring-primary border-border rounded disabled:opacity-50"
                           disabled={isLoading}
                         />
-                        <label htmlFor="taxi-client" className="ml-2 block text-sm text-gray-900">
-                          Taxi
-                        </label>
-                      </div>
-                      <div className="flex items-center">
-                        <input
-                          id="movie-client"
-                          name="clients"
-                          type="checkbox"
-                          value="movie"
-                          checked={formData.clients.includes('movie')}
-                          onChange={handleClientsChange}
-                          onBlur={handleInputBlur}
-                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded disabled:opacity-50"
-                          disabled={isLoading}
-                        />
-                        <label htmlFor="movie-client" className="ml-2 block text-sm text-gray-900">
-                          Movie
+                        <label htmlFor="theater-client" className="ml-2 block text-sm text-foreground">
+                          Theater
                         </label>
                       </div>
                     </div>
@@ -795,10 +788,10 @@ const SignUpPage = () => {
                         checked={formData.clients.includes('all')}
                         onChange={handleClientsChange}
                         onBlur={handleInputBlur}
-                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded disabled:opacity-50"
+                        className="h-4 w-4 text-primary focus:ring-primary border-border rounded disabled:opacity-50"
                         disabled={isLoading}
                       />
-                      <label htmlFor="all-client" className="ml-2 block text-sm text-gray-900">
+                      <label htmlFor="all-client" className="ml-2 block text-sm text-foreground">
                         All Services
                       </label>
                     </div>
@@ -806,13 +799,13 @@ const SignUpPage = () => {
                   
                   {/* Note */}
                   <div className="mt-2 mb-4">
-                    <p className="text-xs text-gray-600 italic">
+                    <p className="text-xs text-muted-foreground italic">
                       Note: You can select multiple services if you own them.
                     </p>
                   </div>
                   
                   {touched.clients && validationErrors.clients && (
-                    <p id="clients-error" className="mt-2 text-sm text-red-600">
+                    <p id="clients-error" className="mt-2 text-sm text-destructive">
                       {validationErrors.clients}
                     </p>
                   )}
@@ -829,7 +822,7 @@ const SignUpPage = () => {
                   type="submit"
                   onClick={createAccount}
                   disabled={isLoading}
-                  className="w-full bg-gradient-to-r relative overflow-hidden from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white py-3 rounded-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-200"
+                  className="w-full bg-primary hover:bg-primary/90 text-primary-foreground py-3 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-primary/20"
                 >
                   <span className="flex items-center justify-center">
                     {isLoading ? (
@@ -852,11 +845,11 @@ const SignUpPage = () => {
               
               {/* Sign In Link */}
               <div className="text-center mt-6">
-                <p className="text-sm text-gray-600">
+                <p className="form-field-hint md:text-sm">
                   Already have an account?{' '}
                   <Link 
                     to="/signin" 
-                    className="text-blue-600 hover:text-blue-700 text-sm transition-colors"
+                    className="text-primary hover:text-primary/80 text-sm transition-colors font-medium"
                   >
                     Sign in
                   </Link>
@@ -864,14 +857,14 @@ const SignUpPage = () => {
               </div>
 
               {/* Terms and Privacy */}
-              <div className="text-center pt-4 border-t border-gray-200 mt-4">
-                <p className="text-xs text-gray-500">
+              <div className="text-center pt-4 border-t border-border mt-4">
+                <p className="form-field-hint">
                   By creating an account, you agree to our{' '}
-                  <Link to="/terms" className="text-blue-600 hover:text-blue-500">
+                  <Link to="/terms" className="text-primary hover:text-primary/80">
                     Terms of Service
                   </Link>{' '}
                   and{' '}
-                  <Link to="/privacy" className="text-blue-600 hover:text-blue-500">
+                  <Link to="/privacy" className="text-primary hover:text-primary/80">
                     Privacy Policy
                   </Link>
                 </p>

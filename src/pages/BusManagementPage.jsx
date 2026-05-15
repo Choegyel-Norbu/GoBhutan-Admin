@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bus, Plus, Edit, Trash2, Search, Filter, Eye, MapPin, Calendar, RefreshCw, Save, X, AlertCircle, Grid3x3 } from 'lucide-react';
+import { Bus, Plus, Edit, Trash2, Search, Eye, RefreshCw, Save, X, AlertCircle, Grid3x3, Armchair } from 'lucide-react';
 import PageWrapper from '@/components/PageWrapper';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -8,11 +8,49 @@ import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
 import { Select } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';
-import { Badge } from '@/components/ui/Badge';
 import { api } from '@/lib/apiService';
-import { validateBusForm, sanitizeInput, validateLayoutType, validateRecurrenceType } from '@/lib/validation';
+import { validateBusForm, validateLayoutType, validateRecurrenceType, buildBusApiPayload, computeBusOperatingDays } from '@/lib/validation';
 import { RecurrenceType } from '@/lib/constants';
 import Swal from 'sweetalert2';
+
+function TooltipButton({ icon, label, onClick, disabled, danger }) {
+  const [pos, setPos] = useState(null);
+
+  return (
+    <div
+      className="relative"
+      onMouseEnter={(e) => {
+        const r = e.currentTarget.getBoundingClientRect();
+        setPos({ x: r.left + r.width / 2, y: r.top });
+      }}
+      onMouseLeave={() => setPos(null)}
+    >
+      <button
+        onClick={onClick}
+        disabled={disabled}
+        aria-label={label}
+        className={`flex h-7 w-7 items-center justify-center rounded-md border border-border text-muted-foreground transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
+          danger
+            ? 'hover:border-destructive/50 hover:bg-destructive/10 hover:text-destructive'
+            : 'hover:border-foreground/30 hover:bg-muted hover:text-foreground'
+        }`}
+      >
+        {icon}
+      </button>
+      {pos && (
+        <div
+          className="fixed z-[9999] pointer-events-none"
+          style={{ left: pos.x, top: pos.y - 10, transform: 'translate(-50%, -100%)' }}
+        >
+          <span className="block whitespace-nowrap rounded-md bg-gray-900 px-2.5 py-1.5 text-xs font-medium text-white shadow-xl">
+            {label}
+          </span>
+          <span className="block absolute top-full left-1/2 -translate-x-1/2 border-[5px] border-transparent border-t-gray-900" />
+        </div>
+      )}
+    </div>
+  );
+}
 
 function BusManagementPage() {
   const navigate = useNavigate();
@@ -20,7 +58,6 @@ function BusManagementPage() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all');
-  const [filterStatus, setFilterStatus] = useState('all');
   const hasLoadedRef = useRef(false);
 
   // Edit form state
@@ -34,7 +71,8 @@ function BusManagementPage() {
     layoutType: '',
     recurrenceType: '',
     description: '',
-    amenities: ''
+    amenities: '',
+    operatingDays: null
   });
   const [editErrors, setEditErrors] = useState({});
   const [isSubmittingEdit, setIsSubmittingEdit] = useState(false);
@@ -83,9 +121,7 @@ function BusManagementPage() {
     const matchesSearch = (bus.busName?.toLowerCase().includes(searchTerm.toLowerCase()) || false) ||
                          (bus.busNumber?.toLowerCase().includes(searchTerm.toLowerCase()) || false);
     const matchesType = filterType === 'all' || bus.busType === filterType;
-    const matchesStatus = filterStatus === 'all' || bus.status === filterStatus;
-    
-    return matchesSearch && matchesType && matchesStatus;
+    return matchesSearch && matchesType;
   }) : [];
 
   const handleEditBus = (bus) => {
@@ -98,7 +134,12 @@ function BusManagementPage() {
       layoutType: bus.layoutType || '',
       recurrenceType: bus.recurrenceType || '',
       description: bus.description || '',
-      amenities: bus.amenities || ''
+      amenities: bus.amenities || '',
+      operatingDays: Array.isArray(bus.operatingDays)
+        ? bus.operatingDays
+        : Array.isArray(bus.operating_days)
+          ? bus.operating_days
+          : null
     });
     setEditErrors({});
     setShowEditForm(true);
@@ -287,16 +328,7 @@ function BusManagementPage() {
     
     try {
       // Format the data according to the API schema with proper sanitization
-      const payload = {
-        busName: sanitizeInput(editFormData.busName),
-        busNumber: sanitizeInput(editFormData.busNumber),
-        busType: editFormData.busType,
-        totalSeats: parseInt(editFormData.totalSeats),
-        layoutType: editFormData.layoutType ? sanitizeInput(editFormData.layoutType) : null,
-        recurrenceType: editFormData.recurrenceType || null,
-        description: editFormData.description ? sanitizeInput(editFormData.description) : null,
-        amenities: editFormData.amenities ? sanitizeInput(editFormData.amenities) : null
-      };
+      const payload = buildBusApiPayload(editFormData);
 
       console.log('Update bus payload:', payload);
       
@@ -327,7 +359,8 @@ function BusManagementPage() {
           layoutType: '',
           recurrenceType: '',
           description: '',
-          amenities: ''
+          amenities: '',
+          operatingDays: null
         });
         setEditErrors({});
         
@@ -378,8 +411,11 @@ function BusManagementPage() {
       busNumber: '',
       busType: '',
       totalSeats: '',
+      layoutType: '',
+      recurrenceType: '',
       description: '',
-      amenities: ''
+      amenities: '',
+      operatingDays: null
     });
     setEditErrors({});
   };
@@ -497,7 +533,7 @@ function BusManagementPage() {
           html: `
             <div class="text-left">
               <p class="mb-2">${errorMessage}</p>
-              <p class="text-sm text-muted-foreground mt-2">
+              <p class="form-field-hint mt-2">
                 This may be due to invalid seat type configuration. Please contact support if the issue persists.
               </p>
             </div>
@@ -516,17 +552,6 @@ function BusManagementPage() {
     }
   };
 
-  const getStatusBadge = (status) => {
-    const statusConfig = {
-      active: { variant: 'default', label: 'Active' },
-      maintenance: { variant: 'secondary', label: 'Maintenance' },
-      inactive: { variant: 'outline', label: 'Inactive' }
-    };
-    
-    const config = statusConfig[status] || statusConfig.active;
-    return <Badge variant={config.variant}>{config.label}</Badge>;
-  };
-
   if (loading) {
     return (
       <PageWrapper title="Bus Management" description="Loading buses...">
@@ -541,159 +566,264 @@ function BusManagementPage() {
   }
 
   return (
-    <PageWrapper 
-      title="Bus Management" 
+    <PageWrapper
+      title="Bus Management"
       description="Manage existing buses in your fleet."
     >
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* Buses List */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="flex items-center gap-2">
-                  Fleet Overview
-                </CardTitle>
-                <CardDescription>
-                  {filteredBuses.length} of {displayBuses.length} buses found
-                </CardDescription>
-              </div>
+      <div className="max-w-7xl mx-auto space-y-4">
+
+        {/* Toolbar */}
+        <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+          <div className="flex flex-1 gap-2 w-full sm:max-w-md">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="Search by name or number…"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-9 pr-4 py-2 text-sm rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 transition-colors"
+              />
             </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {filteredBuses.map((bus) => (
-                <Card key={bus.id} className="border">
-                  <CardContent className="p-6">
-                    <div className="flex justify-between items-start">
-                      <div className="space-y-3 flex-1">
-                        <div className="flex items-center gap-3">
-                          <h3 className="text-lg font-semibold">{bus.busName}</h3>
-                          <Badge variant="outline">{bus.busType}</Badge>
-                          <Badge variant="secondary">{bus.busNumber}</Badge>
-                          {getStatusBadge(bus.status)}
-                        </div>
-                        
-                        <p className="text-muted-foreground text-sm">{bus.description}</p>
-                        
-                        <div className="flex flex-wrap gap-2">
-                          {bus.amenities.split(', ').map((amenity, index) => (
-                            <Badge key={index} variant="outline" className="text-xs">
-                              {amenity.trim()}
-                            </Badge>
-                          ))}
-                        </div>
-                        
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                          <div>
-                            <p className="text-muted-foreground">Total Seats</p>
-                            <p className="font-medium">{bus.totalSeats}</p>
-                          </div>
-                          {/* <div>
-                            <p className="text-muted-foreground">Registered</p>
-                            <p className="font-medium">{new Date(bus.registeredDate).toLocaleDateString()}</p>
-                          </div>
-                          <div>
-                            <p className="text-muted-foreground">Last Service</p>
-                            <p className="font-medium">{new Date(bus.lastService).toLocaleDateString()}</p>
-                          </div>
-                          <div>
-                            <p className="text-muted-foreground">Next Service</p>
-                            <p className="font-medium">{new Date(bus.nextService).toLocaleDateString()}</p>
-                          </div> */}
-                        </div>
+            <select
+              value={filterType}
+              onChange={(e) => setFilterType(e.target.value)}
+              className="px-3 py-2 text-sm rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 transition-colors cursor-pointer"
+            >
+              <option value="all">All Types</option>
+              <option value="Standard">Standard</option>
+              <option value="Deluxe">Deluxe</option>
+              <option value="Luxury">Luxury</option>
+              <option value="Sleeper">Sleeper</option>
+              <option value="AC">AC</option>
+            </select>
+          </div>
+          <Button onClick={() => navigate('/dashboard/bus/add')} className="shrink-0 w-full sm:w-auto">
+            <Plus className="h-4 w-4 mr-2" />
+            Add Bus
+          </Button>
+        </div>
+
+        {/* ── Mobile cards (< md) ── */}
+        {filteredBuses.length > 0 ? (
+          <>
+            <div className="md:hidden space-y-3">
+              {filteredBuses.map((bus) => {
+                const amenityList = bus.amenities
+                  ? bus.amenities.split(',').map((a) => a.trim()).filter(Boolean)
+                  : [];
+                const isActive = !bus.status || bus.status === 'active';
+                const isMaintenance = bus.status === 'maintenance';
+                const statusLabel = isMaintenance ? 'Maintenance' : isActive ? 'Active' : 'Inactive';
+
+                return (
+                  <div key={bus.id} className="rounded-xl border border-border bg-card p-4 space-y-3">
+                    {/* Top row: name + status */}
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-foreground truncate">{bus.busName}</p>
+                        <p className="text-xs font-mono text-muted-foreground mt-0.5">{bus.busNumber}</p>
                       </div>
-                      
-                      <div className="flex gap-2 ml-4">
-                        <div className="relative group">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleViewBus(bus)}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <div className="absolute bottom-full left-0 mb-2 px-2 py-1 text-xs text-white bg-gray-900 rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-[100] min-w-max">
-                            View Routes & Schedules
-                            <div className="absolute top-full left-4 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
-                          </div>
-                        </div>
-                        <div className="relative group">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleGenerateSeats(bus)}
-                            disabled={generatingSeats[bus.id]}
-                            className="text-green-600 hover:text-green-700"
-                          >
-                            {generatingSeats[bus.id] ? (
-                              <RefreshCw className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <Grid3x3 className="h-4 w-4" />
-                            )}
-                          </Button>
-                          <div className="absolute bottom-full left-0 mb-2 px-2 py-1 text-xs text-white bg-gray-900 rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-[100] min-w-max">
-                            Generate Seats
-                            <div className="absolute top-full left-4 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
-                          </div>
-                        </div>
-                        <div className="relative group">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleEditBus(bus)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <div className="absolute bottom-full left-0 mb-2 px-2 py-1 text-xs text-white bg-gray-900 rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-[100] min-w-max">
-                            Edit Bus Details
-                            <div className="absolute top-full left-4 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
-                          </div>
-                        </div>
-                        <div className="relative group">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleDeleteBus(bus)}
-                            className="text-red-600 hover:text-red-700"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                          <div className="absolute bottom-full left-0 mb-2 px-2 py-1 text-xs text-white bg-gray-900 rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-[100] min-w-max">
-                            Delete Bus
-                            <div className="absolute top-full left-4 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
-                          </div>
-                        </div>
+                      <span className="shrink-0 inline-flex items-center rounded-md border border-border bg-muted px-2 py-0.5 text-xs font-medium text-foreground">
+                        {statusLabel}
+                      </span>
+                    </div>
+
+                    {/* Meta row: type · seats */}
+                    <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                      <span>{bus.busType || '—'}</span>
+                      {bus.layoutType && <><span>·</span><span>{bus.layoutType}</span></>}
+                      <span>·</span>
+                      <span className="flex items-center gap-1">
+                        <Armchair className="h-3 w-3 shrink-0" />
+                        {bus.totalSeats} seats
+                      </span>
+                    </div>
+
+                    {/* Amenities */}
+                    {amenityList.length > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        {amenityList.slice(0, 4).map((a, i) => (
+                          <span key={i} className="rounded-md border border-border px-2 py-0.5 text-xs text-muted-foreground">
+                            {a}
+                          </span>
+                        ))}
+                        {amenityList.length > 4 && (
+                          <span className="rounded-md border border-border px-2 py-0.5 text-xs text-muted-foreground">
+                            +{amenityList.length - 4}
+                          </span>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Description */}
+                    {bus.description && (
+                      <p className="text-xs text-muted-foreground/70 line-clamp-2">{bus.description}</p>
+                    )}
+
+                    {/* Actions */}
+                    <div className="flex items-center gap-2 pt-1 border-t border-border">
+                      <button
+                        onClick={() => handleViewBus(bus)}
+                        className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md border border-border text-xs text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                      >
+                        <Eye className="h-3.5 w-3.5" /> View
+                      </button>
+                      <button
+                        onClick={() => handleGenerateSeats(bus)}
+                        disabled={!!generatingSeats[bus.id]}
+                        className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md border border-border text-xs text-muted-foreground hover:bg-muted hover:text-foreground transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        {generatingSeats[bus.id]
+                          ? <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                          : <Grid3x3 className="h-3.5 w-3.5" />}
+                        Seats
+                      </button>
+                      <button
+                        onClick={() => handleEditBus(bus)}
+                        className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md border border-border text-xs text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                      >
+                        <Edit className="h-3.5 w-3.5" /> Edit
+                      </button>
+                      <button
+                        onClick={() => handleDeleteBus(bus)}
+                        className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md border border-destructive/30 text-xs text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" /> Delete
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* ── Desktop / tablet table (md+) ── */}
+            <div className="hidden md:block rounded-xl border border-border bg-card">
+              {/* Header — Amenities col hidden below lg */}
+              <div className="grid grid-cols-[2fr_1fr_1fr_2fr_1fr_auto] lg:grid-cols-[2fr_1fr_1fr_2fr_1fr_auto] md:grid-cols-[2fr_1fr_1fr_1fr_auto] gap-4 px-5 py-3 border-b border-border bg-muted/40 rounded-t-xl">
+                <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Bus</span>
+                <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Type</span>
+                <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Seats</span>
+                <span className="hidden lg:block text-xs font-semibold uppercase tracking-wide text-muted-foreground">Amenities</span>
+                <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Status</span>
+                <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Actions</span>
+              </div>
+
+              <div className="divide-y divide-border">
+                {filteredBuses.map((bus) => {
+                  const amenityList = bus.amenities
+                    ? bus.amenities.split(',').map((a) => a.trim()).filter(Boolean)
+                    : [];
+                  const isActive = !bus.status || bus.status === 'active';
+                  const isMaintenance = bus.status === 'maintenance';
+
+                  return (
+                    <div
+                      key={bus.id}
+                      className="group grid grid-cols-[2fr_1fr_1fr_1fr_auto] lg:grid-cols-[2fr_1fr_1fr_2fr_1fr_auto] gap-4 items-center px-5 py-4 transition-colors hover:bg-muted/30"
+                    >
+                      {/* Bus */}
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-foreground truncate">{bus.busName}</p>
+                        <p className="text-xs font-mono text-muted-foreground mt-0.5">{bus.busNumber}</p>
+                        {bus.description && (
+                          <p className="text-xs text-muted-foreground/70 mt-0.5 truncate">{bus.description}</p>
+                        )}
+                      </div>
+
+                      {/* Type */}
+                      <div className="min-w-0">
+                        <p className="text-sm text-foreground">{bus.busType || '—'}</p>
+                        {bus.layoutType && (
+                          <p className="text-xs text-muted-foreground mt-0.5">{bus.layoutType}</p>
+                        )}
+                      </div>
+
+                      {/* Seats */}
+                      <div className="flex items-center gap-1.5">
+                        <Armchair className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                        <span className="text-sm text-foreground">{bus.totalSeats}</span>
+                      </div>
+
+                      {/* Amenities — hidden on md, visible on lg */}
+                      <div className="hidden lg:flex flex-wrap gap-1">
+                        {amenityList.slice(0, 3).map((a, i) => (
+                          <span key={i} className="rounded-md border border-border px-2 py-0.5 text-xs text-muted-foreground">
+                            {a}
+                          </span>
+                        ))}
+                        {amenityList.length > 3 && (
+                          <span className="rounded-md border border-border px-2 py-0.5 text-xs text-muted-foreground">
+                            +{amenityList.length - 3}
+                          </span>
+                        )}
+                        {amenityList.length === 0 && <span className="text-xs text-muted-foreground/50">—</span>}
+                      </div>
+
+                      {/* Status */}
+                      <div>
+                        <span className={`inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium ${
+                          isMaintenance
+                            ? 'border-border bg-muted text-muted-foreground'
+                            : isActive
+                            ? 'border-border bg-muted text-foreground'
+                            : 'border-border bg-muted text-muted-foreground'
+                        }`}>
+                          {isMaintenance ? 'Maintenance' : isActive ? 'Active' : 'Inactive'}
+                        </span>
+                      </div>
+
+                      {/* Actions */}
+                      <div className="flex items-center gap-1">
+                        <TooltipButton icon={<Eye className="h-3.5 w-3.5" />} label="View Routes" onClick={() => handleViewBus(bus)} />
+                        <TooltipButton
+                          icon={generatingSeats[bus.id] ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Grid3x3 className="h-3.5 w-3.5" />}
+                          label="Generate Seats"
+                          onClick={() => handleGenerateSeats(bus)}
+                          disabled={!!generatingSeats[bus.id]}
+                        />
+                        <TooltipButton icon={<Edit className="h-3.5 w-3.5" />} label="Edit" onClick={() => handleEditBus(bus)} />
+                        <TooltipButton icon={<Trash2 className="h-3.5 w-3.5" />} label="Delete" onClick={() => handleDeleteBus(bus)} danger />
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
-              ))}
-              
-              {filteredBuses.length === 0 && (
-                <div className="text-center py-12">
-                  <Bus className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-                  <h3 className="text-lg font-semibold mb-2">
-                    {searchTerm || filterType !== 'all' || filterStatus !== 'all' 
-                      ? 'No buses found'
-                      : 'No buses in your fleet'
-                    }
-                  </h3>
-                  <p className="text-muted-foreground mb-4">
-                    {searchTerm || filterType !== 'all' || filterStatus !== 'all' 
-                      ? 'Try adjusting your search or filter criteria to find buses.'
-                      : 'Your bus fleet is currently empty. Add your first bus to get started with managing your transportation services.'
-                    }
-                  </p>
-                  <Button onClick={() => navigate('/dashboard/bus/add')}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Your First Bus
-                  </Button>
-                </div>
-              )}
+                  );
+                })}
+              </div>
+
+              {/* Footer count */}
+              <div className="border-t border-border px-5 py-2.5 bg-muted/20 rounded-b-xl">
+                <p className="text-xs text-muted-foreground">
+                  {filteredBuses.length} of {displayBuses.length} buses
+                </p>
+              </div>
             </div>
-          </CardContent>
-        </Card>
+
+            {/* Mobile footer count */}
+            <p className="md:hidden text-xs text-muted-foreground px-1">
+              {filteredBuses.length} of {displayBuses.length} buses
+            </p>
+          </>
+        ) : (
+          <div className="rounded-xl border border-border bg-card flex flex-col items-center justify-center py-20 text-center">
+            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full border border-border bg-muted text-muted-foreground">
+              <Bus className="h-5 w-5" />
+            </div>
+            <p className="text-sm font-semibold text-foreground mb-1">
+              {searchTerm || filterType !== 'all' ? 'No buses match your search' : 'No buses in your fleet'}
+            </p>
+            <p className="text-xs text-muted-foreground mb-5">
+              {searchTerm || filterType !== 'all'
+                ? 'Try a different name, number, or bus type.'
+                : 'Add your first bus to get started.'}
+            </p>
+            {!searchTerm && filterType === 'all' && (
+              <Button onClick={() => navigate('/dashboard/bus/add')}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Your First Bus
+              </Button>
+            )}
+          </div>
+        )}
 
         {/* Edit Bus Form */}
         {showEditForm && (
@@ -781,9 +911,19 @@ function BusManagementPage() {
                         <span>{editErrors.recurrenceType}</span>
                       </div>
                     )}
-                    <p className="text-sm text-muted-foreground">
+                    <p className="form-field-hint">
                       Schedule recurrence pattern for bus operations
                     </p>
+                    {editFormData.recurrenceType === RecurrenceType.ALTERNATE && (
+                      <div className="form-field-hint mt-2 rounded-md border border-border/60 bg-muted/30 px-3 py-2">
+                        <p className="not-italic">
+                          <span className="italic">Operating days set to</span>{' '}
+                          <span className="font-semibold text-foreground">
+                            {computeBusOperatingDays(editFormData).join(', ')}
+                          </span>
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -822,7 +962,7 @@ function BusManagementPage() {
                         <span>{editErrors.layoutType}</span>
                       </div>
                     )}
-                    <p className="text-sm text-muted-foreground">
+                    <p className="form-field-hint">
                       Seat configuration (e.g., 1+2 = 1 seat left, 2 seats right)
                     </p>
                   </div>
@@ -841,7 +981,7 @@ function BusManagementPage() {
                   {editErrors.amenities && (
                     <p className="text-sm text-red-600">{editErrors.amenities}</p>
                   )}
-                  <p className="text-sm text-muted-foreground">
+                  <p className="form-field-hint">
                     Enter amenities separated by commas (e.g., AC, WiFi, Water, Snacks)
                   </p>
                 </div>
@@ -860,7 +1000,7 @@ function BusManagementPage() {
                   {editErrors.description && (
                     <p className="text-sm text-red-600">{editErrors.description}</p>
                   )}
-                  <p className="text-sm text-muted-foreground">
+                  <p className="form-field-hint">
                     {editFormData.description.length}/500 characters
                   </p>
                 </div>

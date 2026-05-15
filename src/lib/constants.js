@@ -1,4 +1,4 @@
-export const APP_NAME = "GoBhutan Admin";
+export const APP_NAME = "YaYa Admin";
 
 export const ROUTES = {
   DASHBOARD: "/dashboard",
@@ -50,7 +50,7 @@ export const ENV = {
 // App Configuration
 export const APP_CONFIG = {
   VERSION: '1.0.0',
-  AUTHOR: 'GoBhutan',
+  AUTHOR: 'YaYa',
   DESCRIPTION: 'Comprehensive reservation management system',
 };
 
@@ -61,6 +61,17 @@ export const RecurrenceType = {
   ALTERNATE: 'ALTERNATE',  // Bus runs every 2 days
   CUSTOM: 'CUSTOM'         // Uses Bus.operatingDays set (manual)
 };
+
+/** Default `operatingDays` values for POST/PUT bus (API: "MONDAY", …). */
+export const BUS_OPERATING_WEEK = [
+  'MONDAY',
+  'TUESDAY',
+  'WEDNESDAY',
+  'THURSDAY',
+  'FRIDAY',
+  'SATURDAY',
+  'SUNDAY',
+];
 
 // Layout Type Options
 // Seat layout configurations (e.g., "1+2" = 1 seat on left, 2 on right)

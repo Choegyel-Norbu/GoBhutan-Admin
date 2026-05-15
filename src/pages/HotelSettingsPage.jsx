@@ -9,6 +9,7 @@ import { Settings, Building2, Wifi, Car, Coffee, Shield, Utensils, Save, Refresh
 import { apiClient, api } from '@/lib/apiService';
 import authAPI from '@/lib/authAPI';
 import { getHotelPrimaryImage } from '@/lib/utils';
+import AuthenticatedImage from '@/components/AuthenticatedImage';
 import Swal from 'sweetalert2';
 
 const HotelSettingsPage = () => {
@@ -509,7 +510,7 @@ const HotelSettingsPage = () => {
         <Settings className="h-8 w-8 text-primary" />
         <div>
           <h1 className="text-3xl font-bold">Hotel Settings</h1>
-          <p className="text-muted-foreground">Select a hotel to configure its settings</p>
+          <p className="form-field-hint md:text-sm">Select a hotel to configure its settings</p>
         </div>
       </div>
 
@@ -563,13 +564,19 @@ const HotelSettingsPage = () => {
                 {/* Hotel Image */}
                 <div className="aspect-video bg-muted overflow-hidden">
                   {hotelImageUrl ? (
-                    <img
+                    <AuthenticatedImage
                       src={hotelImageUrl}
                       alt={hotel.name}
                       className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
                       onError={(e) => {
-                        e.target.style.display = 'none';
-                        e.target.nextSibling.style.display = 'flex';
+                        const imgElement = e.target;
+                        if (imgElement) {
+                          imgElement.style.display = 'none';
+                          const nextSibling = imgElement.nextSibling;
+                          if (nextSibling) {
+                            nextSibling.style.display = 'flex';
+                          }
+                        }
                       }}
                     />
                   ) : null}
@@ -639,7 +646,7 @@ const HotelSettingsPage = () => {
           <Settings className="h-8 w-8 text-primary" />
           <div>
             <h1 className="text-3xl font-bold">Hotel Settings</h1>
-            <p className="text-muted-foreground">Configure settings for {selectedHotel?.name}</p>
+            <p className="form-field-hint md:text-sm">Configure settings for {selectedHotel?.name}</p>
           </div>
         </div>
         <Button 

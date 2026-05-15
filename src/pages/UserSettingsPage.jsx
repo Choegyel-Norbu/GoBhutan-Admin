@@ -3,8 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
-import { Textarea } from '@/components/ui/Textarea';
-import { UserCog, Save, Loader2, User } from 'lucide-react';
+import { Save, Loader2, User } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import Swal from 'sweetalert2';
 import PageWrapper from '@/components/PageWrapper';
@@ -22,48 +21,38 @@ const UserSettingsPage = () => {
   const [formData, setFormData] = useState({
     username: '',
     email: '',
-    password: '',
-    confirmPassword: '',
-    firstName: '',
-    lastName: '',
+    phoneNumber: '',
     clients: []
   });
+
+  const normalizeClients = (clients = []) => {
+    const safeClients = Array.isArray(clients) ? clients : [];
+    return [...new Set(
+      safeClients
+        .map((client) => (client === 'movie' ? 'theater' : client))
+        .filter((client) => client !== 'flight')
+    )];
+  };
 
   // Load user data on mount
   useEffect(() => {
     if (user) {
-      // Try to get additional user info from token
       let tokenEmail = '';
-      let tokenLastName = '';
-      let tokenFirstName = '';
-      
       try {
         const authData = authAPI.getStoredAuthData();
         if (authData?.accessToken) {
           const tokenInfo = extractUserInfoFromToken(authData.accessToken);
-          if (tokenInfo) {
-            tokenEmail = tokenInfo.email || '';
-            tokenFirstName = tokenInfo.given_name || '';
-            tokenLastName = tokenInfo.family_name || '';
-          }
+          if (tokenInfo) tokenEmail = tokenInfo.email || '';
         }
       } catch (error) {
         console.warn('Could not extract token info:', error);
       }
-      
-      // Extract firstName and lastName from user.name if token doesn't have them
-      const nameParts = user.name?.split(' ') || [];
-      const extractedFirstName = tokenFirstName || nameParts[0] || '';
-      const extractedLastName = tokenLastName || nameParts.slice(1).join(' ') || '';
-      
+
       setFormData({
         username: user.username || '',
         email: user.email || tokenEmail || '',
-        password: '',
-        confirmPassword: '',
-        firstName: extractedFirstName,
-        lastName: extractedLastName,
-        clients: user.clients || []
+        phoneNumber: user.phoneNumber || '',
+        clients: normalizeClients(user.clients)
       });
     }
   }, [user]);
@@ -90,13 +79,16 @@ const UserSettingsPage = () => {
   };
 
   const validateForm = () => {
-    // Validate username is provided
     if (!formData.username || formData.username.trim() === '') {
       setError('Username is required.');
       return false;
     }
 
-    // Validate that clients is an array
+    if (!formData.email || formData.email.trim() === '') {
+      setError('Email is required.');
+      return false;
+    }
+
     if (!Array.isArray(formData.clients)) {
       setError('Clients data is invalid.');
       return false;
@@ -128,14 +120,15 @@ const UserSettingsPage = () => {
         }
       });
 
-      // Prepare update data - send clients and username
       const updateData = {
+        username: formData.username,
+        email: formData.email,
+        phoneNumber: formData.phoneNumber ? Number(formData.phoneNumber) : undefined,
         clients: formData.clients,
-        username: formData.username
       };
 
       // Call API to update clients and username
-      const response = await api.auth.updateClients(updateData);
+      const response = await api.auth.updateProfile(updateData);
 
       // Update local storage with new clients data
       try {
@@ -144,8 +137,8 @@ const UserSettingsPage = () => {
         if (authData) {
           const updatedAuthData = {
             ...authData,
-            clients: formData.clients,
             username: formData.username,
+            clients: formData.clients,
             timestamp: Date.now()
           };
           // Store updated auth data using secure storage pattern
@@ -157,10 +150,11 @@ const UserSettingsPage = () => {
         if (userData) {
           const updatedUserData = {
             ...userData,
+            username: formData.username,
+            email: formData.email,
+            phoneNumber: formData.phoneNumber,
             clients: formData.clients,
-            username: formData.username
           };
-          // Store updated user data using secure storage pattern
           localStorage.setItem('gobhutan_user_data', JSON.stringify(updatedUserData));
         }
       } catch (error) {
@@ -170,13 +164,7 @@ const UserSettingsPage = () => {
       // Refresh auth context to update user state without page reload
       refreshAuth();
 
-      // Update form data to reflect the new clients
-      setFormData(prev => ({
-        ...prev,
-        clients: formData.clients,
-        password: '',
-        confirmPassword: ''
-      }));
+      setFormData(prev => ({ ...prev, clients: formData.clients }));
 
       // Show success alert
       await Swal.fire({
@@ -212,7 +200,7 @@ const UserSettingsPage = () => {
     }
   };
 
-  const availableClients = ['hotel', 'bus', 'taxi', 'flight', 'movie'];
+  const availableClients = ['hotel', 'bus', 'taxi', 'theater'];
 
   return (
     <PageWrapper
@@ -241,7 +229,7 @@ const UserSettingsPage = () => {
                 </div>
               )}
 
-              {/* Username and Email */}
+              {/* Username, Email, Phone */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <Label htmlFor="username">Username</Label>
@@ -268,70 +256,17 @@ const UserSettingsPage = () => {
                     placeholder="Enter your email"
                   />
                 </div>
-              </div>
-
-              {/* First Name and Last Name */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="firstName">First Name</Label>
-                  <Input
-                    id="firstName"
-                    name="firstName"
-                    type="text"
-                    value={formData.firstName}
-                    onChange={handleInputChange}
-                    required
-                    placeholder="Enter your first name"
-                  />
-                </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="lastName">Last Name</Label>
+                  <Label htmlFor="phoneNumber">Phone Number</Label>
                   <Input
-                    id="lastName"
-                    name="lastName"
-                    type="text"
-                    value={formData.lastName}
+                    id="phoneNumber"
+                    name="phoneNumber"
+                    type="tel"
+                    value={formData.phoneNumber}
                     onChange={handleInputChange}
-                    required
-                    placeholder="Enter your last name"
+                    placeholder="Enter your phone number"
                   />
-                </div>
-              </div>
-
-              {/* Password Section */}
-              <div className="border-t pt-6 space-y-4">
-                <div>
-                  <h3 className="text-sm font-medium mb-2">Change Password</h3>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Leave blank if you don't want to change your password.
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="password">New Password</Label>
-                    <Input
-                      id="password"
-                      name="password"
-                      type="password"
-                      value={formData.password}
-                      onChange={handleInputChange}
-                      placeholder="Enter new password (min 6 characters)"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="confirmPassword">Confirm New Password</Label>
-                    <Input
-                      id="confirmPassword"
-                      name="confirmPassword"
-                      type="password"
-                      value={formData.confirmPassword}
-                      onChange={handleInputChange}
-                      placeholder="Confirm new password"
-                    />
-                  </div>
                 </div>
               </div>
 
@@ -339,7 +274,7 @@ const UserSettingsPage = () => {
               <div className="border-t pt-6 space-y-4">
                 <div>
                   <h3 className="text-sm font-medium mb-2">Clients</h3>
-                  <p className="text-sm text-muted-foreground mb-4">
+                  <p className="form-field-hint mb-4">
                     Select which client services you have access to.
                   </p>
                 </div>

@@ -4,11 +4,8 @@ import { validateLoginForm, sanitizeFormData } from '../lib/validation';
 import { useAuth } from '../contexts/AuthContext';
 import { Eye, EyeOff, ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
-
-// Helper function to merge class names
-const cn = (...classes) => {
-  return classes.filter(Boolean).join(" ");
-};
+import { Colors, colorsRgb } from '../lib/colors';
+import yayaLogo from '@/assets/images/yaya-logo.png';
 
 // DotMap Component for animated background
 const DotMap = () => {
@@ -20,22 +17,22 @@ const DotMap = () => {
     {
       start: { x: 100, y: 150, delay: 0 },
       end: { x: 200, y: 80, delay: 2 },
-      color: "#2563eb",
+      color: Colors.primary,
     },
     {
       start: { x: 200, y: 80, delay: 2 },
       end: { x: 260, y: 120, delay: 4 },
-      color: "#2563eb",
+      color: Colors.primary,
     },
     {
       start: { x: 50, y: 50, delay: 1 },
       end: { x: 150, y: 180, delay: 3 },
-      color: "#2563eb",
+      color: Colors.primary,
     },
     {
       start: { x: 280, y: 60, delay: 0.5 },
       end: { x: 180, y: 180, delay: 2.5 },
-      color: "#2563eb",
+      color: Colors.primary,
     },
   ];
 
@@ -112,7 +109,7 @@ const DotMap = () => {
       dots.forEach(dot => {
         ctx.beginPath();
         ctx.arc(dot.x, dot.y, dot.radius, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(37, 99, 235, ${dot.opacity})`;
+        ctx.fillStyle = `rgba(${colorsRgb.primary.r}, ${colorsRgb.primary.g}, ${colorsRgb.primary.b}, ${dot.opacity})`;
         ctx.fill();
       });
     }
@@ -148,13 +145,13 @@ const DotMap = () => {
         // Draw the moving point
         ctx.beginPath();
         ctx.arc(x, y, 3, 0, Math.PI * 2);
-        ctx.fillStyle = "#3b82f6";
+        ctx.fillStyle = Colors.primary;
         ctx.fill();
         
         // Add glow effect to the moving point
         ctx.beginPath();
         ctx.arc(x, y, 6, 0, Math.PI * 2);
-        ctx.fillStyle = "rgba(59, 130, 246, 0.4)";
+        ctx.fillStyle = `rgba(${colorsRgb.primary.r}, ${colorsRgb.primary.g}, ${colorsRgb.primary.b}, 0.35)`;
         ctx.fill();
         
         // If the route is complete, draw the end point
@@ -311,20 +308,26 @@ const SignInPage = () => {
     try {
       // Attempt login using auth context
       const response = await login(sanitizedData);
-      
+
       // Login successful
       console.log('Login successful:', response.data);
-      
+
       // Show success message
       setSuccessMessage('Login successful! Redirecting to dashboard...');
-      
+
       // Redirect to dashboard after a brief delay
       setTimeout(() => {
         navigate('/dashboard');
       }, 1000);
-      
+
     } catch (error) {
       console.error('Login error:', error);
+
+      if (error.message?.includes('Account is not fully set up')) {
+        navigate('/set-password', { state: { mode: 'setup', username: sanitizedData.username } });
+        return;
+      }
+
       setSubmitError(error.message || 'Login failed. Please try again.');
     } finally {
       setIsLoading(false);
@@ -337,59 +340,71 @@ const SignInPage = () => {
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-2 md:p-4">
+    <div className="min-h-screen w-full flex items-center justify-center bg-background p-2 md:p-4">
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.5 }}
-        className="w-full max-w-4xl overflow-hidden rounded-xl md:rounded-2xl flex flex-col md:flex-row bg-white shadow-xl"
+        className="w-full max-w-4xl overflow-hidden rounded-xl md:rounded-2xl flex flex-col md:flex-row bg-card text-card-foreground shadow-xl border border-border"
       >
         {/* Left side - Map */}
-        <div className="hidden md:block w-1/2 h-[600px] md:h-[800px] relative overflow-hidden border-r border-gray-100">
-          <div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-indigo-100">
+        <div className="hidden md:block w-1/2 h-[600px] md:h-[800px] relative overflow-hidden border-r border-border">
+          <div className="absolute inset-0 bg-background">
             <DotMap />
             
-            {/* Logo and text overlay */}
+            {/* Logo and text overlay — frosted panel so copy stays readable over the map */}
             <div className="absolute inset-0 flex flex-col items-center justify-center p-6 md:p-8 z-10">
-              <motion.div 
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.6, duration: 0.5 }}
-                className="mb-6 md:mb-8"
-              >
-                <div className="h-12 w-12 md:h-16 md:w-16 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-xl shadow-blue-200">
-                  <ArrowRight className="text-white h-6 w-6 md:h-8 md:w-8" />
-                </div>
-              </motion.div>
-              <motion.h2 
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.7, duration: 0.5 }}
-                className="text-2xl md:text-4xl font-bold mb-3 md:mb-4 text-center text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600"
-              >
-                GoBhutan Admin
-              </motion.h2>
-              <motion.p 
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.8, duration: 0.5 }}
-                className="text-sm md:text-base text-center text-gray-600 max-w-sm leading-relaxed"
-              >
-                Sign in to access your GoBhutan admin dashboard and manage travel reservations across Bhutan
-              </motion.p>
+              <div className="w-full max-w-md rounded-2xl border border-border/80 bg-background/90 px-8 py-10 backdrop-blur-md supports-[backdrop-filter]:bg-background/80">
+                <motion.div 
+                  initial={{ opacity: 0, y: -20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.6, duration: 0.5 }}
+                  className="mb-6 md:mb-8 flex justify-center"
+                >
+                  <img
+                    src={yayaLogo}
+                    alt="YaYa logo"
+                    className="h-28 w-auto max-w-[min(100%,280px)] md:h-40 md:max-w-[min(100%,360px)] rounded-xl object-contain border border-border/50 bg-card/50 p-2"
+                  />
+                </motion.div>
+                <motion.h2 
+                  initial={{ opacity: 0, y: -20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.7, duration: 0.5 }}
+                  className="text-3xl md:text-5xl font-bold mb-3 md:mb-4 text-center text-foreground tracking-tight"
+                >
+                  YaYa Admin
+                </motion.h2>
+                <motion.p 
+                  initial={{ opacity: 0, y: -20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.8, duration: 0.5 }}
+                  className="text-sm md:text-base text-center text-foreground/90 max-w-sm mx-auto leading-relaxed"
+                >
+                  Sign in to access your YaYa admin dashboard and manage travel reservations across Bhutan
+                </motion.p>
+              </div>
             </div>
           </div>
         </div>
         
         {/* Right side - Sign In Form */}
-        <div className="w-full md:w-1/2 min-h-[600px] md:h-[800px] p-4 md:p-8 lg:p-10 flex flex-col justify-center bg-white">
+        <div className="w-full md:w-1/2 min-h-[600px] md:h-[800px] p-4 md:p-8 lg:p-10 flex flex-col justify-center bg-card">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <h1 className="text-xl md:text-2xl font-bold mb-1 text-gray-800">Welcome</h1>
-            <p className="text-gray-500 mb-6 md:mb-8 text-sm">Sign in to your account</p>
+            <div className="mb-6 flex flex-col items-center gap-3 md:hidden">
+              <img
+                src={yayaLogo}
+                alt="YaYa logo"
+                className="h-24 w-auto max-w-[260px] rounded-xl object-contain border border-border bg-card/40 p-2"
+              />
+              <p className="text-lg font-semibold text-foreground">YaYa Admin</p>
+            </div>
+            <h1 className="text-xl md:text-2xl font-bold mb-1 text-foreground">Welcome</h1>
+            <p className="text-foreground/85 mb-6 md:mb-8 text-sm md:text-base">Sign in to your account</p>
             
             <form onSubmit={handleSubmit}>
               {/* Success Message Display */}
@@ -397,12 +412,12 @@ const SignInPage = () => {
                 <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
                   <div className="flex">
                     <div className="flex-shrink-0">
-                      <svg className="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
+                      <svg className="h-5 w-5 text-green-600" viewBox="0 0 20 20" fill="currentColor">
                         <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                       </svg>
                     </div>
                     <div className="ml-3">
-                      <p className="text-sm text-green-800">{successMessage}</p>
+                      <p className="text-sm text-green-700">{successMessage}</p>
                     </div>
                   </div>
                 </div>
@@ -410,15 +425,15 @@ const SignInPage = () => {
 
               {/* Submit Error Display */}
               {submitError && (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+                <div className="bg-destructive/10 border border-destructive/25 rounded-lg p-4 mb-6">
                   <div className="flex">
                     <div className="flex-shrink-0">
-                      <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                      <svg className="h-5 w-5 text-destructive" viewBox="0 0 20 20" fill="currentColor">
                         <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                       </svg>
                     </div>
                     <div className="ml-3">
-                      <p className="text-sm text-red-800">{submitError}</p>
+                      <p className="text-sm text-destructive">{submitError}</p>
                     </div>
                   </div>
                 </div>
@@ -428,9 +443,9 @@ const SignInPage = () => {
               <div className="mb-4 md:mb-5">
                 <label 
                   htmlFor="username" 
-                  className="block text-sm font-medium text-gray-700 mb-1"
+                  className="block text-sm font-medium text-foreground mb-1"
                 >
-                  Username <span className="text-blue-500">*</span>
+                  Username <span className="text-primary">*</span>
                 </label>
                 <input
                   id="username"
@@ -440,17 +455,17 @@ const SignInPage = () => {
                   value={formData.username}
                   onChange={handleInputChange}
                   onBlur={handleInputBlur}
-                  className={`flex h-10 w-full rounded-md border bg-background px-3 py-2 text-sm text-gray-800 ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
+                  className={`flex h-10 w-full rounded-md border bg-background px-3 py-2 text-sm text-foreground ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
                     touched.username && validationErrors.username 
-                      ? 'border-red-300 focus:ring-red-500 focus:border-red-500' 
-                      : 'border-gray-200'
+                      ? 'border-destructive/60 focus-visible:ring-destructive' 
+                      : 'border-border'
                   }`}
                   placeholder="Enter your username"
                   aria-describedby="username-error"
                   disabled={isLoading}
                 />
                 {touched.username && validationErrors.username && (
-                  <p id="username-error" className="mt-1 text-sm text-red-600">
+                  <p id="username-error" className="mt-1 text-sm text-destructive">
                     {validationErrors.username}
                   </p>
                 )}
@@ -460,9 +475,9 @@ const SignInPage = () => {
               <div className="mb-4 md:mb-5">
                 <label 
                   htmlFor="password" 
-                  className="block text-sm font-medium text-gray-700 mb-1"
+                  className="block text-sm font-medium text-foreground mb-1"
                 >
-                  Password <span className="text-blue-500">*</span>
+                  Password <span className="text-primary">*</span>
                 </label>
                 <div className="relative">
                   <input
@@ -473,10 +488,10 @@ const SignInPage = () => {
                     value={formData.password}
                     onChange={handleInputChange}
                     onBlur={handleInputBlur}
-                    className={`flex h-10 w-full rounded-md border bg-background px-3 py-2 pr-10 text-sm text-gray-800 ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
+                    className={`flex h-10 w-full rounded-md border bg-background px-3 py-2 pr-10 text-sm text-foreground ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
                       touched.password && validationErrors.password 
-                        ? 'border-red-300 focus:ring-red-500 focus:border-red-500' 
-                        : 'border-gray-200'
+                        ? 'border-destructive/60 focus-visible:ring-destructive' 
+                        : 'border-border'
                     }`}
                     placeholder="Enter your password"
                     aria-describedby="password-error"
@@ -486,24 +501,25 @@ const SignInPage = () => {
                     type="button"
                     onClick={togglePasswordVisibility}
                     disabled={isLoading}
-                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 hover:text-gray-700"
+                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-muted-foreground hover:text-foreground"
                     aria-label={showPassword ? "Hide password" : "Show password"}
                   >
                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
                 </div>
                 {touched.password && validationErrors.password && (
-                  <p id="password-error" className="mt-1 text-sm text-red-600">
+                  <p id="password-error" className="mt-1 text-sm text-destructive">
                     {validationErrors.password}
                   </p>
                 )}
                 <div className="mt-2 text-right">
-                  <Link 
-                    to="/forgot-password" 
-                    className="text-sm text-blue-600 hover:text-blue-700 transition-colors"
+                  <button
+                    type="button"
+                    onClick={() => navigate('/set-password', { state: { mode: 'reset' } })}
+                    className="text-sm text-primary hover:text-primary/80 transition-colors"
                   >
                     Forgot password?
-                  </Link>
+                  </button>
                 </div>
               </div>
 
@@ -516,7 +532,7 @@ const SignInPage = () => {
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full bg-gradient-to-r relative overflow-hidden from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white py-3 md:py-3 rounded-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-200"
+                  className="w-full bg-primary hover:bg-primary/90 text-primary-foreground py-3 md:py-3 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-primary/20"
                 >
                   <span className="flex items-center justify-center text-sm md:text-base">
                     {isLoading ? (
@@ -539,11 +555,11 @@ const SignInPage = () => {
               
               {/* Sign Up Link */}
               <div className="text-center mt-4 md:mt-6">
-                <p className="text-xs md:text-sm text-gray-600">
+                <p className="form-field-hint md:text-sm">
                   Don't have an account?{' '}
                   <Link 
                     to="/signup" 
-                    className="text-blue-600 hover:text-blue-700 text-xs md:text-sm transition-colors"
+                    className="text-primary hover:text-primary/80 text-xs md:text-sm transition-colors font-medium"
                   >
                     Sign up
                   </Link>

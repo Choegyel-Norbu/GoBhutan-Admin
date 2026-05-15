@@ -4,7 +4,8 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
 import { Textarea } from '@/components/ui/Textarea';
-import { Home, Edit, Trash2, Plus } from 'lucide-react';
+import { Edit, Trash2, Plus } from 'lucide-react';
+import PageWrapper from '@/components/PageWrapper';
 import { apiClient } from '@/lib/apiService';
 import { API_CONFIG } from '@/lib/api';
 import authAPI from '@/lib/authAPI';
@@ -367,16 +368,10 @@ const AddRoomTypePage = () => {
   };
 
   return (
-    <div className="container mx-auto p-0 md:p-6">
-      <div className="mb-6">
-        <h1 className="text-xl font-bold flex items-center gap-2">
-          <Home className="h-6 w-6" />
-          Room Types Management
-        </h1>
-        <p className="text-muted-foreground mt-2">
-          Manage room types for your hotels
-        </p>
-      </div>
+    <PageWrapper
+      title="Room Types Management"
+      description="Manage room types for your hotels"
+    >
 
       {/* Room Types Table */}
       <Card className="mb-6">
@@ -540,7 +535,7 @@ const AddRoomTypePage = () => {
           </CardContent>
         </Card>
       )}
-    </div>
+    </PageWrapper>
   );
 };
 

@@ -18,7 +18,10 @@ export const API_CONFIG = {
       REFRESH: '/auth/refresh-token',
       PROFILE: '/auth/profile',
       UPDATE_USER: '/auth/update-user',
-      UPDATE_CLIENTS: '/auth/update-clients',
+      UPDATE_PROFILE: '/auth/update-profile',
+      FORGOT_PASSWORD_SEND_OTP: '/auth/forgot-password/send-otp',
+      FORGOT_PASSWORD_VERIFY_OTP: '/auth/forgot-password/verify-otp',
+      FORGOT_PASSWORD_RESET: '/auth/forgot-password/reset',
     },
     
     // Dashboard
@@ -42,6 +45,7 @@ export const API_CONFIG = {
       ALL_ROOMS: '/api/rooms',
       ROOM_TYPES: '/api/room-types',
       ROOM_TYPES_BY_HOTEL: '/api/room-types',
+      REGISTER_STAFF: '/auth/staff/create',
     },
     
     FLIGHT: {
@@ -57,11 +61,10 @@ export const API_CONFIG = {
     },
     
     BUS: {
-      BOOKINGS: '/bookings/hotel/count',
       ROUTES: '/api/bus-routes',
       SCHEDULES: '/api/schedules',
       BUSES: '/api/buses',
-      AVAILABLE_SEATS: '/bus/bookings/schedule',
+      BUS_MASTERS: '/api/bus-masters/routes',
       /** GET `{SCHEDULE_SEATS}/{scheduleId}/seats` → `/api/bookings/schedule/{scheduleId}/seats` */
       SCHEDULE_SEATS: '/api/bookings/schedule',
       GENERATE_SEATS: '/api/buses',
@@ -71,6 +74,17 @@ export const API_CONFIG = {
       BOOKING_CONFIRM: '/api/bookings/confirm',
       /** GET `/api/bookings/ticket/{bookingId}` */
       BOOKING_TICKET: '/api/bookings/ticket',
+      /** POST `/api/bookings/pay` */
+      BOOKING_PAY: '/api/bookings/pay',
+      /** POST `/api/bookings/cancel/{bookingId}` */
+      BOOKING_CANCEL: '/api/bookings/cancel',
+      /** GET `/api/bookings/admin/schedule/{id}/manifest` */
+      BOOKING_MANIFEST: '/api/bookings/admin/schedule',
+      /** Admin cash booking endpoints */
+      BOOKING_CASH_LOCK: '/api/bookings/admin/cash/lock',
+      BOOKING_CASH_CONFIRM: '/api/bookings/admin/cash/confirm',
+      BOOKING_CASH_CANCEL: '/api/bookings/admin/cash/cancel',
+      BOOKING_CASH_TICKET: '/api/bookings/admin/cash/ticket',
     },
   },
   

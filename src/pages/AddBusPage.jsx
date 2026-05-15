@@ -10,9 +10,16 @@ import { Textarea } from '@/components/ui/Textarea';
 import { apiClient } from '@/lib/apiService';
 import { API_CONFIG } from '@/lib/api';
 import authAPI from '@/lib/authAPI';
-import { validateBusForm, sanitizeInput, validateLayoutType, validateRecurrenceType } from '@/lib/validation';
+import { validateBusForm, validateLayoutType, validateRecurrenceType, buildBusApiPayload, computeBusOperatingDays } from '@/lib/validation';
 import { RecurrenceType } from '@/lib/constants';
 import Swal from 'sweetalert2';
+
+/** Layout option values sent to the API → fixed total seat counts */
+const LAYOUT_TYPE_SEAT_COUNTS = {
+  '1+2': 19,
+  '2+2': 32,
+  '2+3': 40,
+};
 
 function AddBusPage() {
   const [formData, setFormData] = useState({
@@ -38,6 +45,19 @@ function AddBusPage() {
       processedValue = '';
     }
     
+    if (field === 'layoutType') {
+      const seatNumber = processedValue ? LAYOUT_TYPE_SEAT_COUNTS[processedValue] : undefined;
+      const seatCount = typeof seatNumber === 'number' ? String(seatNumber) : '';
+      setFormData((prev) => ({
+        ...prev,
+        layoutType: processedValue,
+        totalSeats: seatCount,
+      }));
+      validateField('layoutType', processedValue);
+      validateField('totalSeats', seatCount);
+      return;
+    }
+
     if (field === 'busNumber') {
       // For bus number, remove spaces and sanitize
       processedValue = typeof value === 'string' ? value.replace(/\s/g, '') : value;
@@ -199,17 +219,7 @@ function AddBusPage() {
     }
     
     try {
-      // Format the data according to the API schema with proper sanitization
-      const payload = {
-        busName: sanitizeInput(formData.busName),
-        busNumber: sanitizeInput(formData.busNumber),
-        busType: formData.busType,
-        totalSeats: parseInt(formData.totalSeats),
-        layoutType: formData.layoutType ? sanitizeInput(formData.layoutType) : null,
-        recurrenceType: formData.recurrenceType || null,
-        description: formData.description ? sanitizeInput(formData.description) : null,
-        amenities: formData.amenities ? sanitizeInput(formData.amenities) : null
-      };
+      const payload = buildBusApiPayload(formData);
 
       console.log('Bus payload:', payload);
       
@@ -403,31 +413,24 @@ function AddBusPage() {
                       <span>{errors.recurrenceType}</span>
                     </div>
                   )}
-                  <p className="text-sm text-muted-foreground">
+                  <p className="form-field-hint">
                     Schedule recurrence pattern for bus operations
                   </p>
-                </div>
-              </div>
-
-              {/* Seating Configuration */}
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="totalSeats">Total Seats *</Label>
-                  <Input
-                    id="totalSeats"
-                    type="number"
-                    value={formData.totalSeats}
-                    onChange={(e) => handleInputChange('totalSeats', e.target.value)}
-                    placeholder="e.g., 50"
-                    className={errors.totalSeats ? 'border-red-500 focus:border-red-500' : 'focus:border-blue-100 focus:ring-0 focus:ring-blue-100'}
-                  />
-                  {errors.totalSeats && (
-                    <div className="flex items-center gap-1 text-sm text-red-600">
-                      <AlertCircle className="h-4 w-4" />
-                      <span>{errors.totalSeats}</span>
+                  {formData.recurrenceType === RecurrenceType.ALTERNATE && (
+                    <div className="form-field-hint mt-2 rounded-md border border-border/60 bg-muted/30 px-3 py-2">
+                      <p className="not-italic">
+                        <span className="italic">Operating days set to</span>{' '}
+                        <span className="font-semibold text-foreground">
+                          {computeBusOperatingDays(formData).join(', ')}
+                        </span>
+                      </p>
                     </div>
                   )}
                 </div>
+              </div>
+
+              {/* Seating Configuration — layout first; seat count follows layout */}
+              <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="layoutType">Layout Type *</Label>
                   <Select
@@ -447,8 +450,33 @@ function AddBusPage() {
                       <span>{errors.layoutType}</span>
                     </div>
                   )}
-                  <p className="text-sm text-muted-foreground">
-                    Seat configuration (e.g., 1+2 = 1 seat left, 2 seats right)
+                  <p className="form-field-hint">
+                    Seat configuration (e.g., 1+2 = 1 seat left, 2 seats right). Total seats update automatically.
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="totalSeats">Total Seats *</Label>
+                  <Input
+                    id="totalSeats"
+                    type="number"
+                    readOnly
+                    value={formData.totalSeats}
+                    placeholder="Select a layout type"
+                    aria-readonly="true"
+                    className={
+                      errors.totalSeats
+                        ? 'border-red-500 focus:border-red-500'
+                        : 'focus:border-blue-100 focus:ring-0 focus:ring-blue-100 bg-muted/40 cursor-not-allowed'
+                    }
+                  />
+                  {errors.totalSeats && (
+                    <div className="flex items-center gap-1 text-sm text-red-600">
+                      <AlertCircle className="h-4 w-4" />
+                      <span>{errors.totalSeats}</span>
+                    </div>
+                  )}
+                  <p className="form-field-hint">
+                    19, 32, or 40 seats depending on layout type (1+2, 2+2, or 2+3).
                   </p>
                 </div>
               </div>
@@ -469,7 +497,7 @@ function AddBusPage() {
                     <span>{errors.amenities}</span>
                   </div>
                 )}
-                <p className="text-sm text-muted-foreground">
+                <p className="form-field-hint">
                   Enter amenities separated by commas (e.g., AC, WiFi, Water, Snacks)
                 </p>
               </div>
@@ -491,7 +519,7 @@ function AddBusPage() {
                     <span>{errors.description}</span>
                   </div>
                 )}
-                <p className="text-sm text-muted-foreground">
+                <p className="form-field-hint">
                   {formData.description.length}/500 characters
                 </p>
               </div>

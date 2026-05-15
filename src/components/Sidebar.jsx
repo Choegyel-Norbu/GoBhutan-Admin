@@ -6,6 +6,7 @@ import { APP_NAME } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 import { Button } from './ui/Button';
 import { useAuth } from '@/contexts/AuthContext';
+import yayaLogo from '@/assets/images/yaya-logo.png';
 
 function Sidebar() {
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -101,11 +102,18 @@ function Sidebar() {
             "flex items-center h-14 md:h-16 px-3 md:px-4 border-b border-sidebar-border",
             isCollapsed ? "justify-center" : "justify-between"
           )}>
-            {!isCollapsed && (
-              <h1 className="text-base md:text-lg font-semibold truncate text-sidebar-foreground">
-                {APP_NAME}
-              </h1>
-            )}
+            <div className={cn("flex items-center min-w-0", isCollapsed ? "justify-center" : "gap-2")}>
+              <img
+                src={yayaLogo}
+                alt="YaYa logo"
+                className="h-8 w-8 rounded-md object-cover shrink-0 border border-sidebar-border"
+              />
+              {!isCollapsed && (
+                <h1 className="text-base md:text-lg font-semibold truncate text-sidebar-foreground">
+                  {APP_NAME}
+                </h1>
+              )}
+            </div>
             <Button
               variant="ghost"
               size="icon"
@@ -224,7 +232,7 @@ function Sidebar() {
           {!isCollapsed && (
             <div className="p-3 md:p-4 border-t border-sidebar-border">
               <div className="text-xs text-sidebar-foreground/70">
-                © 2024 GoBhutan
+                © 2024 YaYa
               </div>
             </div>
           )}

@@ -7,10 +7,12 @@ import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { Badge } from '@/components/ui/Badge';
 import { Bed, Loader2, Edit, Trash2, Save, X, Plus, Upload, Image as ImageIcon } from 'lucide-react';
+import PageWrapper from '@/components/PageWrapper';
 import { apiClient, api } from '@/lib/apiService';
 import { API_CONFIG } from '@/lib/api';
 import authAPI from '@/lib/authAPI';
 import { getRoomPrimaryImage, getRoomImageUrl } from '@/lib/utils';
+import AuthenticatedImage from '@/components/AuthenticatedImage';
 import Swal from 'sweetalert2';
 
 const RoomManager = () => {
@@ -763,13 +765,10 @@ const RoomManager = () => {
   };
 
   return (
-    <div className="container mx-auto p-4 md:p-6 space-y-4 md:space-y-6">
-      <div className="flex items-center gap-3">
-        <div>
-          <h1 className="text-lg md:text-xl font-bold">Room Management</h1>
-          <p className="text-sm md:text-base text-muted-foreground">Manage rooms for existing hotels</p>
-        </div>
-      </div>
+    <PageWrapper
+      title="Room Management"
+      description="Manage rooms for existing hotels"
+    >
 
       {/* Hotel Selection */}
       <Card>
@@ -917,13 +916,19 @@ const RoomManager = () => {
                       <td className="px-2 md:px-4 py-2 md:py-3 whitespace-nowrap">
                         <div className="w-12 h-12 md:w-16 md:h-16 rounded overflow-hidden bg-gray-100">
                           {roomImageUrl ? (
-                            <img
+                            <AuthenticatedImage
                               src={roomImageUrl}
                               alt={`Room ${room.roomNumber || 'N/A'}`}
                               className="w-full h-full object-cover"
                               onError={(e) => {
-                                e.target.style.display = 'none';
-                                e.target.nextSibling.style.display = 'flex';
+                                const imgElement = e.target;
+                                if (imgElement) {
+                                  imgElement.style.display = 'none';
+                                  const nextSibling = imgElement.nextSibling;
+                                  if (nextSibling) {
+                                    nextSibling.style.display = 'flex';
+                                  }
+                                }
                               }}
                             />
                           ) : null}
@@ -1394,14 +1399,18 @@ const RoomManager = () => {
                         return (
                           <div key={image.id} className="relative group">
                             {imageUrl ? (
-                              <img
+                              <AuthenticatedImage
                                 src={imageUrl}
                                 alt={image.title || `Room image ${image.id}`}
                                 className="w-full h-24 object-cover rounded-lg border"
                                 onError={(e) => {
-                                  e.target.style.display = 'none';
-                                  if (e.target.nextSibling) {
-                                    e.target.nextSibling.style.display = 'flex';
+                                  const imgElement = e.target;
+                                  if (imgElement) {
+                                    imgElement.style.display = 'none';
+                                    const nextSibling = imgElement.nextSibling;
+                                    if (nextSibling) {
+                                      nextSibling.style.display = 'flex';
+                                    }
                                   }
                                 }}
                               />
@@ -1538,7 +1547,7 @@ const RoomManager = () => {
         </div>
       )}
 
-    </div>
+    </PageWrapper>
   );
 };
 

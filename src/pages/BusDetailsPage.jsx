@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { Bus, Plus, Edit, Trash2, Search, Filter, Eye, Clock, MapPin, Calendar, ArrowLeft, Sparkles, Ticket } from 'lucide-react';
+import { Bus, Plus, Edit, Trash2, Eye, MapPin, Calendar, ArrowLeft, Ticket, Sparkles, RefreshCw } from 'lucide-react';
 import PageWrapper from '@/components/PageWrapper';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -24,20 +24,21 @@ function BusDetailsPage() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [submittingRoute, setSubmittingRoute] = useState(false);
-  const [submittingSchedule, setSubmittingSchedule] = useState(false);
   const routeFormRef = useRef(null);
-  const scheduleFormRef = useRef(null);
   const generateScheduleFormRef = useRef(null);
   const schedulesSectionRefs = useRef({}); // Refs for each route's schedules section
   const [showAddRouteForm, setShowAddRouteForm] = useState(false);
-  const [showAddScheduleForm, setShowAddScheduleForm] = useState(false);
+  const [showGenerateScheduleForm, setShowGenerateScheduleForm] = useState(false);
+  const [generatingSchedules, setGeneratingSchedules] = useState(false);
+  const [generateScheduleData, setGenerateScheduleData] = useState({
+    startDate: new Date().toISOString().split('T')[0],
+    days: 30
+  });
   const [editingRoute, setEditingRoute] = useState(null);
-  const [editingSchedule, setEditingSchedule] = useState(null);
+  const [togglingSchedule, setTogglingSchedule] = useState({});
   const [viewingRouteSchedules, setViewingRouteSchedules] = useState(null); // Track which route's schedules are being viewed
   const [routeSchedules, setRouteSchedules] = useState({}); // Store schedules for each route
   const [loadingRouteSchedules, setLoadingRouteSchedules] = useState({}); // Track loading state per route
-  const [showGenerateScheduleForm, setShowGenerateScheduleForm] = useState(false);
-  const [generatingSchedules, setGeneratingSchedules] = useState(false);
   
   // Booking state
   const [showBookingForm, setShowBookingForm] = useState(false);
@@ -60,31 +61,19 @@ function BusDetailsPage() {
   });
   
   // Generate schedule form data
-  const [generateScheduleData, setGenerateScheduleData] = useState({
-    startDate: new Date().toISOString().split('T')[0], // Today's date in YYYY-MM-DD format
-    days: 1
-  });
-
   // Route form data
   const [routeFormData, setRouteFormData] = useState({
     source: '',
     destination: '',
     distance: '',
     baseFare: '',
-    estimatedDuration: '',
+    estimatedDurationMinutes: '',
     departureTime: '',
-    customFare: '',
+    appCharges: '',
     active: true
   });
 
-  // Schedule form data
-  const [scheduleFormData, setScheduleFormData] = useState({
-    routeId: '',
-    departureTime: '',
-    arrivalTime: '',
-    price: ''
-  });
-
+  const [routeMasters, setRouteMasters] = useState([]);
   const [errors, setErrors] = useState({});
   const hasLoadedRef = useRef(false);
 
@@ -94,12 +83,21 @@ function BusDetailsPage() {
       hasLoadedRef.current = true;
       loadRoutes();
     }
-    
+
     // Reset the ref when component unmounts or busId changes
     return () => {
       hasLoadedRef.current = false;
     };
   }, [busId]);
+
+  useEffect(() => {
+    api.bus.getRouteMasters(true)
+      .then(resp => {
+        const data = Array.isArray(resp) ? resp : resp?.data ?? [];
+        setRouteMasters(data.filter(m => m?.active !== false));
+      })
+      .catch(() => {});
+  }, []);
 
   const loadRoutes = async (isRefresh = false) => {
     try {
@@ -185,50 +183,6 @@ function BusDetailsPage() {
     }
   };
 
-  const handleScheduleInputChange = (field, value) => {
-    console.log('Schedule input change:', field, value); // Debug log
-    setScheduleFormData(prev => {
-      const newData = {
-        ...prev,
-        [field]: value
-      };
-      console.log('New schedule form data:', newData); // Debug log
-      return newData;
-    });
-
-    if (errors[field]) {
-      setErrors(prev => {
-        const newErrors = { ...prev };
-        delete newErrors[field];
-        return newErrors;
-      });
-    }
-
-    // Auto-calculate arrival time if departure time and route duration are available
-    if (field === 'departureTime' && scheduleFormData.routeId) {
-      const selectedRoute = routes.find(r => r && r.id === parseInt(scheduleFormData.routeId));
-      if (selectedRoute && value) {
-        const departure = new Date(value);
-        const arrival = new Date(departure.getTime() + (selectedRoute.estimatedDuration * 60000));
-        setScheduleFormData(prev => ({
-          ...prev,
-          arrivalTime: arrival.toISOString().slice(0, 16)
-        }));
-      }
-    }
-
-    // Auto-calculate price if route is selected
-    if (field === 'routeId' && value) {
-      const selectedRoute = routes.find(r => r && r.id === parseInt(value));
-      if (selectedRoute) {
-        setScheduleFormData(prev => ({
-          ...prev,
-          price: selectedRoute.baseFare.toString()
-        }));
-      }
-    }
-  };
-
   const validateRouteForm = () => {
     const newErrors = {};
 
@@ -247,36 +201,8 @@ function BusDetailsPage() {
     if (!routeFormData.baseFare || parseFloat(routeFormData.baseFare) <= 0) {
       newErrors.baseFare = 'Base fare must be greater than 0';
     }
-    if (!routeFormData.estimatedDuration || parseInt(routeFormData.estimatedDuration) <= 0) {
-      newErrors.estimatedDuration = 'Estimated duration must be greater than 0';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const validateScheduleForm = () => {
-    const newErrors = {};
-
-    if (!scheduleFormData.routeId) {
-      newErrors.routeId = 'Route is required';
-    }
-    if (!scheduleFormData.departureTime) {
-      newErrors.departureTime = 'Departure time is required';
-    }
-    if (!scheduleFormData.arrivalTime) {
-      newErrors.arrivalTime = 'Arrival time is required';
-    }
-    if (!scheduleFormData.price || parseFloat(scheduleFormData.price) <= 0) {
-      newErrors.price = 'Price must be greater than 0';
-    }
-
-    if (scheduleFormData.departureTime && scheduleFormData.arrivalTime) {
-      const departure = new Date(scheduleFormData.departureTime);
-      const arrival = new Date(scheduleFormData.arrivalTime);
-      if (arrival <= departure) {
-        newErrors.arrivalTime = 'Arrival time must be after departure time';
-      }
+    if (!routeFormData.estimatedDurationMinutes || parseInt(routeFormData.estimatedDurationMinutes) <= 0) {
+      newErrors.estimatedDurationMinutes = 'Estimated duration must be greater than 0';
     }
 
     setErrors(newErrors);
@@ -300,9 +226,9 @@ function BusDetailsPage() {
         destination: routeFormData.destination.trim(),
         distance: parseFloat(routeFormData.distance),
         baseFare: parseFloat(routeFormData.baseFare),
-        estimatedDuration: parseInt(routeFormData.estimatedDuration),
+        estimatedDurationMinutes: parseInt(routeFormData.estimatedDurationMinutes),
         departureTime: routeFormData.departureTime || '10:30',
-        customFare: routeFormData.customFare ? parseFloat(routeFormData.customFare) : 0,
+        appCharges: routeFormData.appCharges ? parseFloat(routeFormData.appCharges) : 0,
         active: routeFormData.active !== undefined ? routeFormData.active : true
       };
 
@@ -339,80 +265,15 @@ function BusDetailsPage() {
     }
   };
 
-  const handleScheduleSubmit = async (e) => {
-    e.preventDefault();
-    
-    if (!validateScheduleForm()) {
-      return;
-    }
-
-    if (submittingSchedule) return; // Prevent double submission
-
-    try {
-      setSubmittingSchedule(true);
-      const payload = {
-        busId: parseInt(busId),
-        routeId: parseInt(scheduleFormData.routeId),
-        departureTime: new Date(scheduleFormData.departureTime).toISOString().slice(0, 19).replace('T', ' '),
-        arrivalTime: new Date(scheduleFormData.arrivalTime).toISOString().slice(0, 19).replace('T', ' '),
-        price: parseFloat(scheduleFormData.price)
-      };
-
-      console.log('Schedule payload:', payload); // Debug log
-
-      if (editingSchedule) {
-        await api.bus.updateSchedule(editingSchedule.id, payload);
-        await Swal.fire({
-          icon: 'success',
-          title: 'Success!',
-          text: 'Schedule updated successfully.',
-          confirmButtonText: 'OK'
-        });
-      } else {
-        await api.bus.createSchedule(payload);
-        await Swal.fire({
-          icon: 'success',
-          title: 'Success!',
-          text: 'Schedule created successfully.',
-          confirmButtonText: 'OK'
-        });
-      }
-
-      const savedRouteId = scheduleFormData.routeId;
-      resetScheduleForm();
-      
-      // Refresh the route schedules if we're viewing schedules for this route
-      if (savedRouteId && viewingRouteSchedules === parseInt(savedRouteId)) {
-        // Clear the cache and reload
-        setRouteSchedules(prev => {
-          const newSchedules = { ...prev };
-          delete newSchedules[parseInt(savedRouteId)];
-          return newSchedules;
-        });
-        await loadSchedulesForRoute(parseInt(savedRouteId));
-      }
-    } catch (error) {
-      console.error('Error saving schedule:', error);
-      Swal.fire({
-        icon: 'error',
-        title: 'Error',
-        text: 'Failed to save schedule. Please try again.',
-        confirmButtonText: 'OK'
-      });
-    } finally {
-      setSubmittingSchedule(false);
-    }
-  };
-
   const resetRouteForm = () => {
     setRouteFormData({
       source: '',
       destination: '',
       distance: '',
       baseFare: '',
-      estimatedDuration: '',
+      estimatedDurationMinutes: '',
       departureTime: '',
-      customFare: '',
+      appCharges: '',
       active: true
     });
     setErrors({});
@@ -431,36 +292,10 @@ function BusDetailsPage() {
     }, 100);
   };
 
-  const resetScheduleForm = () => {
-    setScheduleFormData({
-      routeId: '',
-      departureTime: '',
-      arrivalTime: '',
-      price: ''
-    });
-    setErrors({});
-    setShowAddScheduleForm(false);
-    setEditingSchedule(null);
-  };
-
-  const scrollToScheduleForm = () => {
-    setTimeout(() => {
-      if (scheduleFormRef.current) {
-        scheduleFormRef.current.scrollIntoView({ 
-          behavior: 'smooth', 
-          block: 'start' 
-        });
-      }
-    }, 100);
-  };
-
   const scrollToGenerateScheduleForm = () => {
     setTimeout(() => {
       if (generateScheduleFormRef.current) {
-        generateScheduleFormRef.current.scrollIntoView({ 
-          behavior: 'smooth', 
-          block: 'start' 
-        });
+        generateScheduleFormRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
     }, 100);
   };
@@ -693,27 +528,31 @@ function BusDetailsPage() {
       destination: route.destination || '',
       distance: route.distance?.toString() || '',
       baseFare: route.baseFare?.toString() || '',
-      estimatedDuration: route.estimatedDuration?.toString() || '',
+      estimatedDurationMinutes: route.estimatedDurationMinutes?.toString() || '',
       departureTime: route.departureTime || '',
-      customFare: route.customFare?.toString() || '',
+      appCharges: route.appCharges?.toString() || '',
       active: route.active !== undefined ? route.active : true
     });
     setShowAddRouteForm(true);
     scrollToRouteForm();
   };
 
-  const handleEditSchedule = (schedule) => {
-    setEditingSchedule(schedule);
-    setScheduleFormData({
-      routeId: schedule.routeId?.toString() || '',
-      departureTime: schedule.departureTime ? new Date(schedule.departureTime).toISOString().slice(0, 16) : '',
-      arrivalTime: schedule.arrivalTime ? new Date(schedule.arrivalTime).toISOString().slice(0, 16) : '',
-      price: schedule.price?.toString() || ''
-    });
-    setShowAddScheduleForm(true);
-    scrollToScheduleForm();
+  const handleToggleSchedule = async (schedule, routeId) => {
+    setTogglingSchedule(prev => ({ ...prev, [schedule.id]: true }));
+    try {
+      await api.bus.toggleSchedule(schedule.id);
+      setRouteSchedules(prev => {
+        const newSchedules = { ...prev };
+        delete newSchedules[routeId];
+        return newSchedules;
+      });
+      await loadSchedulesForRoute(routeId);
+    } catch (error) {
+      Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to toggle schedule.', confirmButtonText: 'OK' });
+    } finally {
+      setTogglingSchedule(prev => { const s = { ...prev }; delete s[schedule.id]; return s; });
+    }
   };
-
 
   const handleDeleteRoute = async (route) => {
     const result = await Swal.fire({
@@ -748,7 +587,7 @@ function BusDetailsPage() {
     }
   };
 
-  const handleDeleteSchedule = async (schedule) => {
+  const handleDeleteSchedule = async (schedule, routeId) => {
     const result = await Swal.fire({
       title: 'Are you sure?',
       text: `This will permanently delete this schedule.`,
@@ -768,17 +607,13 @@ function BusDetailsPage() {
           text: 'Schedule has been deleted.',
           confirmButtonText: 'OK'
         });
-        
-        // Refresh the route schedules if we're viewing schedules for this route
-        if (schedule.routeId && viewingRouteSchedules === schedule.routeId) {
-          // Clear the cache and reload
-          setRouteSchedules(prev => {
-            const newSchedules = { ...prev };
-            delete newSchedules[schedule.routeId];
-            return newSchedules;
-          });
-          await loadSchedulesForRoute(schedule.routeId);
-        }
+
+        setRouteSchedules(prev => {
+          const newSchedules = { ...prev };
+          delete newSchedules[routeId];
+          return newSchedules;
+        });
+        await loadSchedulesForRoute(routeId);
       } catch (error) {
         console.error('Error deleting schedule:', error);
         Swal.fire({
@@ -816,99 +651,46 @@ function BusDetailsPage() {
 
   const handleGenerateSchedules = async (e) => {
     e.preventDefault();
-    
-    console.log('handleGenerateSchedules called', { generateScheduleData, busId }); // Debug log
-    
-    if (generatingSchedules) {
-      console.log('Already generating schedules, returning early');
-      return; // Prevent double submission
-    }
-
-    // Validate form
-    if (!generateScheduleData.startDate) {
-      Swal.fire({
-        icon: 'error',
-        title: 'Validation Error',
-        text: 'Start date is required.',
-        confirmButtonText: 'OK'
-      });
-      return;
-    }
-
-    if (!generateScheduleData.days || parseInt(generateScheduleData.days) <= 0) {
-      Swal.fire({
-        icon: 'error',
-        title: 'Validation Error',
-        text: 'Days must be greater than 0.',
-        confirmButtonText: 'OK'
-      });
-      return;
-    }
-
+    if (generatingSchedules) return;
+    setGeneratingSchedules(true);
     try {
-      setGeneratingSchedules(true);
       const payload = {
         busId: parseInt(busId),
         startDate: generateScheduleData.startDate,
-        days: parseInt(generateScheduleData.days)
+        days: parseInt(generateScheduleData.days),
       };
-
-      console.log('Calling API with payload:', payload); // Debug log
-      const response = await api.bus.generateSchedules(payload);
-      console.log('API Response:', response); // Debug log
-      
+      await api.bus.generateSchedules(payload);
       await Swal.fire({
         icon: 'success',
         title: 'Success!',
-        text: `Schedules generated successfully for ${generateScheduleData.days} day(s) starting from ${generateScheduleData.startDate}.`,
-        confirmButtonText: 'OK'
+        text: `Schedules generated for ${generateScheduleData.days} day(s) from ${generateScheduleData.startDate}.`,
+        confirmButtonText: 'OK',
       });
-
-      // Reset form
-      setGenerateScheduleData({
-        startDate: new Date().toISOString().split('T')[0],
-        days: 1
-      });
+      const currentlyViewingRoute = viewingRouteSchedules;
+      // Generation affects all routes of this bus — wipe the full cache
+      setRouteSchedules({});
+      setGenerateScheduleData({ startDate: new Date().toISOString().split('T')[0], days: 30 });
       setShowGenerateScheduleForm(false);
-      
-      // Optionally refresh routes to see new schedules
-      // await loadRoutes(true);
-    } catch (error) {
-      console.error('Error generating schedules:', error);
-      console.error('Error details:', {
-        message: error?.message,
-        response: error?.response,
-        data: error?.response?.data,
-        status: error?.response?.status
-      });
-      
-      let errorMessage = 'Failed to generate schedules. Please try again.';
-      if (error?.response?.data?.message) {
-        errorMessage = error.response.data.message;
-      } else if (error?.message) {
-        errorMessage = error.message;
+      if (currentlyViewingRoute) {
+        await loadSchedulesForRoute(currentlyViewingRoute, true);
       }
-      
-      Swal.fire({
-        icon: 'error',
-        title: 'Error',
-        text: errorMessage,
-        confirmButtonText: 'OK'
-      });
+    } catch (error) {
+      const msg = error?.response?.data?.message || error?.message || 'Failed to generate schedules.';
+      Swal.fire({ icon: 'error', title: 'Error', text: msg, confirmButtonText: 'OK' });
     } finally {
       setGeneratingSchedules(false);
     }
   };
 
-  const loadSchedulesForRoute = async (routeId) => {
+  const loadSchedulesForRoute = async (routeId, forceRefresh = false) => {
     // If already viewing this route's schedules, hide them
-    if (viewingRouteSchedules === routeId) {
+    if (!forceRefresh && viewingRouteSchedules === routeId) {
       setViewingRouteSchedules(null);
       return;
     }
 
     // If schedules are already loaded, just show them
-    if (routeSchedules[routeId]) {
+    if (!forceRefresh && routeSchedules[routeId]) {
       setViewingRouteSchedules(routeId);
       // Scroll to schedules section after a brief delay to ensure DOM is updated
       setTimeout(() => {
@@ -1012,17 +794,6 @@ function BusDetailsPage() {
                   Details and specifications for this bus.
                 </CardDescription>
               </div>
-              <Button 
-                onClick={() => {
-                  setShowGenerateScheduleForm(true);
-                  scrollToGenerateScheduleForm();
-                }}
-                disabled={routes.length < 1}
-                className="flex items-center gap-2"
-              >
-                <Sparkles className="h-4 w-4" />
-                Generate Schedules
-              </Button>
             </div>
           </CardHeader>
           <CardContent>
@@ -1100,6 +871,18 @@ function BusDetailsPage() {
                   Manage routes and schedules for this bus.
                 </CardDescription>
               </div>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowGenerateScheduleForm(true);
+                  scrollToGenerateScheduleForm();
+                }}
+                disabled={routes.length < 1}
+                className="flex items-center gap-2"
+              >
+                <Sparkles className="h-4 w-4" />
+                Generate Schedules
+              </Button>
             </div>
           </CardHeader>
           <CardContent>
@@ -1157,7 +940,7 @@ function BusDetailsPage() {
                                   </div>
                                   <div>
                                     <p className="text-muted-foreground">Duration</p>
-                                    <p className="font-medium">{route.estimatedDuration} hours</p>
+                                    <p className="font-medium">{route.estimatedDurationMinutes} min</p>
                                   </div>
                                   <div className="flex items-end">
                                     <Button
@@ -1208,7 +991,7 @@ function BusDetailsPage() {
                                     </div>
                                     <div>
                                       <span className="text-muted-foreground">Travel Time:</span>
-                                      <span className="ml-2 font-medium">{route.estimatedDuration} hours</span>
+                                      <span className="ml-2 font-medium">{route.estimatedDurationMinutes} min</span>
                                     </div>
                                   </div>
                                 </div>
@@ -1294,7 +1077,7 @@ function BusDetailsPage() {
                                                 </div>
                                                 <div>
                                                   <p className="text-muted-foreground">Price</p>
-                                                  <p className="font-medium">BTN {schedule.price}</p>
+                                                  <p className="font-medium">BTN {schedule.finalFare ?? schedule.baseFare ?? '—'}</p>
                                                 </div>
                                                 <div>
                                                   <p className="text-muted-foreground">Available Seats</p>
@@ -1308,12 +1091,13 @@ function BusDetailsPage() {
                                                 <Button
                                                   variant="outline"
                                                   size="sm"
-                                                  onClick={() => handleEditSchedule(schedule)}
+                                                  onClick={() => handleToggleSchedule(schedule, route.id)}
+                                                  disabled={!!togglingSchedule[schedule.id]}
                                                 >
-                                                  <Edit className="h-4 w-4" />
+                                                  <RefreshCw className={`h-4 w-4 ${togglingSchedule[schedule.id] ? 'animate-spin' : ''}`} />
                                                 </Button>
                                                 <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-900 rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50 w-max max-w-xs">
-                                                  Edit Schedule
+                                                  {schedule.active ? 'Deactivate' : 'Activate'}
                                                   <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
                                                 </div>
                                               </div>
@@ -1321,7 +1105,7 @@ function BusDetailsPage() {
                                                 <Button
                                                   variant="outline"
                                                   size="sm"
-                                                  onClick={() => handleDeleteSchedule(schedule)}
+                                                  onClick={() => handleDeleteSchedule(schedule, route.id)}
                                                   className="text-red-600 hover:text-red-700"
                                                 >
                                                   <Trash2 className="h-4 w-4" />
@@ -1342,17 +1126,8 @@ function BusDetailsPage() {
                                 <div className="text-center py-8">
                                   <Calendar className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
                                   <h3 className="text-lg font-semibold mb-2">No schedules found</h3>
-                                  <p className="text-muted-foreground mb-4">No schedules have been created for this route yet.</p>
-                                  <Button 
-                                    onClick={() => {
-                                      setScheduleFormData(prev => ({ ...prev, routeId: route.id.toString() }));
-                                      setShowAddScheduleForm(true);
-                                      scrollToScheduleForm();
-                                    }}
-                                  >
-                                    <Plus className="h-4 w-4 mr-2" />
-                                    Add Schedule
-                                  </Button>
+                                  <p className="text-muted-foreground">No schedules have been generated for this route yet.</p>
+                                  <p className="text-muted-foreground text-sm mt-1">Use the <strong>Generate Schedules</strong> button above to create schedules in bulk.</p>
                                 </div>
                               )}
                             </CardContent>
@@ -1385,24 +1160,50 @@ function BusDetailsPage() {
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-2">
                     <Label htmlFor="source">Source *</Label>
-                    <Input
-                      id="source"
-                      value={routeFormData.source}
-                      onChange={(e) => handleRouteInputChange('source', e.target.value)}
-                      placeholder="e.g., Thimphu"
-                    />
+                    {routeMasters.length > 0 ? (
+                      <Select
+                        id="source"
+                        value={routeFormData.source}
+                        onChange={(e) => handleRouteInputChange('source', e.target.value)}
+                      >
+                        <option value="">Select source</option>
+                        {routeMasters.map(m => (
+                          <option key={m.id} value={m.routeName}>{m.routeName}</option>
+                        ))}
+                      </Select>
+                    ) : (
+                      <Input
+                        id="source"
+                        value={routeFormData.source}
+                        onChange={(e) => handleRouteInputChange('source', e.target.value)}
+                        placeholder="e.g., Thimphu"
+                      />
+                    )}
                     {errors.source && (
                       <p className="text-sm text-red-600">{errors.source}</p>
                     )}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="destination">Destination *</Label>
-                    <Input
-                      id="destination"
-                      value={routeFormData.destination}
-                      onChange={(e) => handleRouteInputChange('destination', e.target.value)}
-                      placeholder="e.g., Paro"
-                    />
+                    {routeMasters.length > 0 ? (
+                      <Select
+                        id="destination"
+                        value={routeFormData.destination}
+                        onChange={(e) => handleRouteInputChange('destination', e.target.value)}
+                      >
+                        <option value="">Select destination</option>
+                        {routeMasters.map(m => (
+                          <option key={m.id} value={m.routeName}>{m.routeName}</option>
+                        ))}
+                      </Select>
+                    ) : (
+                      <Input
+                        id="destination"
+                        value={routeFormData.destination}
+                        onChange={(e) => handleRouteInputChange('destination', e.target.value)}
+                        placeholder="e.g., Paro"
+                      />
+                    )}
                     {errors.destination && (
                       <p className="text-sm text-red-600">{errors.destination}</p>
                     )}
@@ -1436,16 +1237,16 @@ function BusDetailsPage() {
                     )}
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="estimatedDuration">Estimated Duration (min) *</Label>
+                    <Label htmlFor="estimatedDurationMinutes">Estimated Duration (min) *</Label>
                     <Input
-                      id="estimatedDuration"
+                      id="estimatedDurationMinutes"
                       type="number"
-                      value={routeFormData.estimatedDuration}
-                      onChange={(e) => handleRouteInputChange('estimatedDuration', e.target.value)}
+                      value={routeFormData.estimatedDurationMinutes}
+                      onChange={(e) => handleRouteInputChange('estimatedDurationMinutes', e.target.value)}
                       placeholder="e.g., 90"
                     />
-                    {errors.estimatedDuration && (
-                      <p className="text-sm text-red-600">{errors.estimatedDuration}</p>
+                    {errors.estimatedDurationMinutes && (
+                      <p className="text-sm text-red-600">{errors.estimatedDurationMinutes}</p>
                     )}
                   </div>
                   <div className="space-y-2">
@@ -1465,20 +1266,21 @@ function BusDetailsPage() {
                     )}
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="customFare">Custom Fare (BTN)</Label>
+                    <Label htmlFor="appCharges">App Charges (BTN)</Label>
                     <Input
-                      id="customFare"
+                      id="appCharges"
                       type="number"
                       step="0.01"
-                      value={routeFormData.customFare}
-                      onChange={(e) => handleRouteInputChange('customFare', e.target.value)}
-                      placeholder="e.g., 200.00"
+                      min="0"
+                      value={routeFormData.appCharges}
+                      onChange={(e) => handleRouteInputChange('appCharges', e.target.value)}
+                      placeholder="e.g., 0"
                     />
                     <p className="form-field-hint">
-                      Optional custom fare override (leave empty to use base fare)
+                      Platform/app service charge (defaults to 0)
                     </p>
-                    {errors.customFare && (
-                      <p className="text-sm text-red-600">{errors.customFare}</p>
+                    {errors.appCharges && (
+                      <p className="text-sm text-red-600">{errors.appCharges}</p>
                     )}
                   </div>
                   <div className="space-y-2">
@@ -1513,99 +1315,6 @@ function BusDetailsPage() {
           </Card>
         )}
 
-        {/* Add/Edit Schedule Form */}
-        {showAddScheduleForm && (
-          <Card ref={scheduleFormRef}>
-            <CardHeader>
-              <CardTitle>
-                {editingSchedule ? 'Edit Schedule' : 'Add New Schedule'}
-              </CardTitle>
-              <CardDescription>
-                {editingSchedule 
-                  ? 'Update the schedule details below.'
-                  : 'Enter the details for the new schedule.'
-                }
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleScheduleSubmit} className="space-y-6">
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="routeId">Route *</Label>
-                    <Select
-                      value={scheduleFormData.routeId}
-                      onChange={(e) => handleScheduleInputChange('routeId', e.target.value)}
-                      disabled={!!scheduleFormData.routeId && !editingSchedule}
-                    >
-                      <option value="">Select a route</option>
-                      {Array.isArray(routes) ? routes.map(route => (
-                        <option key={route?.id} value={route?.id}>
-                          {route?.source || 'Unknown'} → {route?.destination || 'Unknown'} (BTN {route?.baseFare || 0})
-                        </option>
-                      )) : null}
-                    </Select>
-                    {errors.routeId && (
-                      <p className="text-sm text-red-600">{errors.routeId}</p>
-                    )}
-                    {scheduleFormData.routeId && !editingSchedule && (
-                      <p className="form-field-hint">
-                        Route is pre-selected for this schedule
-                      </p>
-                    )}
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="departureTime">Departure Time *</Label>
-                    <Input
-                      id="departureTime"
-                      type="datetime-local"
-                      value={scheduleFormData.departureTime}
-                      onChange={(e) => handleScheduleInputChange('departureTime', e.target.value)}
-                    />
-                    {errors.departureTime && (
-                      <p className="text-sm text-red-600">{errors.departureTime}</p>
-                    )}
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="arrivalTime">Arrival Time *</Label>
-                    <Input
-                      id="arrivalTime"
-                      type="datetime-local"
-                      value={scheduleFormData.arrivalTime}
-                      onChange={(e) => handleScheduleInputChange('arrivalTime', e.target.value)}
-                    />
-                    {errors.arrivalTime && (
-                      <p className="text-sm text-red-600">{errors.arrivalTime}</p>
-                    )}
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="price">Price (BTN) *</Label>
-                    <Input
-                      id="price"
-                      type="number"
-                      step="0.01"
-                      value={scheduleFormData.price}
-                      onChange={(e) => handleScheduleInputChange('price', e.target.value)}
-                      placeholder="e.g., 150.00"
-                    />
-                    {errors.price && (
-                      <p className="text-sm text-red-600">{errors.price}</p>
-                    )}
-                  </div>
-                </div>
-
-                <div className="flex gap-4 pt-4">
-                  <Button type="submit" disabled={submittingSchedule}>
-                    {submittingSchedule ? 'Saving...' : (editingSchedule ? 'Update Schedule' : 'Add Schedule')}
-                  </Button>
-                  <Button type="button" variant="outline" onClick={resetScheduleForm} disabled={submittingSchedule}>
-                    Cancel
-                  </Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
-        )}
-
         {/* Generate Schedules Form */}
         {showGenerateScheduleForm && (
           <Card ref={generateScheduleFormRef}>
@@ -1615,86 +1324,52 @@ function BusDetailsPage() {
                 Generate Schedules
               </CardTitle>
               <CardDescription>
-                Generate schedules for this bus automatically. Specify the start date and number of days to generate.
+                Automatically generate schedules for this bus. Specify a start date and number of days.
               </CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleGenerateSchedules} className="space-y-6">
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-2">
-                    <Label htmlFor="startDate">Start Date *</Label>
+                    <Label htmlFor="genStartDate">Start Date *</Label>
                     <Input
-                      id="startDate"
+                      id="genStartDate"
                       type="date"
                       value={generateScheduleData.startDate}
-                      onChange={(e) => setGenerateScheduleData(prev => ({
-                        ...prev,
-                        startDate: e.target.value
-                      }))}
                       min={new Date().toISOString().split('T')[0]}
+                      onChange={(e) => setGenerateScheduleData(prev => ({ ...prev, startDate: e.target.value }))}
                       required
                     />
-                    <p className="form-field-hint">
-                      Select the starting date for schedule generation
-                    </p>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="days">Number of Days *</Label>
+                    <Label htmlFor="genDays">Number of Days *</Label>
                     <Input
-                      id="days"
+                      id="genDays"
                       type="number"
                       min="1"
                       value={generateScheduleData.days}
-                      onChange={(e) => setGenerateScheduleData(prev => ({
-                        ...prev,
-                        days: e.target.value
-                      }))}
-                      placeholder="e.g., 7"
+                      onChange={(e) => setGenerateScheduleData(prev => ({ ...prev, days: e.target.value }))}
+                      placeholder="e.g., 30"
                       required
                     />
-                    <p className="form-field-hint">
-                      Number of days to generate schedules for
-                    </p>
                   </div>
                 </div>
-
-                <div className="flex gap-4 pt-4">
-                  <Button 
-                    type="submit" 
-                    disabled={generatingSchedules}
-                    onClick={(e) => {
-                      // Ensure form validation passes before allowing submission
-                      const form = e.target.closest('form');
-                      if (form && !form.checkValidity()) {
-                        e.preventDefault();
-                        form.reportValidity();
-                        return;
-                      }
-                    }}
-                  >
+                <div className="flex gap-4 pt-2">
+                  <Button type="submit" disabled={generatingSchedules} className="flex items-center gap-2">
                     {generatingSchedules ? (
-                      <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
-                        Generating...
-                      </>
+                      <><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current" />Generating...</>
                     ) : (
-                      <>
-                        <Sparkles className="h-4 w-4 mr-2" />
-                        Generate Schedules
-                      </>
+                      <><Sparkles className="h-4 w-4" />Generate Schedules</>
                     )}
                   </Button>
-                  <Button 
-                    type="button" 
-                    variant="outline" 
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={generatingSchedules}
                     onClick={() => {
                       setShowGenerateScheduleForm(false);
-                      setGenerateScheduleData({
-                        startDate: new Date().toISOString().split('T')[0],
-                        days: 1
-                      });
-                    }} 
-                    disabled={generatingSchedules}
+                      setGenerateScheduleData({ startDate: new Date().toISOString().split('T')[0], days: 30 });
+                    }}
                   >
                     Cancel
                   </Button>

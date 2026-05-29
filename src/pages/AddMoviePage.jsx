@@ -3,7 +3,8 @@ import {
   Film, Calendar, X, MapPin, Building, RefreshCw, Plus,
   Clapperboard, DoorOpen,
   Trash2, Settings, Monitor, Armchair, Ticket, Clock,
-  AlertCircle, Pencil, ChevronRight, Lock, CheckCircle2
+  AlertCircle, Pencil, ChevronRight, Lock, LockOpen, CheckCircle2,
+  Upload, Image as ImageIcon
 } from 'lucide-react';
 import PageWrapper from '@/components/PageWrapper';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
@@ -14,6 +15,9 @@ import { Textarea } from '@/components/ui/Textarea';
 import { Select } from '@/components/ui/Select';
 import { apiClient } from '@/lib/apiService';
 import authAPI from '@/lib/authAPI';
+import { buildScreeningFormData } from '@/lib/screening';
+import { getScreeningImageUrl, getScreeningPosterImages } from '@/lib/utils';
+import AuthenticatedImage from '@/components/AuthenticatedImage';
 import { useAuth } from '@/contexts/AuthContext';
 import Swal from 'sweetalert2';
 
@@ -35,6 +39,43 @@ function FieldError({ message }) {
 
 function Skeleton({ className = '' }) {
   return <div className={`animate-pulse rounded bg-muted/50 ${className}`} />;
+}
+
+function LocationListSkeleton({ count = 4 }) {
+  return (
+    <div className="space-y-1" aria-hidden="true">
+      {Array.from({ length: count }, (_, i) => (
+        <div key={i} className="flex items-center gap-1 rounded-lg px-2.5 py-2">
+          <div className="flex-1 min-w-0 space-y-1.5">
+            <Skeleton className="h-3 w-[85%]" />
+            <Skeleton className="h-2.5 w-[60%]" />
+          </div>
+          <Skeleton className="h-6 w-6 shrink-0 rounded-md" />
+          <Skeleton className="h-6 w-6 shrink-0 rounded-md" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function TheaterExplorerSkeleton() {
+  return (
+    <div className="space-y-5 min-h-[320px]" aria-hidden="true">
+      <div className="space-y-3">
+        <Skeleton className="h-4 w-40" />
+        <Skeleton className="h-3 w-64 max-w-full" />
+      </div>
+      <div className="rounded-xl border border-border/60 p-6 space-y-4">
+        <Skeleton className="h-5 w-48" />
+        <Skeleton className="h-4 w-full max-w-md" />
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-2">
+          {[1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-20 w-full rounded-lg" />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function AddMoviePage() {
@@ -115,6 +156,9 @@ function AddMoviePage() {
   const [loadingBookings, setLoadingBookings] = useState({});
   const [bookingsError, setBookingsError] = useState({});
 
+  // Unlock seat state
+  const [unlockingSeat, setUnlockingSeat] = useState(null); // seatId being unlocked
+
   // Confirm booking modal state (per locked seat)
   const [confirmModal, setConfirmModal] = useState(null); // { screenId, seatId, seatIdentifier, hallId }
   const [confirmForm, setConfirmForm] = useState({ customerName: '', cidOrPassport: '', phoneNumber: '', email: '' });
@@ -126,12 +170,18 @@ function AddMoviePage() {
   const [editScreeningData, setEditScreeningData] = useState({});
   const [editScreeningErrors, setEditScreeningErrors] = useState({});
   const [isSubmittingEditScreening, setIsSubmittingEditScreening] = useState(false);
+  const [loadingEditScreeningPosters, setLoadingEditScreeningPosters] = useState(false);
 
   // Location form state
   const [showLocationForm, setShowLocationForm] = useState(false);
+  const [editingLocation, setEditingLocation] = useState(null);
   const [locationFormData, setLocationFormData] = useState({ dzongkhag: '', thromdoe: '', address: '' });
   const [locationErrors, setLocationErrors] = useState({});
   const [isSubmittingLocation, setIsSubmittingLocation] = useState(false);
+
+  // Edit theater / hall (reuse add modals)
+  const [editingTheater, setEditingTheater] = useState(null);
+  const [editingHall, setEditingHall] = useState(null);
 
   // Movie screening form state
   const [screeningFormData, setScreeningFormData] = useState({
@@ -143,7 +193,8 @@ function AddMoviePage() {
     theaterName: '',
     hallId: '',
     hallName: '',
-    isActive: true
+    isActive: true,
+    images: [],
   });
 
   const [screeningErrors, setScreeningErrors] = useState({});
@@ -278,6 +329,29 @@ function AddMoviePage() {
     return { isValid: Object.keys(newErrors).length === 0, errors: newErrors };
   };
 
+  const openAddLocation = () => {
+    setEditingLocation(null);
+    handleLocationReset();
+    setShowLocationForm(true);
+  };
+
+  const openEditLocation = (loc) => {
+    setEditingLocation(loc);
+    setLocationFormData({
+      dzongkhag: loc.dzongkhag ?? '',
+      thromdoe: loc.thromdoe ?? '',
+      address: loc.address ?? '',
+    });
+    setLocationErrors({});
+    setShowLocationForm(true);
+  };
+
+  const closeLocationForm = () => {
+    setShowLocationForm(false);
+    setEditingLocation(null);
+    handleLocationReset();
+  };
+
   const handleLocationSubmit = async (e) => {
     e.preventDefault();
     const validation = validateLocationForm();
@@ -292,17 +366,47 @@ function AddMoviePage() {
       const token = authAPI.getStoredToken();
       if (token) apiClient.setAuthToken(token);
       const payload = { dzongkhag: locationFormData.dzongkhag.trim(), thromdoe: locationFormData.thromdoe.trim(), address: locationFormData.address.trim() };
-      await apiClient.post('/api/theater-locations', payload);
-      await Swal.fire({ icon: 'success', title: 'Success!', text: 'Theater location created successfully.', confirmButtonText: 'OK', confirmButtonColor: '#10b981' });
-      setLocationFormData({ dzongkhag: '', thromdoe: '', address: '' });
-      setLocationErrors({});
-      setShowLocationForm(false);
+      if (editingLocation?.id) {
+        await apiClient.put(`/api/theater-locations/${editingLocation.id}`, payload);
+        await Swal.fire({ icon: 'success', title: 'Updated', text: 'Location updated successfully.', timer: 1500, showConfirmButton: false });
+      } else {
+        await apiClient.post('/api/theater-locations', payload);
+        await Swal.fire({ icon: 'success', title: 'Success!', text: 'Theater location created successfully.', confirmButtonText: 'OK', confirmButtonColor: '#10b981' });
+      }
+      closeLocationForm();
       fetchTheaterLocations();
     } catch (error) {
-      console.error('Error creating theater location:', error);
-      Swal.fire({ icon: 'error', title: 'Error', text: error?.response?.data?.message || 'Failed to create theater location. Please try again.', confirmButtonText: 'OK' });
+      console.error('Error saving theater location:', error);
+      Swal.fire({ icon: 'error', title: 'Error', text: error?.message || 'Failed to save theater location. Please try again.', confirmButtonText: 'OK' });
     } finally {
       setIsSubmittingLocation(false);
+    }
+  };
+
+  const handleDeleteLocation = async (loc) => {
+    const label = [loc.dzongkhag, loc.thromdoe].filter(Boolean).join(' / ');
+    const result = await Swal.fire({
+      icon: 'warning',
+      title: 'Delete Location?',
+      text: `"${label}" and its theaters will be permanently removed.`,
+      showCancelButton: true,
+      confirmButtonText: 'Delete',
+      confirmButtonColor: '#ef4444',
+    });
+    if (!result.isConfirmed) return;
+    try {
+      const token = authAPI.getStoredToken();
+      if (token) apiClient.setAuthToken(token);
+      await apiClient.delete(`/api/theater-locations/${loc.id}`);
+      if (expandedLocationId === loc.id) {
+        setExpandedLocationId(null);
+        setExpandedTheaterId(null);
+        setExpandedHallId(null);
+      }
+      await fetchTheaterLocations();
+      await Swal.fire({ icon: 'success', title: 'Deleted', text: 'Location removed.', timer: 1200, showConfirmButton: false });
+    } catch (err) {
+      Swal.fire({ icon: 'error', title: 'Error', text: err?.message || 'Failed to delete location.' });
     }
   };
 
@@ -359,6 +463,32 @@ function AddMoviePage() {
     return { isValid: Object.keys(newErrors).length === 0, errors: newErrors };
   };
 
+  const openAddTheater = () => {
+    setEditingTheater(null);
+    if (!theaterFormData[expandedLocationId]) {
+      setTheaterFormData(prev => ({ ...prev, [expandedLocationId]: { name: '', description: '' } }));
+    }
+    setTheaterErrors(prev => ({ ...prev, [expandedLocationId]: {} }));
+    setShowAddTheaterModal(true);
+  };
+
+  const openEditTheater = (theater) => {
+    setEditingTheater(theater);
+    setTheaterFormData(prev => ({
+      ...prev,
+      [expandedLocationId]: { name: theater.name ?? '', description: theater.description ?? '' },
+    }));
+    setTheaterErrors(prev => ({ ...prev, [expandedLocationId]: {} }));
+    setShowAddTheaterModal(true);
+  };
+
+  const closeTheaterForm = () => {
+    setShowAddTheaterModal(false);
+    setEditingTheater(null);
+    setTheaterFormData(prev => ({ ...prev, [expandedLocationId]: { name: '', description: '' } }));
+    setTheaterErrors(prev => ({ ...prev, [expandedLocationId]: {} }));
+  };
+
   const handleTheaterSubmit = async (e, locationId) => {
     e.preventDefault();
     const validation = validateTheaterForm(locationId);
@@ -375,18 +505,45 @@ function AddMoviePage() {
       const formData = theaterFormData[locationId] || {};
       const adminUserId = user?.userId || user?.keycloakId || '';
       const payload = { name: formData.name.trim(), description: formData.description?.trim() || '', locationId: locationId, adminUserId: adminUserId };
-      await apiClient.post('/api/theaters', payload);
-      await Swal.fire({ icon: 'success', title: 'Success!', text: 'Theater created successfully.', confirmButtonText: 'OK', confirmButtonColor: '#10b981' });
-      setTheaterFormData(prev => ({ ...prev, [locationId]: { name: '', description: '' } }));
-      setTheaterErrors(prev => ({ ...prev, [locationId]: {} }));
-      setShowTheaterForm(prev => ({ ...prev, [locationId]: false }));
-      setShowAddTheaterModal(false);
+      if (editingTheater?.id) {
+        await apiClient.put(`/api/theaters/${editingTheater.id}`, payload);
+        await Swal.fire({ icon: 'success', title: 'Updated', text: 'Theater updated successfully.', timer: 1500, showConfirmButton: false });
+      } else {
+        await apiClient.post('/api/theaters', payload);
+        await Swal.fire({ icon: 'success', title: 'Success!', text: 'Theater created successfully.', confirmButtonText: 'OK', confirmButtonColor: '#10b981' });
+      }
+      closeTheaterForm();
       fetchTheaters(locationId);
     } catch (error) {
-      console.error('Error creating theater:', error);
-      Swal.fire({ icon: 'error', title: 'Error', text: error?.response?.data?.message || 'Failed to create theater. Please try again.', confirmButtonText: 'OK' });
+      console.error('Error saving theater:', error);
+      Swal.fire({ icon: 'error', title: 'Error', text: error?.message || 'Failed to save theater. Please try again.', confirmButtonText: 'OK' });
     } finally {
       setIsSubmittingTheater(prev => ({ ...prev, [locationId]: false }));
+    }
+  };
+
+  const handleDeleteTheater = async (theater) => {
+    const result = await Swal.fire({
+      icon: 'warning',
+      title: 'Delete Theater?',
+      text: `"${theater.name}" and its halls will be permanently removed.`,
+      showCancelButton: true,
+      confirmButtonText: 'Delete',
+      confirmButtonColor: '#ef4444',
+    });
+    if (!result.isConfirmed) return;
+    try {
+      const token = authAPI.getStoredToken();
+      if (token) apiClient.setAuthToken(token);
+      await apiClient.delete(`/api/theaters/${theater.id}`);
+      if (expandedTheaterId === theater.id) {
+        setExpandedTheaterId(null);
+        setExpandedHallId(null);
+      }
+      await fetchTheaters(expandedLocationId);
+      await Swal.fire({ icon: 'success', title: 'Deleted', text: 'Theater removed.', timer: 1200, showConfirmButton: false });
+    } catch (err) {
+      Swal.fire({ icon: 'error', title: 'Error', text: err?.message || 'Failed to delete theater.' });
     }
   };
 
@@ -448,6 +605,32 @@ function AddMoviePage() {
     return { isValid: Object.keys(newErrors).length === 0, errors: newErrors };
   };
 
+  const openAddHall = () => {
+    setEditingHall(null);
+    if (!hallFormData[expandedTheaterId]) {
+      setHallFormData(prev => ({ ...prev, [expandedTheaterId]: { name: '', totalSeats: '' } }));
+    }
+    setHallErrors(prev => ({ ...prev, [expandedTheaterId]: {} }));
+    setShowAddHallModal(true);
+  };
+
+  const openEditHall = (hall) => {
+    setEditingHall(hall);
+    setHallFormData(prev => ({
+      ...prev,
+      [expandedTheaterId]: { name: hall.name ?? '', totalSeats: hall.totalSeats?.toString() ?? '' },
+    }));
+    setHallErrors(prev => ({ ...prev, [expandedTheaterId]: {} }));
+    setShowAddHallModal(true);
+  };
+
+  const closeHallForm = () => {
+    setShowAddHallModal(false);
+    setEditingHall(null);
+    setHallFormData(prev => ({ ...prev, [expandedTheaterId]: { name: '', totalSeats: '' } }));
+    setHallErrors(prev => ({ ...prev, [expandedTheaterId]: {} }));
+  };
+
   const handleHallSubmit = async (e, theaterId) => {
     e.preventDefault();
     const validation = validateHallForm(theaterId);
@@ -463,23 +646,49 @@ function AddMoviePage() {
       if (token) apiClient.setAuthToken(token);
       const formData = hallFormData[theaterId] || {};
       const payload = { name: formData.name.trim(), totalSeats: parseInt(formData.totalSeats), theaterId: theaterId };
-      const response = await apiClient.post('/api/halls', payload);
-      const createdHall = response?.data ?? response;
-      if (createdHall && typeof createdHall === 'object' && (createdHall.id != null || createdHall.name != null)) {
-        const hallToAdd = { id: createdHall.id, name: createdHall.name ?? formData.name?.trim(), totalSeats: createdHall.totalSeats ?? parseInt(formData.totalSeats), theaterId: createdHall.theaterId ?? theaterId };
-        setHalls(prev => ({ ...prev, [theaterId]: [...(prev[theaterId] || []), hallToAdd] }));
+      if (editingHall?.id) {
+        await apiClient.put(`/api/halls/${editingHall.id}`, payload);
+        await Swal.fire({ icon: 'success', title: 'Updated', text: 'Hall updated successfully.', timer: 1500, showConfirmButton: false });
+      } else {
+        const response = await apiClient.post('/api/halls', payload);
+        const createdHall = response?.data ?? response;
+        if (createdHall && typeof createdHall === 'object' && (createdHall.id != null || createdHall.name != null)) {
+          const hallToAdd = { id: createdHall.id, name: createdHall.name ?? formData.name?.trim(), totalSeats: createdHall.totalSeats ?? parseInt(formData.totalSeats), theaterId: createdHall.theaterId ?? theaterId };
+          setHalls(prev => ({ ...prev, [theaterId]: [...(prev[theaterId] || []), hallToAdd] }));
+        }
+        await Swal.fire({ icon: 'success', title: 'Success!', text: 'Hall created successfully.', confirmButtonText: 'OK', confirmButtonColor: '#10b981' });
       }
-      await Swal.fire({ icon: 'success', title: 'Success!', text: 'Hall created successfully.', confirmButtonText: 'OK', confirmButtonColor: '#10b981' });
-      setHallFormData(prev => ({ ...prev, [theaterId]: { name: '', totalSeats: '' } }));
-      setHallErrors(prev => ({ ...prev, [theaterId]: {} }));
-      setShowHallForm(prev => ({ ...prev, [theaterId]: false }));
-      setShowAddHallModal(false);
+      closeHallForm();
       await fetchHalls(theaterId, true);
     } catch (error) {
-      console.error('Error creating hall:', error);
-      Swal.fire({ icon: 'error', title: 'Error', text: error?.response?.data?.message || 'Failed to create hall. Please try again.', confirmButtonText: 'OK' });
+      console.error('Error saving hall:', error);
+      Swal.fire({ icon: 'error', title: 'Error', text: error?.message || 'Failed to save hall. Please try again.', confirmButtonText: 'OK' });
     } finally {
       setIsSubmittingHall(prev => ({ ...prev, [theaterId]: false }));
+    }
+  };
+
+  const handleDeleteHall = async (hall) => {
+    const result = await Swal.fire({
+      icon: 'warning',
+      title: 'Delete Hall?',
+      text: `"${hall.name}" and its seats/screenings may be affected.`,
+      showCancelButton: true,
+      confirmButtonText: 'Delete',
+      confirmButtonColor: '#ef4444',
+    });
+    if (!result.isConfirmed) return;
+    try {
+      const token = authAPI.getStoredToken();
+      if (token) apiClient.setAuthToken(token);
+      await apiClient.delete(`/api/halls/${hall.id}`);
+      if (expandedHallId === hall.id) {
+        setExpandedHallId(null);
+      }
+      await fetchHalls(expandedTheaterId, true);
+      await Swal.fire({ icon: 'success', title: 'Deleted', text: 'Hall removed.', timer: 1200, showConfirmButton: false });
+    } catch (err) {
+      Swal.fire({ icon: 'error', title: 'Error', text: err?.message || 'Failed to delete hall.' });
     }
   };
 
@@ -520,6 +729,23 @@ function AddMoviePage() {
       if (response && response.success && Array.isArray(response.data)) screeningsData = response.data;
       else if (Array.isArray(response)) screeningsData = response;
       else if (response && Array.isArray(response.data)) screeningsData = response.data;
+
+      if (import.meta.env.DEV) {
+        const first = screeningsData[0];
+        console.log('[screenings/hall] GET', url, {
+          rawResponse: response,
+          count: screeningsData.length,
+          firstItemKeys: first ? Object.keys(first) : [],
+          firstItemPosterFields: first
+            ? {
+                posterImage: first.posterImage,
+                posterImages: first.posterImages,
+                images: first.images,
+              }
+            : null,
+        });
+      }
+
       setScreeningsByHall(prev => ({ ...prev, [hallId]: screeningsData }));
     } catch (err) {
       console.error('Error fetching screenings:', err);
@@ -539,7 +765,12 @@ function AddMoviePage() {
   };
 
   const formatStartTime = (startTime) => {
-    if (!startTime || typeof startTime !== 'object') return '--:--';
+    if (!startTime) return '--:--';
+    if (typeof startTime === 'string') {
+      const match = startTime.match(/^(\d{1,2}):(\d{2})/);
+      return match ? `${match[1].padStart(2, '0')}:${match[2]}` : startTime;
+    }
+    if (typeof startTime !== 'object') return '--:--';
     const h = startTime.hour != null ? String(startTime.hour).padStart(2, '0') : '00';
     const m = startTime.minute != null ? String(startTime.minute).padStart(2, '0') : '00';
     return `${h}:${m}`;
@@ -577,26 +808,47 @@ function AddMoviePage() {
       setSelectedScreeningIdForLocked(prev => ({ ...prev, [bookingScreening.hallId]: bookingScreening.id }));
       fetchLockedSeats(bookingScreening.id, bookingScreening.hallId);
     } catch (err) {
-      setBookingError(err?.response?.data?.message || 'Failed to lock seats. Please try again.');
+      setBookingError(err?.message || 'Failed to lock seats. Please try again.');
     } finally {
       setIsLockingSeats(false);
     }
   };
 
-  const openEditScreening = (screening) => {
+  const openEditScreening = async (screening) => {
     const st = screening.startTime;
     const timeStr = st && typeof st === 'object'
       ? `${String(st.hour ?? 0).padStart(2, '0')}:${String(st.minute ?? 0).padStart(2, '0')}`
       : (typeof st === 'string' ? st : '');
     setEditingScreening(screening);
-    setEditScreeningData({ movieName: screening.movieName ?? '', screeningDate: screening.screeningDate ?? '', startTime: timeStr, trailerLink: screening.trailerLink ?? '', isActive: screening.isActive ?? true });
+    setEditScreeningData({
+      movieName: screening.movieName ?? '',
+      screeningDate: screening.screeningDate ?? '',
+      startTime: timeStr,
+      trailerLink: screening.trailerLink ?? '',
+      isActive: screening.isActive ?? true,
+    });
     setEditScreeningErrors({});
+    setLoadingEditScreeningPosters(true);
+    try {
+      const token = authAPI.getStoredToken();
+      if (token) apiClient.setAuthToken(token);
+      const response = await apiClient.get(`/api/screenings/${screening.id}`);
+      const detail = response?.data ?? response;
+      if (detail && typeof detail === 'object' && !Array.isArray(detail)) {
+        setEditingScreening((prev) => ({ ...prev, ...detail }));
+      }
+    } catch (err) {
+      console.warn('Screening detail fetch failed; using list row data for posters.', err);
+    } finally {
+      setLoadingEditScreeningPosters(false);
+    }
   };
 
   const closeEditScreening = () => {
     setEditingScreening(null);
     setEditScreeningData({});
     setEditScreeningErrors({});
+    setLoadingEditScreeningPosters(false);
   };
 
   const handleUpdateScreening = async (e) => {
@@ -628,7 +880,7 @@ function AddMoviePage() {
         setEditScreeningErrors({ submit: response?.message || 'Update failed.' });
       }
     } catch (err) {
-      setEditScreeningErrors({ submit: err?.response?.data?.message || 'Failed to update screening.' });
+      setEditScreeningErrors({ submit: err?.message || 'Failed to update screening.' });
     } finally {
       setIsSubmittingEditScreening(false);
     }
@@ -644,7 +896,7 @@ function AddMoviePage() {
       fetchScreenings(screening.hallId, true);
       await Swal.fire({ icon: 'success', title: 'Deleted', text: 'Screening removed.', timer: 1200, showConfirmButton: false });
     } catch (err) {
-      Swal.fire({ icon: 'error', title: 'Error', text: err?.response?.data?.message || 'Failed to delete screening.' });
+      Swal.fire({ icon: 'error', title: 'Error', text: err?.message || 'Failed to delete screening.' });
     }
   };
 
@@ -697,7 +949,7 @@ function AddMoviePage() {
         setConfirmBookingError(response?.message || 'Booking failed.');
       }
     } catch (err) {
-      setConfirmBookingError(err?.response?.data?.message || 'Failed to create booking. Please try again.');
+      setConfirmBookingError(err?.message || 'Failed to create booking. Please try again.');
     } finally {
       setIsConfirmingBooking(false);
     }
@@ -719,6 +971,27 @@ function AddMoviePage() {
       setLockedSeatsError(prev => ({ ...prev, [key]: 'Failed to load locked seats.' }));
     } finally {
       setLoadingLockedSeats(prev => ({ ...prev, [key]: false }));
+    }
+  };
+
+  const handleUnlockSeat = async (screenId, seatId, hallId) => {
+    setUnlockingSeat(seatId);
+    try {
+      const token = authAPI.getStoredToken();
+      if (token) apiClient.setAuthToken(token);
+      const seat = (seats[hallId] ?? []).find(s => s.id === seatId);
+      await apiClient.post('/api/bookings/toggle-lock', {
+        seatId,
+        hallId,
+        seatClassId: seat?.seatClassId,
+        userId: user?.userId,
+        screenId,
+      });
+      await fetchLockedSeats(screenId, hallId);
+    } catch (err) {
+      Swal.fire({ icon: 'error', title: 'Error', text: err?.message || 'Failed to unlock seat.' });
+    } finally {
+      setUnlockingSeat(null);
     }
   };
 
@@ -759,7 +1032,7 @@ function AddMoviePage() {
       await Swal.fire({ icon: 'success', title: 'Ticket Cancelled', timer: 1200, showConfirmButton: false });
       fetchBookings(expandedTheaterId);
     } catch (err) {
-      Swal.fire({ icon: 'error', title: 'Error', text: err?.response?.data?.message || 'Failed to cancel ticket.' });
+      Swal.fire({ icon: 'error', title: 'Error', text: err?.message || 'Failed to cancel ticket.' });
     }
   };
 
@@ -781,7 +1054,7 @@ function AddMoviePage() {
       await Swal.fire({ icon: 'success', title: 'Booking Cancelled', timer: 1200, showConfirmButton: false });
       fetchBookings(expandedTheaterId);
     } catch (err) {
-      Swal.fire({ icon: 'error', title: 'Error', text: err?.response?.data?.message || 'Failed to cancel booking.' });
+      Swal.fire({ icon: 'error', title: 'Error', text: err?.message || 'Failed to cancel booking.' });
     }
   };
 
@@ -900,7 +1173,7 @@ function AddMoviePage() {
       fetchSeats(hallId);
     } catch (error) {
       console.error('Error configuring seats:', error);
-      Swal.fire({ icon: 'error', title: 'Error', text: error?.response?.data?.message || 'Failed to configure seats. Please try again.', confirmButtonText: 'OK' });
+      Swal.fire({ icon: 'error', title: 'Error', text: error?.message || 'Failed to configure seats. Please try again.', confirmButtonText: 'OK' });
     } finally {
       setIsSubmittingSeatConfig(prev => ({ ...prev, [hallId]: false }));
     }
@@ -909,6 +1182,28 @@ function AddMoviePage() {
   const handleScreeningInputChange = (field, value) => {
     setScreeningFormData(prev => ({ ...prev, [field]: value }));
     if (screeningErrors[field]) setScreeningErrors(prev => { const n = { ...prev }; delete n[field]; return n; });
+  };
+
+  const handleScreeningImageUpload = (e) => {
+    const files = Array.from(e.target.files ?? []);
+    const imageFiles = files.map((file) => ({
+      id: Date.now() + Math.random(),
+      file,
+      name: file.name,
+      url: URL.createObjectURL(file),
+    }));
+    setScreeningFormData((prev) => ({
+      ...prev,
+      images: [...prev.images, ...imageFiles],
+    }));
+    e.target.value = '';
+  };
+
+  const removeScreeningImage = (imageId) => {
+    setScreeningFormData((prev) => ({
+      ...prev,
+      images: prev.images.filter((img) => img.id !== imageId),
+    }));
   };
 
   const handleTimeChange = (value) => {
@@ -973,23 +1268,45 @@ function AddMoviePage() {
       const token = authAPI.getStoredToken();
       if (token) apiClient.setAuthToken(token);
       const startTimeString = convertTo24HourFormat(screeningFormData.startTime);
-      const payload = { movieName: screeningFormData.movieName.trim(), screeningDate: screeningFormData.screeningDate, startTime: startTimeString, trailerLink: screeningFormData.trailerLink.trim() || '', hallId: screeningFormData.hallId, hallName: screeningFormData.hallName, isActive: screeningFormData.isActive };
-      const response = await apiClient.post('/api/screenings', payload);
+      const dto = {
+        movieName: screeningFormData.movieName.trim(),
+        screeningDate: screeningFormData.screeningDate,
+        startTime: startTimeString,
+        trailerLink: screeningFormData.trailerLink.trim() || '',
+        hallId: screeningFormData.hallId,
+        hallName: screeningFormData.hallName,
+        isActive: screeningFormData.isActive,
+      };
+      const posterFiles = screeningFormData.images.map((img) => img.file);
+      const formDataToSend = buildScreeningFormData(dto, posterFiles);
+
+      const response = await apiClient.postFormData('/api/screenings', formDataToSend);
       const createdForHallId = screeningFormData.hallId;
       const createdScreening = response?.data ?? response;
       if (createdScreening && typeof createdScreening === 'object' && (createdScreening.id != null || createdScreening.movieName != null)) {
-        const screeningToAdd = { id: createdScreening.id, movieName: createdScreening.movieName ?? payload.movieName, screeningDate: createdScreening.screeningDate ?? payload.screeningDate, startTime: createdScreening.startTime ?? payload.startTime, trailerLink: createdScreening.trailerLink ?? payload.trailerLink, hallId: createdScreening.hallId ?? payload.hallId, hallName: createdScreening.hallName ?? payload.hallName, theaterName: createdScreening.theaterName ?? screeningFormData.theaterName, isActive: createdScreening.isActive ?? payload.isActive };
+        const screeningToAdd = {
+          id: createdScreening.id,
+          movieName: createdScreening.movieName ?? screeningFormData.movieName.trim(),
+          screeningDate: createdScreening.screeningDate ?? screeningFormData.screeningDate,
+          startTime: createdScreening.startTime ?? startTimeString,
+          trailerLink: createdScreening.trailerLink ?? screeningFormData.trailerLink.trim(),
+          hallId: createdScreening.hallId ?? screeningFormData.hallId,
+          hallName: createdScreening.hallName ?? screeningFormData.hallName,
+          theaterName: createdScreening.theaterName ?? screeningFormData.theaterName,
+          isActive: createdScreening.isActive ?? screeningFormData.isActive,
+          posterImages: createdScreening.posterImages ?? createdScreening.images ?? createdScreening.posters,
+        };
         setScreeningsByHall(prev => ({ ...prev, [createdForHallId]: [...(prev[createdForHallId] || []), screeningToAdd] }));
       }
       await Swal.fire({ icon: 'success', title: 'Success!', text: 'Movie screening created successfully.', confirmButtonText: 'OK', confirmButtonColor: '#10b981' });
-      setScreeningFormData({ movieName: '', screeningDate: '', startTime: '', trailerLink: '', theaterId: '', theaterName: '', hallId: '', hallName: '', isActive: true });
+      setScreeningFormData({ movieName: '', screeningDate: '', startTime: '', trailerLink: '', theaterId: '', theaterName: '', hallId: '', hallName: '', isActive: true, images: [] });
       setScreeningErrors({});
       setScreeningFormTheaterIdFromContext(null);
       setShowScreeningForm(false);
       if (createdForHallId) await fetchScreenings(createdForHallId, true);
     } catch (error) {
       console.error('Error creating movie screening:', error);
-      Swal.fire({ icon: 'error', title: 'Error', text: error?.response?.data?.message || 'Failed to create movie screening. Please try again.', confirmButtonText: 'OK' });
+      Swal.fire({ icon: 'error', title: 'Error', text: error?.message || 'Failed to create movie screening. Please try again.', confirmButtonText: 'OK' });
     } finally {
       setIsSubmittingScreening(false);
     }
@@ -1047,16 +1364,16 @@ function AddMoviePage() {
       {/* ── Location Modal ─────────────────────────────────────────────── */}
       {showLocationForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" onClick={() => setShowLocationForm(false)} aria-hidden="true" />
+          <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" onClick={closeLocationForm} aria-hidden="true" />
           <div className="relative z-10 w-full max-w-lg bg-card rounded-2xl border shadow-2xl animate-in fade-in zoom-in-95 duration-200">
             <div className="flex items-center justify-between border-b px-5 py-4">
               <div className="flex items-center gap-3">
                 <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10">
                   <MapPin className="h-5 w-5 text-primary" />
                 </div>
-                <h2 className="text-base font-semibold text-foreground">New Location</h2>
+                <h2 className="text-base font-semibold text-foreground">{editingLocation ? 'Edit Location' : 'New Location'}</h2>
               </div>
-              <Button variant="ghost" size="icon" onClick={() => setShowLocationForm(false)} className="h-8 w-8 rounded-lg">
+              <Button variant="ghost" size="icon" onClick={closeLocationForm} className="h-8 w-8 rounded-lg">
                 <X className="h-4 w-4" />
               </Button>
             </div>
@@ -1081,7 +1398,7 @@ function AddMoviePage() {
               <div className="flex gap-3 pt-1">
                 <Button type="button" variant="outline" className="flex-1" onClick={handleLocationReset}>Reset</Button>
                 <Button type="submit" className="flex-1" disabled={isSubmittingLocation}>
-                  {isSubmittingLocation ? 'Creating...' : 'Create Location'}
+                  {isSubmittingLocation ? 'Saving...' : editingLocation ? 'Update Location' : 'Create Location'}
                 </Button>
               </div>
             </form>
@@ -1147,6 +1464,63 @@ function AddMoviePage() {
                     <FieldError message={screeningErrors.hallId} />
                   </div>
                 </div>
+
+                {/* Poster / screening images */}
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-1.5">
+                    <ImageIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                    Movie Poster
+                    <span className="text-xs text-muted-foreground font-normal">(optional)</span>
+                  </Label>
+                  <div
+                    className="border-2 border-dashed border-border/60 rounded-xl p-5 text-center hover:border-primary/40 hover:bg-muted/20 transition-colors cursor-pointer"
+                    onClick={() => document.getElementById('add-movie-screening-images')?.click()}
+                  >
+                    <Upload className="h-6 w-6 text-muted-foreground/40 mx-auto mb-2" />
+                    <p className="text-xs font-medium text-muted-foreground mb-1">Click to upload poster images</p>
+                    <p className="text-[10px] text-muted-foreground/60 mb-3">PNG, JPG, WebP</p>
+                    <input
+                      id="add-movie-screening-images"
+                      type="file"
+                      multiple
+                      accept="image/*"
+                      onChange={handleScreeningImageUpload}
+                      className="hidden"
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={(e) => { e.stopPropagation(); document.getElementById('add-movie-screening-images')?.click(); }}
+                    >
+                      <Upload className="h-3.5 w-3.5 mr-1.5" />
+                      Choose Images
+                    </Button>
+                  </div>
+                  {screeningFormData.images.length > 0 && (
+                    <div className="grid grid-cols-4 gap-2">
+                      {screeningFormData.images.map((image) => (
+                        <div key={image.id} className="relative group aspect-square">
+                          <img
+                            src={image.url}
+                            alt={image.name}
+                            className="w-full h-full object-cover rounded-lg border border-border/60"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removeScreeningImage(image.id)}
+                            aria-label="Remove image"
+                            className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center"
+                          >
+                            <Trash2 className="h-4 w-4 text-white" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
                 <div className="flex items-center gap-3 rounded-lg border bg-muted/30 px-4 py-3">
                   <div className="flex-1">
                     <p className="text-sm font-medium text-foreground">Active Immediately</p>
@@ -1177,7 +1551,7 @@ function AddMoviePage() {
       {/* ── Edit Screening Modal ────────────────────────────────────────── */}
       {editingScreening && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4 animate-in fade-in overflow-y-auto">
-          <div className="w-full max-w-lg bg-card border rounded-2xl shadow-2xl animate-in zoom-in-95 duration-200 my-8">
+          <div className="w-full max-w-xl bg-card border rounded-2xl shadow-2xl animate-in zoom-in-95 duration-200 my-8">
             <div className="flex items-center justify-between border-b px-5 py-4">
               <div className="flex items-center gap-3">
                 <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10">
@@ -1203,6 +1577,60 @@ function AddMoviePage() {
                   <Label>Trailer Link <span className="text-xs text-muted-foreground font-normal">(optional)</span></Label>
                   <Input value={editScreeningData.trailerLink ?? ''} onChange={(e) => setEditScreeningData(p => ({ ...p, trailerLink: e.target.value }))} placeholder="https://youtube.com/..." />
                 </div>
+
+                {(() => {
+                  const editPosterImages = getScreeningPosterImages(editingScreening);
+                  return (
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-1.5">
+                    <ImageIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                    Poster Images
+                    {!loadingEditScreeningPosters && editPosterImages.length > 0 && (
+                      <span className="text-xs text-muted-foreground font-normal">
+                        ({editPosterImages.length})
+                      </span>
+                    )}
+                  </Label>
+                  {loadingEditScreeningPosters ? (
+                    <div className="flex items-center gap-2 rounded-lg border border-dashed border-border/60 px-4 py-6 text-sm text-muted-foreground">
+                      <RefreshCw className="h-4 w-4 animate-spin shrink-0" />
+                      Loading posters…
+                    </div>
+                  ) : editPosterImages.length === 0 ? (
+                    <p className="text-xs text-muted-foreground rounded-lg border border-dashed border-border/60 px-3 py-4 text-center">
+                      No poster images for this screening.
+                    </p>
+                  ) : (
+                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                      {editPosterImages.map((image) => {
+                        const imageUrl = image.url ? getScreeningImageUrl(image.url) : null;
+                        return (
+                          <div key={image.id ?? image.url} className="relative aspect-[2/3] rounded-lg overflow-hidden border border-border/60 bg-muted">
+                            {imageUrl ? (
+                              <AuthenticatedImage
+                                src={imageUrl}
+                                alt={image.title || editingScreening.movieName || 'Poster'}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+                                <ImageIcon className="h-6 w-6 opacity-40" />
+                              </div>
+                            )}
+                            {image.isPrimary && (
+                              <span className="absolute top-1 left-1 text-[9px] font-semibold uppercase tracking-wide px-1 py-0.5 rounded bg-primary text-primary-foreground">
+                                Primary
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+                  );
+                })()}
+
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
                     <Label>Date <span className="text-destructive">*</span></Label>
@@ -1256,55 +1684,122 @@ function AddMoviePage() {
             <div className="flex-1 overflow-y-auto p-6">
               <div className="space-y-8">
                 <div className="w-full max-w-3xl mx-auto mb-8">
-                  <div className="w-full h-2 bg-primary/20 rounded-t-full mb-1 mx-auto relative">
-                    <div className="absolute -top-6 left-1/2 -translate-x-1/2 text-xs font-bold text-primary tracking-widest uppercase">Screen</div>
+                  <div className="w-full max-w-2xl mx-auto mb-12 relative mt-8">
+                    <div className="absolute -top-8 left-1/2 -translate-x-1/2 text-xs font-bold text-primary/80 tracking-[0.3em] uppercase">Screen</div>
+                    <div className="w-full h-3 bg-gradient-to-r from-primary/10 via-primary/40 to-primary/10 rounded-t-[100%] shadow-[0_-10px_20px_rgba(var(--primary),0.15)]"></div>
+                    <div className="w-full h-12 bg-gradient-to-b from-primary/10 to-transparent rounded-b-[100%] opacity-60"></div>
                   </div>
-                  <div className="w-full h-8 bg-gradient-to-b from-primary/10 to-transparent rounded-b-[50%] mx-auto mb-8"></div>
-                  <div className="flex justify-center overflow-x-auto pb-4">
+                  <div className="overflow-x-auto pb-4">
                     {loadingSeats[bookingScreening.hallId] ? (
-                      <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
+                      <div className="flex justify-center">
+                        <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
+                      </div>
                     ) : seats[bookingScreening.hallId]?.length > 0 ? (
-                      <div className="space-y-3 min-w-max px-4">
+                      <div className="inline-block min-w-full px-4 sm:px-8 pb-12 pt-4">
                         {(() => {
                           const seatsList = seats[bookingScreening.hallId] || [];
+                          if (seatsList.length === 0) return null;
+
                           const byRow = seatsList.reduce((acc, seat) => {
                             const r = seat.rowName ?? '';
                             if (!acc[r]) acc[r] = [];
                             acc[r].push(seat);
                             return acc;
                           }, {});
+                          
                           const rowNames = Object.keys(byRow).sort((a, b) => {
                             const na = parseInt(a, 10); const nb = parseInt(b, 10);
                             if (!isNaN(na) && !isNaN(nb)) return na - nb;
                             return String(a).localeCompare(String(b));
                           });
-                          return rowNames.map(rowName => (
-                            <div key={rowName} className="flex items-center justify-center gap-4">
-                              <span className="text-xs font-bold text-muted-foreground w-6 text-right">{rowName}</span>
-                              <div className="flex gap-2">
-                                {byRow[rowName].map(seat => {
-                                  const selected = bookingTickets.some(t => t.seatId === seat.id);
-                                  const disabled = seat.isBlocked;
-                                  return (
-                                    <button
-                                      key={seat.id}
-                                      type="button"
-                                      onClick={() => !disabled && toggleSeatForBooking(seat)}
-                                      disabled={disabled}
-                                      title={`${seat.seatClassName} - BTN ${seat.basePrice}`}
-                                      className={cn(
-                                        'h-8 w-8 text-[10px] rounded-t-md border-b-2 flex items-center justify-center transition-all',
-                                        selected ? 'bg-primary text-primary-foreground border-primary-foreground transform -translate-y-1 shadow-md' : disabled ? 'bg-muted text-muted-foreground border-transparent cursor-not-allowed opacity-40' : 'bg-card border-primary/30 hover:border-primary hover:bg-primary/5'
-                                      )}
-                                    >
-                                      {seat.seatNumber}
-                                    </button>
-                                  );
-                                })}
-                              </div>
-                              <span className="text-xs font-bold text-muted-foreground w-6 text-left">{rowName}</span>
+
+                          // Find the maximum row length to calculate a consistent curve for all rows
+                          let maxRowLength = 0;
+                          rowNames.forEach(rowName => {
+                            if (byRow[rowName].length > maxRowLength) {
+                              maxRowLength = byRow[rowName].length;
+                            }
+                          });
+
+                          return (
+                            <div className="flex flex-col items-center space-y-8 w-max mx-auto">
+                              {rowNames.map((rowName) => {
+                                const rowSeats = byRow[rowName].sort((a, b) => {
+                                  const na = parseInt(a.seatNumber, 10);
+                                  const nb = parseInt(b.seatNumber, 10);
+                                  if (!isNaN(na) && !isNaN(nb)) return na - nb;
+                                  return String(a.seatNumber).localeCompare(String(b.seatNumber));
+                                });
+
+                                return (
+                                  <div key={rowName} className="flex items-center justify-center gap-4 sm:gap-6">
+                                    {/* Left Row Label */}
+                                    <div className="flex items-center justify-center h-7 w-7 rounded-full bg-muted/50 border border-border/50 shadow-sm shrink-0">
+                                      <span className="text-[11px] font-bold text-muted-foreground">{rowName}</span>
+                                    </div>
+
+                                    {/* Seats */}
+                                    <div className="flex justify-center gap-2 sm:gap-3">
+                                      {rowSeats.map((seat, index) => {
+                                        const selected = bookingTickets.some(t => t.seatId === seat.id);
+                                        const disabled = seat.isBlocked;
+                                        
+                                        // Calculate curve offset based on position relative to the center
+                                        // We use maxRowLength so the curve is consistent across all rows
+                                        const middleIndex = (rowSeats.length - 1) / 2;
+                                        const distFromCenter = Math.abs(index - middleIndex);
+                                        
+                                        // Create a nice parabolic curve
+                                        const curveOffset = Math.pow(distFromCenter, 1.4) * 1.5;
+
+                                        return (
+                                          <div
+                                            key={seat.id}
+                                            style={{ transform: `translateY(${curveOffset}px)` }}
+                                            className="flex justify-center transition-transform"
+                                          >
+                                            <button
+                                              type="button"
+                                              onClick={() => !disabled && toggleSeatForBooking(seat)}
+                                              disabled={disabled}
+                                              title={`${seat.seatClassName} - BTN ${seat.basePrice}`}
+                                              className={cn(
+                                                'relative group flex flex-col items-center justify-center p-1.5 w-10 sm:w-11 transition-all rounded-lg border',
+                                                selected
+                                                  ? 'bg-primary border-primary text-primary-foreground transform -translate-y-1.5 shadow-lg shadow-primary/30 ring-2 ring-primary/20 ring-offset-1 ring-offset-background'
+                                                  : disabled
+                                                    ? 'border-transparent text-muted-foreground cursor-not-allowed opacity-40'
+                                                    : 'border-transparent text-muted-foreground hover:text-primary hover:bg-primary/5 hover:border-primary/20'
+                                              )}
+                                            >
+                                              <Armchair
+                                                strokeWidth={1.5}
+                                                className={cn(
+                                                  "h-8 w-8 sm:h-9 sm:w-9 transition-colors",
+                                                  selected ? "fill-primary-foreground/20" : disabled ? "fill-muted" : "group-hover:fill-primary/10"
+                                                )}
+                                              />
+                                              <span className={cn(
+                                                "text-[10px] sm:text-xs font-bold mt-1",
+                                                selected ? "text-primary-foreground" : "text-muted-foreground"
+                                              )}>
+                                                {seat.seatNumber}
+                                              </span>
+                                            </button>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+
+                                    {/* Right Row Label */}
+                                    <div className="flex items-center justify-center h-7 w-7 rounded-full bg-muted/50 border border-border/50 shadow-sm shrink-0">
+                                      <span className="text-[11px] font-bold text-muted-foreground">{rowName}</span>
+                                    </div>
+                                  </div>
+                                );
+                              })}
                             </div>
-                          ));
+                          );
                         })()}
                       </div>
                     ) : (
@@ -1314,10 +1809,25 @@ function AddMoviePage() {
                       </div>
                     )}
                   </div>
-                  <div className="flex justify-center gap-6 mt-8 text-xs text-muted-foreground">
-                    <div className="flex items-center gap-2"><div className="h-3 w-3 bg-card border border-primary/30 rounded-sm"></div> Available</div>
-                    <div className="flex items-center gap-2"><div className="h-3 w-3 bg-primary rounded-sm"></div> Selected</div>
-                    <div className="flex items-center gap-2"><div className="h-3 w-3 bg-muted rounded-sm opacity-50"></div> Booked/Blocked</div>
+                  <div className="flex justify-center gap-8 mt-8 text-xs font-medium text-muted-foreground">
+                    <div className="flex items-center gap-2">
+                      <div className="p-1 rounded-lg border border-transparent">
+                        <Armchair strokeWidth={1.5} className="h-5 w-5 text-muted-foreground" />
+                      </div>
+                      <span>Available</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="p-1 rounded-lg bg-primary border border-primary shadow-sm ring-1 ring-primary/20 ring-offset-1">
+                        <Armchair strokeWidth={1.5} className="h-5 w-5 text-primary-foreground fill-primary-foreground/20" />
+                      </div>
+                      <span className="text-primary">Selected</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="p-1 rounded-lg border border-transparent opacity-40">
+                        <Armchair strokeWidth={1.5} className="h-5 w-5 text-muted-foreground fill-muted" />
+                      </div>
+                      <span className="opacity-60">Booked/Blocked</span>
+                    </div>
                   </div>
                 </div>
 
@@ -1449,7 +1959,7 @@ function AddMoviePage() {
       {/* ── Add Theater Modal ────────────────────────────────────────────── */}
       {showAddTheaterModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" onClick={() => setShowAddTheaterModal(false)} aria-hidden="true" />
+          <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" onClick={closeTheaterForm} aria-hidden="true" />
           <div className="relative z-10 w-full max-w-md bg-card rounded-2xl border shadow-2xl animate-in fade-in zoom-in-95 duration-200">
             <div className="flex items-center justify-between border-b px-5 py-4">
               <div className="flex items-center gap-3">
@@ -1457,11 +1967,11 @@ function AddMoviePage() {
                   <Building className="h-5 w-5 text-primary" />
                 </div>
                 <div>
-                  <h2 className="text-base font-semibold text-foreground">Add Theater</h2>
+                  <h2 className="text-base font-semibold text-foreground">{editingTheater ? 'Edit Theater' : 'Add Theater'}</h2>
                   <p className="text-xs text-muted-foreground">{selectedLocation?.dzongkhag}</p>
                 </div>
               </div>
-              <Button variant="ghost" size="icon" onClick={() => setShowAddTheaterModal(false)} className="h-8 w-8 rounded-lg">
+              <Button variant="ghost" size="icon" onClick={closeTheaterForm} className="h-8 w-8 rounded-lg">
                 <X className="h-4 w-4" />
               </Button>
             </div>
@@ -1488,9 +1998,13 @@ function AddMoviePage() {
                 />
               </div>
               <div className="flex gap-3 pt-1">
-                <Button type="button" variant="outline" className="flex-1" onClick={() => setShowAddTheaterModal(false)} disabled={isSubmittingTheater[expandedLocationId]}>Cancel</Button>
+                <Button type="button" variant="outline" className="flex-1" onClick={closeTheaterForm} disabled={isSubmittingTheater[expandedLocationId]}>Cancel</Button>
                 <Button type="submit" className="flex-1 gap-2" disabled={isSubmittingTheater[expandedLocationId]}>
-                  {isSubmittingTheater[expandedLocationId] ? <><RefreshCw className="h-4 w-4 animate-spin" />Saving…</> : <><Plus className="h-4 w-4" />Add Theater</>}
+                  {isSubmittingTheater[expandedLocationId]
+                    ? <><RefreshCw className="h-4 w-4 animate-spin" />Saving…</>
+                    : editingTheater
+                      ? <><Pencil className="h-4 w-4" />Update Theater</>
+                      : <><Plus className="h-4 w-4" />Add Theater</>}
                 </Button>
               </div>
             </form>
@@ -1501,7 +2015,7 @@ function AddMoviePage() {
       {/* ── Add Hall Modal ───────────────────────────────────────────────── */}
       {showAddHallModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" onClick={() => setShowAddHallModal(false)} aria-hidden="true" />
+          <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" onClick={closeHallForm} aria-hidden="true" />
           <div className="relative z-10 w-full max-w-md bg-card rounded-2xl border shadow-2xl animate-in fade-in zoom-in-95 duration-200">
             <div className="flex items-center justify-between border-b px-5 py-4">
               <div className="flex items-center gap-3">
@@ -1509,11 +2023,11 @@ function AddMoviePage() {
                   <DoorOpen className="h-5 w-5 text-primary" />
                 </div>
                 <div>
-                  <h2 className="text-base font-semibold text-foreground">Add Hall</h2>
+                  <h2 className="text-base font-semibold text-foreground">{editingHall ? 'Edit Hall' : 'Add Hall'}</h2>
                   <p className="text-xs text-muted-foreground">{selectedTheater?.name}</p>
                 </div>
               </div>
-              <Button variant="ghost" size="icon" onClick={() => setShowAddHallModal(false)} className="h-8 w-8 rounded-lg">
+              <Button variant="ghost" size="icon" onClick={closeHallForm} className="h-8 w-8 rounded-lg">
                 <X className="h-4 w-4" />
               </Button>
             </div>
@@ -1545,9 +2059,13 @@ function AddMoviePage() {
                 <FieldError message={hallErrors[expandedTheaterId]?.totalSeats} />
               </div>
               <div className="flex gap-3 pt-1">
-                <Button type="button" variant="outline" className="flex-1" onClick={() => setShowAddHallModal(false)} disabled={isSubmittingHall[expandedTheaterId]}>Cancel</Button>
+                <Button type="button" variant="outline" className="flex-1" onClick={closeHallForm} disabled={isSubmittingHall[expandedTheaterId]}>Cancel</Button>
                 <Button type="submit" className="flex-1 gap-2" disabled={isSubmittingHall[expandedTheaterId]}>
-                  {isSubmittingHall[expandedTheaterId] ? <><RefreshCw className="h-4 w-4 animate-spin" />Saving…</> : <><Plus className="h-4 w-4" />Add Hall</>}
+                  {isSubmittingHall[expandedTheaterId]
+                    ? <><RefreshCw className="h-4 w-4 animate-spin" />Saving…</>
+                    : editingHall
+                      ? <><Pencil className="h-4 w-4" />Update Hall</>
+                      : <><Plus className="h-4 w-4" />Add Hall</>}
                 </Button>
               </div>
             </form>
@@ -1566,19 +2084,16 @@ function AddMoviePage() {
             <div className="flex items-center gap-1.5 px-2 mb-2">
               <MapPin className="h-3 w-3 text-muted-foreground" />
               <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground flex-1">Locations</span>
-              {loading
-                ? <RefreshCw className="h-2.5 w-2.5 animate-spin text-muted-foreground" />
-                : (
-                  <button
-                    type="button"
-                    onClick={() => setShowLocationForm(true)}
-                    className="flex h-5 w-5 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer"
-                    title="Add location"
-                  >
-                    <Plus className="h-3 w-3" />
-                  </button>
-                )
-              }
+              {!loading && (
+                <button
+                  type="button"
+                  onClick={openAddLocation}
+                  className="flex h-5 w-5 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer"
+                  title="Add location"
+                >
+                  <Plus className="h-3 w-3" />
+                </button>
+              )}
             </div>
 
             {error ? (
@@ -1587,33 +2102,58 @@ function AddMoviePage() {
                 <button type="button" onClick={fetchTheaterLocations} className="text-xs text-primary hover:underline cursor-pointer">Retry</button>
               </div>
             ) : loading ? (
-              <div className="space-y-1">
-                {[1, 2, 3].map(i => <Skeleton key={i} className="h-9 w-full" />)}
-              </div>
+              <LocationListSkeleton count={4} />
             ) : locations.length === 0 ? (
               <p className="px-2 py-1 text-xs text-muted-foreground">No locations found.</p>
             ) : (
               <nav className="space-y-px">
-                {locations.map(loc => (
-                  <button
-                    key={loc.id}
-                    type="button"
-                    onClick={() => handleLocationSelect(loc.id)}
-                    className={`w-full flex items-center gap-2 rounded-lg px-2.5 py-2 text-left transition-colors cursor-pointer ${
-                      expandedLocationId === loc.id ? 'bg-primary text-primary-foreground' : 'text-foreground hover:bg-muted'
-                    }`}
-                  >
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs font-medium truncate leading-tight">{loc.dzongkhag}</p>
-                      {loc.thromdoe && (
-                        <p className={`text-[10px] truncate leading-tight ${expandedLocationId === loc.id ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>
-                          {loc.thromdoe}
-                        </p>
-                      )}
+                {locations.map(loc => {
+                  const isSelected = expandedLocationId === loc.id;
+                  return (
+                    <div
+                      key={loc.id}
+                      className={`group flex items-center gap-0.5 rounded-lg transition-colors ${
+                        isSelected ? 'bg-primary text-primary-foreground' : 'text-foreground hover:bg-muted'
+                      }`}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => handleLocationSelect(loc.id)}
+                        className="flex-1 flex items-center gap-2 min-w-0 px-2.5 py-2 text-left cursor-pointer"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-medium truncate leading-tight">{loc.dzongkhag}</p>
+                          {loc.thromdoe && (
+                            <p className={`text-[10px] truncate leading-tight ${isSelected ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>
+                              {loc.thromdoe}
+                            </p>
+                          )}
+                        </div>
+                        {isSelected && <ChevronRight className="h-3 w-3 shrink-0 opacity-80" />}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => openEditLocation(loc)}
+                        className={`h-6 w-6 shrink-0 flex items-center justify-center rounded transition-colors cursor-pointer ${
+                          isSelected ? 'text-primary-foreground/80 hover:bg-primary-foreground/10' : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                        }`}
+                        title="Edit location"
+                      >
+                        <Pencil className="h-3 w-3" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteLocation(loc)}
+                        className={`h-6 w-6 shrink-0 mr-1 flex items-center justify-center rounded transition-colors cursor-pointer ${
+                          isSelected ? 'text-primary-foreground/80 hover:bg-destructive/20 hover:text-destructive' : 'text-muted-foreground hover:text-destructive hover:bg-destructive/10'
+                        }`}
+                        title="Delete location"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </button>
                     </div>
-                    {expandedLocationId === loc.id && <ChevronRight className="h-3 w-3 shrink-0 opacity-80" />}
-                  </button>
-                ))}
+                  );
+                })}
               </nav>
             )}
           </div>
@@ -1629,11 +2169,7 @@ function AddMoviePage() {
                   : (
                     <button
                       type="button"
-                      onClick={() => {
-                        if (!theaterFormData[expandedLocationId]) setTheaterFormData(prev => ({ ...prev, [expandedLocationId]: { name: '', description: '' } }));
-                        setTheaterErrors(prev => ({ ...prev, [expandedLocationId]: {} }));
-                        setShowAddTheaterModal(true);
-                      }}
+                      onClick={openAddTheater}
                       className="flex h-5 w-5 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer"
                       title="Add theater"
                     >
@@ -1653,20 +2189,43 @@ function AddMoviePage() {
                 <p className="px-2 py-1 text-xs text-muted-foreground">No theaters.</p>
               ) : (
                 <nav className="space-y-px">
-                  {currentTheaters.map(theater => (
-                    <button
-                      key={theater.id}
-                      type="button"
-                      onClick={() => handleTheaterSelect(theater.id)}
-                      className={`w-full flex items-center gap-2 rounded-lg px-2.5 py-2 text-left transition-colors cursor-pointer ${
-                        expandedTheaterId === theater.id ? 'bg-primary/10 text-primary' : 'text-foreground hover:bg-muted'
-                      }`}
-                    >
-                      <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${theater.isActive ? 'bg-green-500' : 'bg-muted-foreground/40'}`} />
-                      <span className="text-xs font-medium truncate flex-1">{theater.name}</span>
-                      {expandedTheaterId === theater.id && <ChevronRight className="h-3 w-3 shrink-0 opacity-60" />}
-                    </button>
-                  ))}
+                  {currentTheaters.map(theater => {
+                    const isSelected = expandedTheaterId === theater.id;
+                    return (
+                      <div
+                        key={theater.id}
+                        className={`group flex items-center gap-0.5 rounded-lg transition-colors ${
+                          isSelected ? 'bg-primary/10 text-primary' : 'text-foreground hover:bg-muted'
+                        }`}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => handleTheaterSelect(theater.id)}
+                          className="flex-1 flex items-center gap-2 min-w-0 px-2.5 py-2 text-left cursor-pointer"
+                        >
+                          <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${theater.isActive ? 'bg-green-500' : 'bg-muted-foreground/40'}`} />
+                          <span className="text-xs font-medium truncate flex-1">{theater.name}</span>
+                          {isSelected && <ChevronRight className="h-3 w-3 shrink-0 opacity-60" />}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => openEditTheater(theater)}
+                          className="h-6 w-6 shrink-0 flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+                          title="Edit theater"
+                        >
+                          <Pencil className="h-3 w-3" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteTheater(theater)}
+                          className="h-6 w-6 shrink-0 mr-1 flex items-center justify-center rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
+                          title="Delete theater"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </button>
+                      </div>
+                    );
+                  })}
                 </nav>
               )}
             </div>
@@ -1683,11 +2242,7 @@ function AddMoviePage() {
                   : (
                     <button
                       type="button"
-                      onClick={() => {
-                        if (!hallFormData[expandedTheaterId]) setHallFormData(prev => ({ ...prev, [expandedTheaterId]: { name: '', totalSeats: '' } }));
-                        setHallErrors(prev => ({ ...prev, [expandedTheaterId]: {} }));
-                        setShowAddHallModal(true);
-                      }}
+                      onClick={openAddHall}
                       className="flex h-5 w-5 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer"
                       title="Add hall"
                     >
@@ -1707,27 +2262,50 @@ function AddMoviePage() {
                 <p className="px-2 py-1 text-xs text-muted-foreground">No halls.</p>
               ) : (
                 <nav className="space-y-px">
-                  {currentHalls.map(hall => (
-                    <button
-                      key={hall.id}
-                      type="button"
-                      onClick={() => handleHallSelect(hall.id)}
-                      className={`w-full flex items-center gap-2 rounded-lg px-2.5 py-2 text-left transition-colors cursor-pointer ${
-                        expandedHallId === hall.id ? 'bg-primary/10 text-primary' : 'text-foreground hover:bg-muted'
-                      }`}
-                    >
-                      <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-muted text-[10px] font-bold text-muted-foreground">
-                        {hall.name.substring(0, 2).toUpperCase()}
+                  {currentHalls.map(hall => {
+                    const isSelected = expandedHallId === hall.id;
+                    return (
+                      <div
+                        key={hall.id}
+                        className={`group flex items-center gap-0.5 rounded-lg transition-colors ${
+                          isSelected ? 'bg-primary/10 text-primary' : 'text-foreground hover:bg-muted'
+                        }`}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => handleHallSelect(hall.id)}
+                          className="flex-1 flex items-center gap-2 min-w-0 px-2.5 py-2 text-left cursor-pointer"
+                        >
+                          <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-muted text-[10px] font-bold text-muted-foreground">
+                            {hall.name.substring(0, 2).toUpperCase()}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs font-medium truncate leading-tight">{hall.name}</p>
+                            <p className={`text-[10px] truncate leading-tight ${isSelected ? 'text-primary/70' : 'text-muted-foreground'}`}>
+                              {hall.totalSeats} seats
+                            </p>
+                          </div>
+                          {isSelected && <ChevronRight className="h-3 w-3 shrink-0 opacity-60" />}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => openEditHall(hall)}
+                          className="h-6 w-6 shrink-0 flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+                          title="Edit hall"
+                        >
+                          <Pencil className="h-3 w-3" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteHall(hall)}
+                          className="h-6 w-6 shrink-0 mr-1 flex items-center justify-center rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
+                          title="Delete hall"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </button>
                       </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-xs font-medium truncate leading-tight">{hall.name}</p>
-                        <p className={`text-[10px] truncate leading-tight ${expandedHallId === hall.id ? 'text-primary/70' : 'text-muted-foreground'}`}>
-                          {hall.totalSeats} seats
-                        </p>
-                      </div>
-                      {expandedHallId === hall.id && <ChevronRight className="h-3 w-3 shrink-0 opacity-60" />}
-                    </button>
-                  ))}
+                    );
+                  })}
                 </nav>
               )}
             </div>
@@ -1740,16 +2318,20 @@ function AddMoviePage() {
           {/* Breadcrumb bar */}
           <div className="flex items-center gap-1.5 border-b border-border px-5 py-3 bg-card shrink-0">
             <Film className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+            {loading ? (
+              <Skeleton className="h-4 w-36" />
+            ) : (
             <span className={`text-sm ${expandedLocationId ? 'text-foreground' : 'text-muted-foreground'}`}>
               {selectedLocation?.dzongkhag ?? 'No location selected'}
             </span>
-            {selectedTheater && (
+            )}
+            {!loading && selectedTheater && (
               <>
                 <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0" />
                 <span className="text-sm text-foreground truncate">{selectedTheater.name}</span>
               </>
             )}
-            {selectedHall && (
+            {!loading && selectedHall && (
               <>
                 <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0" />
                 <span className="text-sm font-semibold text-foreground truncate">{selectedHall.name}</span>
@@ -1767,6 +2349,8 @@ function AddMoviePage() {
           {/* Body */}
           <div className="flex-1 overflow-y-auto p-5">
 
+            {loading && <TheaterExplorerSkeleton />}
+
             {/* Empty: no location */}
             {!expandedLocationId && !loading && (
               <div className="flex flex-col items-center justify-center h-full min-h-[320px] text-center select-none">
@@ -1782,7 +2366,7 @@ function AddMoviePage() {
             )}
 
             {/* Empty: location but no theater */}
-            {expandedLocationId && !expandedTheaterId && (
+            {!loading && expandedLocationId && !expandedTheaterId && (
               <div className="flex flex-col items-center justify-center h-full min-h-[320px] text-center select-none">
                 <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-muted/50 mb-4">
                   <Building className="h-6 w-6 text-muted-foreground/40" />
@@ -1793,7 +2377,7 @@ function AddMoviePage() {
             )}
 
             {/* Empty: theater but no hall */}
-            {expandedTheaterId && !expandedHallId && (
+            {!loading && expandedTheaterId && !expandedHallId && (
               <div className="flex flex-col items-center justify-center h-full min-h-[320px] text-center select-none">
                 <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-muted/50 mb-4">
                   <DoorOpen className="h-6 w-6 text-muted-foreground/40" />
@@ -1804,7 +2388,7 @@ function AddMoviePage() {
             )}
 
             {/* Hall content */}
-            {expandedHallId && selectedHall && (
+            {!loading && expandedHallId && selectedHall && (
               <div className="space-y-4">
 
                 {/* Tab bar */}
@@ -2077,13 +2661,29 @@ function AddMoviePage() {
                                             <span className="text-[10px] text-amber-600 dark:text-amber-400">BTN {seat.basePrice}</span>
                                           )}
                                         </div>
-                                        <button
-                                          type="button"
-                                          onClick={() => openConfirmModal(sid, seatId, seatLabel)}
-                                          className="text-[10px] font-medium text-center py-1 px-2 bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 hover:bg-primary hover:text-primary-foreground transition-colors border-t border-amber-200 dark:border-amber-800 cursor-pointer"
-                                        >
-                                          Confirm
-                                        </button>
+                                        <div className="flex border-t border-amber-200 dark:border-amber-800">
+                                          <button
+                                            type="button"
+                                            onClick={() => openConfirmModal(sid, seatId, seatLabel)}
+                                            className="flex-1 flex items-center justify-center gap-1 text-[10px] font-medium py-1 px-2 bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 hover:bg-primary hover:text-primary-foreground transition-colors cursor-pointer"
+                                          >
+                                            <CheckCircle2 className="h-2.5 w-2.5" />
+                                            Confirm
+                                          </button>
+                                          <div className="w-px bg-amber-200 dark:bg-amber-800" />
+                                          <button
+                                            type="button"
+                                            onClick={() => handleUnlockSeat(sid, seatId, expandedHallId)}
+                                            disabled={unlockingSeat === seatId}
+                                            className="flex-1 flex items-center justify-center gap-1 text-[10px] font-medium py-1 px-2 bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 hover:bg-destructive hover:text-destructive-foreground transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                                          >
+                                            {unlockingSeat === seatId
+                                              ? <RefreshCw className="h-2.5 w-2.5 animate-spin" />
+                                              : <LockOpen className="h-2.5 w-2.5" />
+                                            }
+                                            Unlock
+                                          </button>
+                                        </div>
                                       </div>
                                     );
                                   })}
@@ -2297,44 +2897,92 @@ function AddMoviePage() {
                           ) : currentSeats.length === 0 ? (
                             <p className="text-xs text-muted-foreground text-center py-6">No seats configured. Use "Configure Seats" to set up the layout.</p>
                           ) : (
-                            <div className="space-y-3">
-                              {(() => {
-                                const byRow = currentSeats.reduce((acc, seat) => {
-                                  const r = seat.rowName ?? '';
-                                  if (!acc[r]) acc[r] = [];
-                                  acc[r].push(seat);
-                                  return acc;
-                                }, {});
-                                const rowNames = Object.keys(byRow).sort((a, b) => {
-                                  const na = parseInt(a, 10); const nb = parseInt(b, 10);
-                                  if (!isNaN(na) && !isNaN(nb)) return na - nb;
-                                  return String(a).localeCompare(String(b));
-                                });
-                                return rowNames.map(rowName => (
-                                  <div key={rowName} className="space-y-1">
-                                    <div className="text-[10px] font-semibold text-muted-foreground">Row {rowName}</div>
-                                    <div className="flex flex-wrap gap-1.5">
-                                      {byRow[rowName].map(seat => (
-                                        <div
-                                          key={seat.id}
-                                          className={cn(
-                                            'min-w-[4rem] rounded border px-1.5 py-1 text-[9px]',
-                                            seat.isBlocked
-                                              ? 'border-red-300 bg-red-50 dark:bg-red-950/20 text-red-700 dark:text-red-400'
-                                              : 'border-green-300 bg-green-50 dark:bg-green-950/20 text-green-800 dark:text-green-400'
-                                          )}
-                                          title={seat.seatIdentifier || `${seat.rowName}${seat.seatNumber}`}
-                                        >
-                                          <div className="font-semibold truncate">{seat.seatIdentifier ?? `${seat.rowName}${seat.seatNumber}`}</div>
-                                          <div className="text-muted-foreground truncate">{seat.seatClassName ?? '—'}</div>
-                                          <div className="font-medium">BTN {seat.basePrice != null ? Number(seat.basePrice) : '—'}</div>
-                                          <div className="text-[8px] opacity-80">{seat.isBlocked ? 'Blocked' : 'Available'}</div>
-                                        </div>
-                                      ))}
+                            <div className="overflow-x-auto pb-4 w-full">
+                              <div className="inline-block min-w-full px-4 sm:px-8 pb-12 pt-4">
+                                {(() => {
+                                  const byRow = currentSeats.reduce((acc, seat) => {
+                                    const r = seat.rowName ?? '';
+                                    if (!acc[r]) acc[r] = [];
+                                    acc[r].push(seat);
+                                    return acc;
+                                  }, {});
+                                  const rowNames = Object.keys(byRow).sort((a, b) => {
+                                    const na = parseInt(a, 10); const nb = parseInt(b, 10);
+                                    if (!isNaN(na) && !isNaN(nb)) return na - nb;
+                                    return String(a).localeCompare(String(b));
+                                  });
+
+                                  // Find the maximum row length to calculate a consistent curve for all rows
+                                  let maxRowLength = 0;
+                                  rowNames.forEach(rowName => {
+                                    if (byRow[rowName].length > maxRowLength) {
+                                      maxRowLength = byRow[rowName].length;
+                                    }
+                                  });
+
+                                  return (
+                                    <div className="flex flex-col items-center space-y-8 w-max mx-auto">
+                                      {rowNames.map((rowName) => {
+                                        const rowSeats = byRow[rowName].sort((a, b) => {
+                                          const na = parseInt(a.seatNumber, 10);
+                                          const nb = parseInt(b.seatNumber, 10);
+                                          if (!isNaN(na) && !isNaN(nb)) return na - nb;
+                                          return String(a.seatNumber).localeCompare(String(b.seatNumber));
+                                        });
+
+                                        return (
+                                          <div key={rowName} className="flex items-center justify-center gap-4 sm:gap-6">
+                                            {/* Left Row Label */}
+                                            <div className="w-6 text-right">
+                                              <span className="text-sm font-bold text-muted-foreground">{rowName}</span>
+                                            </div>
+
+                                            {/* Seats */}
+                                            <div className="flex justify-center gap-2 sm:gap-3">
+                                              {rowSeats.map((seat, index) => {
+                                                // Calculate curve offset based on position relative to the center
+                                                const middleIndex = (rowSeats.length - 1) / 2;
+                                                const distFromCenter = Math.abs(index - middleIndex);
+                                                
+                                                // Create a nice parabolic curve
+                                                const curveOffset = Math.pow(distFromCenter, 1.4) * 1.5;
+
+                                                return (
+                                                  <div
+                                                    key={seat.id}
+                                                    style={{ transform: `translateY(${curveOffset}px)` }}
+                                                    className="flex justify-center transition-transform"
+                                                  >
+                                                    <div
+                                                      className={cn(
+                                                        'w-[4rem] sm:w-[4.5rem] rounded border px-1.5 py-1 text-[9px] flex flex-col items-center justify-center text-center',
+                                                        seat.isBlocked
+                                                          ? 'border-red-300 bg-red-50 dark:bg-red-950/20 text-red-700 dark:text-red-400'
+                                                          : 'border-green-300 bg-green-50 dark:bg-green-950/20 text-green-800 dark:text-green-400'
+                                                      )}
+                                                      title={seat.seatIdentifier || `${seat.rowName}${seat.seatNumber}`}
+                                                    >
+                                                      <div className="font-semibold truncate w-full">{seat.seatIdentifier ?? `${seat.rowName}${seat.seatNumber}`}</div>
+                                                      <div className="text-muted-foreground truncate w-full">{seat.seatClassName ?? '—'}</div>
+                                                      <div className="font-medium w-full">BTN {seat.basePrice != null ? Number(seat.basePrice) : '—'}</div>
+                                                      <div className="text-[8px] opacity-80 w-full">{seat.isBlocked ? 'Blocked' : 'Available'}</div>
+                                                    </div>
+                                                  </div>
+                                                );
+                                              })}
+                                            </div>
+
+                                            {/* Right Row Label */}
+                                            <div className="w-6 text-left">
+                                              <span className="text-sm font-bold text-muted-foreground">{rowName}</span>
+                                            </div>
+                                          </div>
+                                        );
+                                      })}
                                     </div>
-                                  </div>
-                                ));
-                              })()}
+                                  );
+                                })()}
+                              </div>
                             </div>
                           )}
                         </div>

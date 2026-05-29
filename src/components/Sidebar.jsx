@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { NavLink } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { NavLink, useLocation } from 'react-router-dom';
 import { Menu, X, ChevronLeft, ChevronDown, ChevronRight } from 'lucide-react';
 import { navigationItems } from '@/routes';
 import { APP_NAME } from '@/lib/constants';
@@ -13,18 +13,31 @@ function Sidebar() {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [expandedItems, setExpandedItems] = useState(new Set());
   const { user } = useAuth();
+  const location = useLocation();
 
   const toggleSidebar = () => setIsCollapsed(!isCollapsed);
   const toggleMobile = () => setIsMobileOpen(!isMobileOpen);
-  
-  const toggleExpanded = (itemPath) => {
-    const newExpanded = new Set(expandedItems);
-    if (newExpanded.has(itemPath)) {
-      newExpanded.delete(itemPath);
-    } else {
-      newExpanded.add(itemPath);
+
+  // Auto-expand the parent whose sub-route is currently active
+  useEffect(() => {
+    const matchingParent = navigationItems.find(item =>
+      item.subcategories?.length && location.pathname.startsWith(item.path + '/')
+    );
+    if (matchingParent) {
+      setExpandedItems(new Set([matchingParent.path]));
     }
-    setExpandedItems(newExpanded);
+  }, [location.pathname]);
+
+  // Close all other parents when opening a new one (accordion); toggle if same
+  const toggleExpanded = (itemPath) => {
+    setExpandedItems(prev => {
+      if (prev.has(itemPath)) {
+        const next = new Set(prev);
+        next.delete(itemPath);
+        return next;
+      }
+      return new Set([itemPath]);
+    });
   };
 
   // Filter navigation items based on user's clients
@@ -167,12 +180,8 @@ function Sidebar() {
                     ) : (
                       <NavLink
                         to={item.path}
-                        onClick={() => {
-                          // Close any expanded subcategories when clicking other menu items
-                          setExpandedItems(new Set());
-                          // Close sidebar on mobile for main navigation items without subcategories
-                          setIsMobileOpen(false);
-                        }}
+                        end
+                        onClick={() => setIsMobileOpen(false)}
                         className={({ isActive }) =>
                           cn(
                             "flex items-center gap-2 md:gap-3 px-2 md:px-3 py-2 rounded-lg text-xs md:text-sm font-medium transition-colors",
@@ -201,12 +210,7 @@ function Sidebar() {
                           <NavLink
                             key={subItem.path}
                             to={subItem.path}
-                            onClick={() => {
-                              // Close any expanded subcategories when clicking subcategory items
-                              setExpandedItems(new Set());
-                              // Close sidebar on mobile when subcategory is clicked
-                              setIsMobileOpen(false);
-                            }}
+                            onClick={() => setIsMobileOpen(false)}
                             className={({ isActive }) =>
                               cn(
                                 "flex items-center gap-2 md:gap-3 px-2 md:px-3 py-2 rounded-lg text-xs md:text-sm font-medium transition-colors",
@@ -232,7 +236,7 @@ function Sidebar() {
           {!isCollapsed && (
             <div className="p-3 md:p-4 border-t border-sidebar-border">
               <div className="text-xs text-sidebar-foreground/70">
-                © 2024 YaYa
+                © 2026 YaYa
               </div>
             </div>
           )}

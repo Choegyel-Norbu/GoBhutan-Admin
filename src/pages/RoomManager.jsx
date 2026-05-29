@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { Badge } from '@/components/ui/Badge';
-import { Bed, Loader2, Edit, Trash2, Save, X, Plus, Upload, Image as ImageIcon } from 'lucide-react';
+import { Bed, Loader2, Edit, Trash2, Save, X, Plus, Upload, Image as ImageIcon, CheckCircle2, AlertCircle } from 'lucide-react';
 import PageWrapper from '@/components/PageWrapper';
 import { apiClient, api } from '@/lib/apiService';
 import { API_CONFIG } from '@/lib/api';
@@ -772,266 +772,217 @@ const RoomManager = () => {
 
       {/* Hotel Selection */}
       <Card>
-        <CardHeader className="pb-4">
-          <CardTitle className="text-base md:text-lg">Select Hotel</CardTitle>
-          <CardDescription className="text-sm">
-            Choose a hotel to view and manage its rooms
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="pt-0">
-          <div className="w-full max-w-md">
-            <Label htmlFor="hotel-select" className="text-sm font-medium">Hotel</Label>
+        <CardContent className="pt-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="hotel-select" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Select Hotel
+            </Label>
             <Select
               id="hotel-select"
               value={selectedHotelId || ''}
               onChange={(e) => setSelectedHotelId(e.target.value)}
-              className="mt-1"
             >
-              <option value="">Select a hotel...</option>
+              <option value="">Choose a hotel…</option>
               {hotels.map((hotel) => (
-                <option key={hotel.id} value={hotel.id}>
-                  {hotel.name}
-                </option>
+                <option key={hotel.id} value={hotel.id}>{hotel.name}</option>
               ))}
             </Select>
           </div>
         </CardContent>
       </Card>
 
-      {/* Loading State */}
       {isLoading && (
-        <Card>
-          <CardContent className="flex items-center justify-center py-8">
-            <div className="flex items-center gap-2">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              <span>{selectedHotelId ? 'Loading rooms...' : 'Loading hotels...'}</span>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="flex items-center justify-center py-12 text-muted-foreground text-sm gap-2">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          {selectedHotelId ? 'Loading rooms…' : 'Loading hotels…'}
+        </div>
       )}
 
-      {/* Error State */}
       {error && (
-        <Card>
-          <CardContent className="py-8">
-            <div className="text-center text-red-600">
-              <p className="font-medium">Error loading data</p>
-              <p className="text-sm mt-1">{error}</p>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="rounded-lg border border-destructive/40 bg-destructive/10 text-destructive px-4 py-3 text-sm">
+          {error}
+        </div>
       )}
 
-      {/* No Hotel Selected State */}
       {!isLoading && !error && !selectedHotelId && (
-        <Card>
-          <CardContent className="py-8">
-            <div className="text-center text-muted-foreground">
-              <Bed className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p className="font-medium">No hotel selected</p>
-              <p className="text-sm mt-1">Please select a hotel above to view its rooms.</p>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+          <Bed className="h-10 w-10 mb-3 opacity-30" />
+          <p className="text-sm font-medium">No hotel selected</p>
+          <p className="text-xs mt-1">Select a hotel above to view its rooms.</p>
+        </div>
       )}
 
       {/* Rooms List */}
       {!isLoading && !error && selectedHotelId && (
         <Card>
           <CardHeader className="pb-4">
-            {/* Selected Hotel Display */}
-            {selectedHotelId && (
-              <div className="flex items-center justify-between mb-2">
-                <div className="text-center flex-1">
-                <h3 className="text-base md:text-lg font-semibold text-primary">
-                  {hotels.find(h => h.id === parseInt(selectedHotelId))?.name || 'Selected Hotel'}
-                </h3>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
+                  <Bed className="h-4 w-4 text-primary" />
                 </div>
-                <Button
-                  onClick={handleToggleAddRoom}
-                  className="flex items-center gap-2"
-                  size="sm"
-                  variant={showAddRoomForm ? "outline" : "default"}
-                >
-                  <Plus className="h-4 w-4" />
-                  {showAddRoomForm ? 'Cancel' : 'Add Room'}
-                </Button>
+                <div>
+                  <CardTitle className="text-sm font-semibold">
+                    {hotels.find(h => h.id === parseInt(selectedHotelId))?.name || 'Selected Hotel'}
+                  </CardTitle>
+                  <CardDescription className="text-xs">
+                    {rooms.length} room{rooms.length !== 1 ? 's' : ''} registered
+                  </CardDescription>
+                </div>
               </div>
-            )}
-            <CardTitle className="text-sm md:text-base">
-              All rooms
-            </CardTitle>
-            <CardDescription className="text-xs md:text-sm">
-              {selectedHotelId ? 'Rooms for the selected hotel' : 'Select a hotel to view rooms'}
-            </CardDescription>
+              <Button
+                onClick={handleToggleAddRoom}
+                size="sm"
+                variant={showAddRoomForm ? "outline" : "default"}
+                className="flex items-center gap-1.5"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                {showAddRoomForm ? 'Cancel' : 'Add Room'}
+              </Button>
+            </div>
           </CardHeader>
 
           {rooms.length === 0 ? (
-            <CardContent className="py-8">
-              <div className="text-center text-muted-foreground">
-                <Bed className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p className="font-medium">No rooms found</p>
-                <p className="text-sm mt-1 mb-4">No rooms are currently registered for this hotel.</p>
+            <CardContent className="py-12">
+              <div className="flex flex-col items-center justify-center text-muted-foreground">
+                <Bed className="h-10 w-10 mb-3 opacity-30" />
+                <p className="text-sm font-medium">No rooms found</p>
+                <p className="text-xs mt-1 mb-4">No rooms are currently registered for this hotel.</p>
                 <Button
                   onClick={handleToggleAddRoom}
-                  className="flex items-center gap-2 mx-auto"
                   size="sm"
                   variant={showAddRoomForm ? "outline" : "default"}
+                  className="flex items-center gap-1.5"
                 >
-                  <Plus className="h-4 w-4" />
+                  <Plus className="h-3.5 w-3.5" />
                   {showAddRoomForm ? 'Cancel' : 'Add First Room'}
                 </Button>
               </div>
             </CardContent>
           ) : (
-
-          <CardContent className="pt-0">
-            {/* Table with horizontal scroll on mobile */}
-            <div className="overflow-x-auto -mx-4 md:mx-0">
-              <div className="min-w-full px-4 md:px-0">
+            <CardContent className="pt-0 px-0 pb-0">
+              <div className="overflow-x-auto">
                 <table className="w-full text-xs md:text-sm">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-gray-700 whitespace-nowrap">Image</th>
-                    <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-gray-700 whitespace-nowrap">Room #</th>
-                    <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-gray-700 whitespace-nowrap">Hotel</th>
-                    <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-gray-700 whitespace-nowrap">Room Type</th>
-                    <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-gray-700 whitespace-nowrap">Floor</th>
-                    <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-gray-700 whitespace-nowrap">Base Price</th>
-                    <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-gray-700 whitespace-nowrap">Max Occupancy</th>
-                    <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-gray-700 whitespace-nowrap">Status</th>
-                    <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-gray-700 whitespace-nowrap">Active</th>
-                    <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-gray-700 whitespace-nowrap">Description</th>
-                    <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-gray-700 whitespace-nowrap">Created</th>
-                    <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-gray-700 whitespace-nowrap">Actions</th>
-                  </tr>
-                </thead>
-
-
-                <tbody className="divide-y divide-gray-200">
-                  {rooms.map((room, index) => {
-                    const roomImageUrl = getRoomPrimaryImage(room.images);
-                    return (
-                    <tr key={room.id || index} className="hover:bg-gray-50">
-                      <td className="px-2 md:px-4 py-2 md:py-3 whitespace-nowrap">
-                        <div className="w-12 h-12 md:w-16 md:h-16 rounded overflow-hidden bg-gray-100">
-                          {roomImageUrl ? (
-                            <AuthenticatedImage
-                              src={roomImageUrl}
-                              alt={`Room ${room.roomNumber || 'N/A'}`}
-                              className="w-full h-full object-cover"
-                              onError={(e) => {
-                                const imgElement = e.target;
-                                if (imgElement) {
-                                  imgElement.style.display = 'none';
-                                  const nextSibling = imgElement.nextSibling;
-                                  if (nextSibling) {
-                                    nextSibling.style.display = 'flex';
-                                  }
-                                }
-                              }}
-                            />
-                          ) : null}
-                          <div 
-                            className="w-full h-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center"
-                            style={{ display: roomImageUrl ? 'none' : 'flex' }}
-                          >
-                            <Bed className="h-5 w-5 md:h-6 md:w-6 text-primary/40" />
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-2 md:px-4 py-2 md:py-3 whitespace-nowrap">
-                        <span className="font-medium text-gray-900">
-                          {room.roomNumber || 'N/A'}
-                        </span>
-                      </td>
-                      <td className="px-2 md:px-4 py-2 md:py-3 whitespace-nowrap">
-                        <span className="text-gray-700">{room.hotelName || 'N/A'}</span>
-                      </td>
-                      <td className="px-2 md:px-4 py-2 md:py-3 whitespace-nowrap">
-                        <div>
-                          <div className="font-medium text-gray-900">{room.roomTypeName || 'N/A'}</div>
-                        </div>
-                      </td>
-                      <td className="px-2 md:px-4 py-2 md:py-3 whitespace-nowrap">
-                        <span className="text-gray-700">{room.floor || 'N/A'}</span>
-                      </td>
-                      <td className="px-2 md:px-4 py-2 md:py-3 whitespace-nowrap">
-                        <span className="font-medium text-green-600">
-                          Nu {room.basePrice || 'N/A'}
-                        </span>
-                      </td>
-                      <td className="px-2 md:px-4 py-2 md:py-3 whitespace-nowrap">
-                        <span className="text-gray-700">{room.maxOccupancy || 'N/A'}</span>
-                      </td>
-                      <td className="px-2 md:px-4 py-2 md:py-3 whitespace-nowrap">
-                        <span className={`px-1 md:px-2 py-1 text-xs rounded-full font-medium ${
-                          room.status === 'AVAILABLE' ? 'bg-green-100 text-green-800' :
-                          room.status === 'OCCUPIED' ? 'bg-red-100 text-red-800' :
-                          room.status === 'MAINTENANCE' ? 'bg-yellow-100 text-yellow-800' :
-                          room.status === 'OUT_OF_ORDER' ? 'bg-gray-100 text-gray-800' :
-                          'bg-gray-100 text-gray-800'
-                        }`}>
-                          {room.status || 'N/A'}
-                        </span>
-                      </td>
-                      <td className="px-2 md:px-4 py-2 md:py-3 whitespace-nowrap">
-                        <span className={`px-1 md:px-2 py-1 text-xs rounded-full font-medium ${
-                          room.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                        }`}>
-                          {room.isActive ? 'Active' : 'Inactive'}
-                        </span>
-                      </td>
-                      <td className="px-2 md:px-4 py-2 md:py-3">
-                        <div className="max-w-32 md:max-w-48">
-                          <span className="text-xs text-gray-600 truncate block">
-                            {room.description || 'N/A'}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-2 md:px-4 py-2 md:py-3 whitespace-nowrap">
-                        <span className="text-xs text-gray-500">
-                          {room.createdAt ? new Date(room.createdAt).toLocaleDateString() : 'N/A'}
-                        </span>
-                      </td>
-                      <td className="px-2 md:px-4 py-2 md:py-3 whitespace-nowrap">
-                        <div className="flex items-center gap-1 md:gap-2">
-                          <button 
-                            onClick={() => handleEditRoom(room)}
-                            className="text-blue-600 hover:text-blue-800 text-xs flex items-center gap-1 px-2 py-1 rounded hover:bg-blue-50"
-                            title="Edit room"
-                          >
-                            <Edit className="h-3 w-3" />
-                            <span className="hidden sm:inline">Edit</span>
-                          </button>
-                          <button 
-                            onClick={() => handleDeleteRoom(room.id)}
-                            className="text-red-600 hover:text-red-800 text-xs flex items-center gap-1 px-2 py-1 rounded hover:bg-red-50"
-                            title="Delete room"
-                          >
-                            <Trash2 className="h-3 w-3" />
-                            <span className="hidden sm:inline">Delete</span>
-                          </button>
-                        </div>
-                      </td>
+                  <thead>
+                    <tr className="bg-muted/30">
+                      <th className="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">Image</th>
+                      <th className="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">Room #</th>
+                      <th className="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">Hotel</th>
+                      <th className="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">Room Type</th>
+                      <th className="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">Floor</th>
+                      <th className="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">Base Price</th>
+                      <th className="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">Max Occ.</th>
+                      <th className="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">Status</th>
+                      <th className="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">Active</th>
+                      <th className="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">Description</th>
+                      <th className="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">Created</th>
+                      <th className="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">Actions</th>
                     </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {rooms.map((room, index) => {
+                      const roomImageUrl = getRoomPrimaryImage(room.images);
+                      return (
+                        <tr key={room.id || index} className="hover:bg-muted/30 transition-colors">
+                          <td className="px-4 py-3 whitespace-nowrap">
+                            <div className="w-12 h-12 rounded-lg overflow-hidden bg-muted">
+                              {roomImageUrl ? (
+                                <AuthenticatedImage
+                                  src={roomImageUrl}
+                                  alt={`Room ${room.roomNumber || 'N/A'}`}
+                                  className="w-full h-full object-cover"
+                                  onError={(e) => {
+                                    const imgElement = e.target;
+                                    if (imgElement) {
+                                      imgElement.style.display = 'none';
+                                      const nextSibling = imgElement.nextSibling;
+                                      if (nextSibling) nextSibling.style.display = 'flex';
+                                    }
+                                  }}
+                                />
+                              ) : null}
+                              <div
+                                className="w-full h-full bg-primary/5 flex items-center justify-center"
+                                style={{ display: roomImageUrl ? 'none' : 'flex' }}
+                              >
+                                <Bed className="h-5 w-5 text-primary/40" />
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap">
+                            <span className="font-medium text-foreground">{room.roomNumber || 'N/A'}</span>
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap">
+                            <span className="text-muted-foreground">{room.hotelName || 'N/A'}</span>
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap">
+                            <span className="font-medium text-foreground">{room.roomTypeName || 'N/A'}</span>
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap">
+                            <span className="text-muted-foreground">{room.floor || 'N/A'}</span>
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap">
+                            <span className="font-medium text-primary">Nu {room.basePrice || 'N/A'}</span>
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap">
+                            <span className="text-muted-foreground">{room.maxOccupancy || 'N/A'}</span>
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap">
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                              room.status === 'AVAILABLE' ? 'bg-primary/10 text-primary' :
+                              room.status === 'OCCUPIED' ? 'bg-destructive/10 text-destructive' :
+                              room.status === 'MAINTENANCE' ? 'bg-amber-50 text-amber-700' :
+                              'bg-muted text-muted-foreground'
+                            }`}>
+                              {room.status || 'N/A'}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap">
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                              room.isActive ? 'bg-primary/10 text-primary' : 'bg-destructive/10 text-destructive'
+                            }`}>
+                              {room.isActive ? 'Active' : 'Inactive'}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className="text-xs text-muted-foreground truncate block max-w-32 md:max-w-48">
+                              {room.description || 'N/A'}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap">
+                            <span className="text-xs text-muted-foreground">
+                              {room.createdAt ? new Date(room.createdAt).toLocaleDateString() : 'N/A'}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap">
+                            <div className="flex items-center gap-0.5">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleEditRoom(room)}
+                                aria-label="Edit room"
+                                className="h-7 w-7 p-0"
+                              >
+                                <Edit className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDeleteRoom(room.id)}
+                                aria-label="Delete room"
+                                className="h-7 w-7 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
-            </div>
-            
-            {/* Room Description Panel */}
-            <div className="mt-4 md:mt-6">
-              <div className="bg-gray-50 rounded-lg p-3 md:p-4">
-                <h4 className="text-xs md:text-sm font-medium text-gray-700 mb-2">Room Details</h4>
-                <div className="text-xs text-gray-600">
-                  Click on any row to view detailed room descriptions and additional information.
-                </div>
-              </div>
-            </div>
-          </CardContent>
+            </CardContent>
           )}
         </Card>
       )}
@@ -1040,73 +991,73 @@ const RoomManager = () => {
       {!isLoading && !error && selectedHotelId && showAddRoomForm && (
         <Card>
           <CardHeader className="pb-4">
-            <CardTitle className="text-base md:text-lg flex items-center gap-2">
-              <Plus className="h-5 w-5" />
-              Add New Room
-            </CardTitle>
-            <CardDescription className="text-sm">
-              Fill in the details below to add a new room to this hotel
-            </CardDescription>
+            <div className="flex items-center gap-3">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
+                <Plus className="h-4 w-4 text-primary" />
+              </div>
+              <div>
+                <CardTitle className="text-sm font-semibold">Add New Room</CardTitle>
+                <CardDescription className="text-xs">Fill in the details below to add a new room to this hotel</CardDescription>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmitAddRoom} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="roomNumber" className="text-sm font-medium">Room Number *</Label>
+                <div className="space-y-1.5">
+                  <Label htmlFor="roomNumber" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Room Number *</Label>
                   <Input
                     id="roomNumber"
                     value={addRoomFormData.roomNumber}
                     onChange={(e) => handleAddRoomFormChange('roomNumber', e.target.value)}
                     placeholder="e.g., 101"
-                    className={addRoomErrors.roomNumber ? 'border-red-500' : ''}
+                    className={addRoomErrors.roomNumber ? 'border-destructive' : ''}
                     disabled={isSubmittingRoom}
                   />
                   {addRoomErrors.roomNumber && (
-                    <p className="text-xs text-red-500 mt-1">{addRoomErrors.roomNumber}</p>
+                    <p className="text-xs text-destructive">{addRoomErrors.roomNumber}</p>
                   )}
                 </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="roomTypeId" className="text-sm font-medium">Room Type *</Label>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="roomTypeId" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Room Type *</Label>
                   <Select
                     id="roomTypeId"
                     value={addRoomFormData.roomTypeId}
                     onChange={(e) => handleAddRoomFormChange('roomTypeId', e.target.value)}
-                    className={addRoomErrors.roomTypeId ? 'border-red-500' : ''}
+                    className={addRoomErrors.roomTypeId ? 'border-destructive' : ''}
                     disabled={isSubmittingRoom || isLoadingRoomTypes}
                   >
                     <option value="">Select room type...</option>
                     {roomTypes.map((roomType) => (
-                      <option key={roomType.id} value={roomType.id}>
-                        {roomType.name}
-                      </option>
+                      <option key={roomType.id} value={roomType.id}>{roomType.name}</option>
                     ))}
                   </Select>
                   {addRoomErrors.roomTypeId && (
-                    <p className="text-xs text-red-500 mt-1">{addRoomErrors.roomTypeId}</p>
+                    <p className="text-xs text-destructive">{addRoomErrors.roomTypeId}</p>
                   )}
                   {isLoadingRoomTypes && (
-                    <p className="text-xs text-gray-500 mt-1">Loading room types...</p>
+                    <p className="text-xs text-muted-foreground">Loading room types…</p>
                   )}
                 </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="roomSize" className="text-sm font-medium">Room Size *</Label>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="roomSize" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Room Size *</Label>
                   <Input
                     id="roomSize"
                     value={addRoomFormData.roomSize}
                     onChange={(e) => handleAddRoomFormChange('roomSize', e.target.value)}
                     placeholder="e.g., 250 sq ft"
-                    className={addRoomErrors.roomSize ? 'border-red-500' : ''}
+                    className={addRoomErrors.roomSize ? 'border-destructive' : ''}
                     disabled={isSubmittingRoom}
                   />
                   {addRoomErrors.roomSize && (
-                    <p className="text-xs text-red-500 mt-1">{addRoomErrors.roomSize}</p>
+                    <p className="text-xs text-destructive">{addRoomErrors.roomSize}</p>
                   )}
                 </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="floor" className="text-sm font-medium">Floor</Label>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="floor" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Floor</Label>
                   <Input
                     id="floor"
                     type="number"
@@ -1116,9 +1067,9 @@ const RoomManager = () => {
                     disabled={isSubmittingRoom}
                   />
                 </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="basePrice" className="text-sm font-medium">Base Price (Nu) *</Label>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="basePrice" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Base Price (Nu) *</Label>
                   <Input
                     id="basePrice"
                     type="number"
@@ -1126,32 +1077,32 @@ const RoomManager = () => {
                     value={addRoomFormData.basePrice}
                     onChange={(e) => handleAddRoomFormChange('basePrice', e.target.value)}
                     placeholder="e.g., 2999.99"
-                    className={addRoomErrors.basePrice ? 'border-red-500' : ''}
+                    className={addRoomErrors.basePrice ? 'border-destructive' : ''}
                     disabled={isSubmittingRoom}
                   />
                   {addRoomErrors.basePrice && (
-                    <p className="text-xs text-red-500 mt-1">{addRoomErrors.basePrice}</p>
+                    <p className="text-xs text-destructive">{addRoomErrors.basePrice}</p>
                   )}
                 </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="maxOccupancy" className="text-sm font-medium">Max Occupancy *</Label>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="maxOccupancy" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Max Occupancy *</Label>
                   <Input
                     id="maxOccupancy"
                     type="number"
                     value={addRoomFormData.maxOccupancy}
                     onChange={(e) => handleAddRoomFormChange('maxOccupancy', e.target.value)}
                     placeholder="e.g., 2"
-                    className={addRoomErrors.maxOccupancy ? 'border-red-500' : ''}
+                    className={addRoomErrors.maxOccupancy ? 'border-destructive' : ''}
                     disabled={isSubmittingRoom}
                   />
                   {addRoomErrors.maxOccupancy && (
-                    <p className="text-xs text-red-500 mt-1">{addRoomErrors.maxOccupancy}</p>
+                    <p className="text-xs text-destructive">{addRoomErrors.maxOccupancy}</p>
                   )}
                 </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="status" className="text-sm font-medium">Status</Label>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="status" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Status</Label>
                   <Select
                     id="status"
                     value={addRoomFormData.status}
@@ -1164,9 +1115,9 @@ const RoomManager = () => {
                     <option value="OUT_OF_ORDER">Out of Order</option>
                   </Select>
                 </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="isActive" className="text-sm font-medium">Active Status</Label>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="isActive" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Active Status</Label>
                   <Select
                     id="isActive"
                     value={addRoomFormData.isActive.toString()}
@@ -1178,9 +1129,9 @@ const RoomManager = () => {
                   </Select>
                 </div>
               </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="description" className="text-sm font-medium">Description</Label>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="description" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Description</Label>
                 <Textarea
                   id="description"
                   value={addRoomFormData.description}
@@ -1190,18 +1141,17 @@ const RoomManager = () => {
                   disabled={isSubmittingRoom}
                 />
               </div>
-              
+
               {/* Room Images */}
               <div className="space-y-2">
-                <Label htmlFor="roomImages" className="text-sm font-medium flex items-center gap-2">
-                  <ImageIcon className="h-4 w-4" />
-                  Room Images
-                </Label>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                  <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-sm text-gray-600 mb-2">
-                    Drag and drop images here, or click to select files
-                  </p>
+                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Room Images</Label>
+                <div
+                  className="border-2 border-dashed border-border/60 rounded-xl p-8 text-center hover:border-primary/40 hover:bg-muted/20 transition-colors cursor-pointer"
+                  onClick={() => !isSubmittingRoom && document.getElementById('roomImages').click()}
+                >
+                  <Upload className="h-8 w-8 text-muted-foreground/40 mx-auto mb-3" />
+                  <p className="text-sm text-muted-foreground mb-1">Drag and drop images here, or click to select</p>
+                  <p className="text-xs text-muted-foreground/60">JPEG, PNG, WebP supported</p>
                   <input
                     id="roomImages"
                     type="file"
@@ -1211,62 +1161,54 @@ const RoomManager = () => {
                     className="hidden"
                     disabled={isSubmittingRoom}
                   />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => document.getElementById('roomImages').click()}
-                    disabled={isSubmittingRoom}
-                  >
-                    <Upload className="h-4 w-4 mr-2" />
-                    Choose Images
-                  </Button>
                 </div>
-                
+
                 {addRoomFormData.images.length > 0 && (
-                  <div className="space-y-2 mt-4">
-                    <Label>Selected Images ({addRoomFormData.images.length})</Label>
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  <div className="space-y-2 mt-3">
+                    <p className="text-xs text-muted-foreground">{addRoomFormData.images.length} image{addRoomFormData.images.length !== 1 ? 's' : ''} selected</p>
+                    <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-3">
                       {addRoomFormData.images.map((image) => (
-                        <div key={image.id} className="relative group">
+                        <div key={image.id} className="relative group aspect-square">
                           <img
                             src={image.url}
                             alt={image.name}
-                            className="w-full h-24 object-cover rounded-lg border"
+                            className="w-full h-full object-cover rounded-lg border border-border"
                           />
-                          <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
-                            <Button
+                          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
+                            <button
                               type="button"
-                              variant="destructive"
-                              size="sm"
                               onClick={() => removeRoomImage(image.id)}
                               disabled={isSubmittingRoom}
+                              className="p-1.5 bg-destructive text-white rounded-md hover:bg-destructive/90"
+                              aria-label="Remove image"
                             >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
                           </div>
-                          <p className="text-xs text-gray-500 mt-1 truncate">{image.name}</p>
                         </div>
                       ))}
                     </div>
                   </div>
                 )}
               </div>
-              
-              <div className="flex flex-col sm:flex-row gap-3 pt-4">
-                <Button 
+
+              <div className="flex items-center gap-3 pt-2 border-t border-border">
+                <Button
                   type="submit"
+                  size="sm"
                   disabled={isSubmittingRoom}
-                  className="flex items-center justify-center gap-2"
+                  className="flex items-center gap-2"
                 >
                   {isSubmittingRoom ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
                   ) : (
-                    <Plus className="h-4 w-4" />
+                    <Plus className="h-3.5 w-3.5" />
                   )}
-                  {isSubmittingRoom ? 'Adding Room...' : 'Add Room'}
+                  {isSubmittingRoom ? 'Adding…' : 'Add Room'}
                 </Button>
-                <Button 
+                <Button
                   type="button"
+                  size="sm"
                   onClick={handleCancelAddRoom}
                   variant="outline"
                   disabled={isSubmittingRoom}
@@ -1281,171 +1223,169 @@ const RoomManager = () => {
 
       {/* Edit Room Modal */}
       {editingRoom && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg p-4 md:p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-base md:text-lg font-semibold">Edit Room</h3>
-              <button 
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-background rounded-xl border border-border shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+              <div className="flex items-center gap-3">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
+                  <Edit className="h-3.5 w-3.5 text-primary" />
+                </div>
+                <h3 className="text-sm font-semibold text-foreground">Edit Room</h3>
+              </div>
+              <button
                 onClick={handleCancelEdit}
-                className="text-gray-400 hover:text-gray-600 p-1"
+                className="text-muted-foreground hover:text-foreground p-1 rounded-md hover:bg-muted/50 transition-colors"
+                aria-label="Close modal"
               >
-                <X className="h-5 w-5 md:h-6 md:w-6" />
+                <X className="h-4 w-4" />
               </button>
             </div>
-            
-            <div className="space-y-3 md:space-y-4">
-              <div>
-                <Label htmlFor="roomNumber" className="text-sm font-medium">Room Number</Label>
-                <Input
-                  id="roomNumber"
-                  value={editFormData.roomNumber}
-                  onChange={(e) => handleEditFormChange('roomNumber', e.target.value)}
-                  placeholder="e.g., 101"
-                  className="mt-1"
-                />
+
+            <div className="px-5 py-4 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="edit-roomNumber" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Room Number</Label>
+                  <Input
+                    id="edit-roomNumber"
+                    value={editFormData.roomNumber}
+                    onChange={(e) => handleEditFormChange('roomNumber', e.target.value)}
+                    placeholder="e.g., 101"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="edit-floor" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Floor</Label>
+                  <Input
+                    id="edit-floor"
+                    type="number"
+                    value={editFormData.floor}
+                    onChange={(e) => handleEditFormChange('floor', parseInt(e.target.value))}
+                    placeholder="e.g., 1"
+                  />
+                </div>
               </div>
-              
-              <div>
-                <Label htmlFor="floor" className="text-sm font-medium">Floor</Label>
-                <Input
-                  id="floor"
-                  type="number"
-                  value={editFormData.floor}
-                  onChange={(e) => handleEditFormChange('floor', parseInt(e.target.value))}
-                  placeholder="e.g., 1"
-                  className="mt-1"
-                />
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="edit-basePrice" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Base Price (Nu)</Label>
+                  <Input
+                    id="edit-basePrice"
+                    type="number"
+                    step="0.01"
+                    value={editFormData.basePrice}
+                    onChange={(e) => handleEditFormChange('basePrice', parseFloat(e.target.value))}
+                    placeholder="e.g., 2999.99"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="edit-maxOccupancy" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Max Occupancy</Label>
+                  <Input
+                    id="edit-maxOccupancy"
+                    type="number"
+                    value={editFormData.maxOccupancy}
+                    onChange={(e) => handleEditFormChange('maxOccupancy', parseInt(e.target.value))}
+                    placeholder="e.g., 2"
+                  />
+                </div>
               </div>
-              
-              <div>
-                <Label htmlFor="basePrice" className="text-sm font-medium">Base Price ($)</Label>
-                <Input
-                  id="basePrice"
-                  type="number"
-                  step="0.01"
-                  value={editFormData.basePrice}
-                  onChange={(e) => handleEditFormChange('basePrice', parseFloat(e.target.value))}
-                  placeholder="e.g., 99.99"
-                  className="mt-1"
-                />
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="edit-status" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Status</Label>
+                  <Select
+                    id="edit-status"
+                    value={editFormData.status}
+                    onChange={(e) => handleEditFormChange('status', e.target.value)}
+                  >
+                    <option value="AVAILABLE">Available</option>
+                    <option value="OCCUPIED">Occupied</option>
+                    <option value="MAINTENANCE">Maintenance</option>
+                    <option value="OUT_OF_ORDER">Out of Order</option>
+                  </Select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="edit-isActive" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Active Status</Label>
+                  <Select
+                    id="edit-isActive"
+                    value={editFormData.isActive.toString()}
+                    onChange={(e) => handleEditFormChange('isActive', e.target.value === 'true')}
+                  >
+                    <option value="true">Active</option>
+                    <option value="false">Inactive</option>
+                  </Select>
+                </div>
               </div>
-              
-              <div>
-                <Label htmlFor="maxOccupancy" className="text-sm font-medium">Max Occupancy</Label>
-                <Input
-                  id="maxOccupancy"
-                  type="number"
-                  value={editFormData.maxOccupancy}
-                  onChange={(e) => handleEditFormChange('maxOccupancy', parseInt(e.target.value))}
-                  placeholder="e.g., 2"
-                  className="mt-1"
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="status" className="text-sm font-medium">Status</Label>
-                <Select
-                  id="status"
-                  value={editFormData.status}
-                  onChange={(e) => handleEditFormChange('status', e.target.value)}
-                  className="mt-1"
-                >
-                  <option value="AVAILABLE">Available</option>
-                  <option value="OCCUPIED">Occupied</option>
-                  <option value="MAINTENANCE">Maintenance</option>
-                  <option value="OUT_OF_ORDER">Out of Order</option>
-                </Select>
-              </div>
-              
-              <div>
-                <Label htmlFor="isActive" className="text-sm font-medium">Active Status</Label>
-                <Select
-                  id="isActive"
-                  value={editFormData.isActive.toString()}
-                  onChange={(e) => handleEditFormChange('isActive', e.target.value === 'true')}
-                  className="mt-1"
-                >
-                  <option value="true">Active</option>
-                  <option value="false">Inactive</option>
-                </Select>
-              </div>
-              
-              <div>
-                <Label htmlFor="description" className="text-sm font-medium">Description</Label>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="edit-description" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Description</Label>
                 <Textarea
-                  id="description"
+                  id="edit-description"
                   value={editFormData.description}
                   onChange={(e) => handleEditFormChange('description', e.target.value)}
                   placeholder="Room description..."
                   rows={3}
-                  className="mt-1"
                 />
               </div>
-              
+
               {/* Room Images Section */}
-              <div className="space-y-2">
-                <Label className="text-sm font-medium flex items-center gap-2">
-                  <ImageIcon className="h-4 w-4" />
-                  Room Images
-                </Label>
-                
+              <div className="space-y-3">
+                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Room Images</Label>
+
                 {/* Existing Images Preview */}
                 {editFormData.existingImages && editFormData.existingImages.length > 0 && (
                   <div className="space-y-2">
-                    <Label className="text-xs text-gray-600">Existing Images ({editFormData.existingImages.length})</Label>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    <p className="text-xs text-muted-foreground">Existing ({editFormData.existingImages.length})</p>
+                    <div className="grid grid-cols-3 gap-2">
                       {editFormData.existingImages.map((image) => {
                         const imageUrl = image.url ? getRoomImageUrl(image.url) : null;
                         return (
-                          <div key={image.id} className="relative group">
+                          <div key={image.id} className="relative group aspect-square">
                             {imageUrl ? (
                               <AuthenticatedImage
                                 src={imageUrl}
                                 alt={image.title || `Room image ${image.id}`}
-                                className="w-full h-24 object-cover rounded-lg border"
+                                className="w-full h-full object-cover rounded-lg border border-border"
                                 onError={(e) => {
                                   const imgElement = e.target;
                                   if (imgElement) {
                                     imgElement.style.display = 'none';
                                     const nextSibling = imgElement.nextSibling;
-                                    if (nextSibling) {
-                                      nextSibling.style.display = 'flex';
-                                    }
+                                    if (nextSibling) nextSibling.style.display = 'flex';
                                   }
                                 }}
                               />
                             ) : (
-                              <div className="w-full h-24 bg-gray-100 rounded-lg border flex items-center justify-center">
-                                <ImageIcon className="h-6 w-6 text-gray-400" />
+                              <div className="w-full h-full bg-muted rounded-lg border border-border flex items-center justify-center">
+                                <ImageIcon className="h-5 w-5 text-muted-foreground" />
                               </div>
                             )}
-                            <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
-                              <Button
+                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
+                              <button
                                 type="button"
-                                variant="destructive"
-                                size="sm"
                                 onClick={() => removeEditImage(image.id, true)}
                                 disabled={isEditLoading}
+                                className="p-1.5 bg-destructive text-white rounded-md hover:bg-destructive/90"
+                                aria-label="Remove image"
                               >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
                             </div>
-                            {image.title && (
-                              <p className="text-xs text-gray-500 mt-1 truncate">{image.title}</p>
-                            )}
                           </div>
                         );
                       })}
                     </div>
                   </div>
                 )}
-                
+
                 {/* Upload New Images */}
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
-                  <Upload className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                  <p className="text-xs text-gray-600 mb-2">
-                    Add new images
-                  </p>
+                <div
+                  className="border-2 border-dashed border-border/60 rounded-xl p-5 text-center hover:border-primary/40 hover:bg-muted/20 transition-colors cursor-pointer"
+                  onClick={() => !isEditLoading && document.getElementById('editRoomImages').click()}
+                >
+                  <Upload className="h-6 w-6 text-muted-foreground/40 mx-auto mb-2" />
+                  <p className="text-xs text-muted-foreground">Click to add new images</p>
                   <input
                     id="editRoomImages"
                     type="file"
@@ -1455,94 +1395,93 @@ const RoomManager = () => {
                     className="hidden"
                     disabled={isEditLoading}
                   />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => document.getElementById('editRoomImages').click()}
-                    disabled={isEditLoading}
-                  >
-                    <Upload className="h-4 w-4 mr-2" />
-                    Choose Images
-                  </Button>
                 </div>
-                
+
                 {/* New Images Preview */}
                 {editFormData.newImages && editFormData.newImages.length > 0 && (
-                  <div className="space-y-2 mt-4">
-                    <Label className="text-xs text-gray-600">New Images ({editFormData.newImages.length})</Label>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  <div className="space-y-2">
+                    <p className="text-xs text-muted-foreground">New ({editFormData.newImages.length})</p>
+                    <div className="grid grid-cols-3 gap-2">
                       {editFormData.newImages.map((image) => (
-                        <div key={image.id} className="relative group">
+                        <div key={image.id} className="relative group aspect-square">
                           <img
                             src={image.url}
                             alt={image.name}
-                            className="w-full h-24 object-cover rounded-lg border"
+                            className="w-full h-full object-cover rounded-lg border border-border"
                           />
-                          <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
-                            <Button
+                          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
+                            <button
                               type="button"
-                              variant="destructive"
-                              size="sm"
                               onClick={() => removeEditImage(image.id, false)}
                               disabled={isEditLoading}
+                              className="p-1.5 bg-destructive text-white rounded-md hover:bg-destructive/90"
+                              aria-label="Remove image"
                             >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
                           </div>
-                          <p className="text-xs text-gray-500 mt-1 truncate">{image.name}</p>
                         </div>
                       ))}
                     </div>
                   </div>
                 )}
               </div>
-              
-              <div className="flex flex-col sm:flex-row gap-2 md:gap-3 pt-4">
-                <Button 
-                  onClick={handleSaveEdit}
-                  disabled={isEditLoading}
-                  className="flex items-center justify-center gap-2 py-2 px-4 text-sm"
-                >
-                  {isEditLoading ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Save className="h-4 w-4" />
-                  )}
-                  Save Changes
-                </Button>
-                <Button 
-                  onClick={handleCancelEdit}
-                  variant="outline"
-                  disabled={isEditLoading}
-                  className="py-2 px-4 text-sm"
-                >
-                  Cancel
-                </Button>
-              </div>
+            </div>
+
+            <div className="flex items-center gap-3 px-5 py-4 border-t border-border">
+              <Button
+                onClick={handleSaveEdit}
+                size="sm"
+                disabled={isEditLoading}
+                className="flex items-center gap-2"
+              >
+                {isEditLoading ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Save className="h-3.5 w-3.5" />
+                )}
+                Save Changes
+              </Button>
+              <Button
+                onClick={handleCancelEdit}
+                size="sm"
+                variant="outline"
+                disabled={isEditLoading}
+              >
+                Cancel
+              </Button>
             </div>
           </div>
         </div>
       )}
-      
 
       {/* Toast Notification */}
       {showToast && (
         <div className="fixed top-4 right-4 z-50">
-          <div className={`px-6 py-3 rounded-lg shadow-lg text-white max-w-sm ${
-            toastMessage.includes('successfully') || toastMessage.includes('success') 
-              ? 'bg-green-500' 
-              : 'bg-red-500'
+          <div className={`flex items-center gap-3 px-4 py-3 rounded-lg border shadow-lg max-w-sm ${
+            toastMessage.includes('successfully') || toastMessage.includes('success')
+              ? 'bg-background border-primary/20'
+              : 'bg-background border-destructive/20'
           }`}>
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">{toastMessage}</span>
-              <button 
-                onClick={() => setShowToast(false)}
-                className="ml-4 text-white hover:text-gray-200"
-              >
-                <X className="h-4 w-4" />
-              </button>
+            <div className={`shrink-0 ${
+              toastMessage.includes('successfully') || toastMessage.includes('success')
+                ? 'text-primary'
+                : 'text-destructive'
+            }`}>
+              {toastMessage.includes('successfully') || toastMessage.includes('success') ? (
+                <CheckCircle2 className="h-4 w-4" />
+              ) : (
+                <AlertCircle className="h-4 w-4" />
+              )}
             </div>
+            <span className="text-sm font-medium text-foreground flex-1">{toastMessage}</span>
+            <button
+              onClick={() => setShowToast(false)}
+              className="text-muted-foreground hover:text-foreground shrink-0"
+              aria-label="Dismiss notification"
+            >
+              <X className="h-4 w-4" />
+            </button>
           </div>
         </div>
       )}

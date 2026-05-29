@@ -15,7 +15,9 @@ import {
   Home,
   Clapperboard,
   Wallet,
-  UserPlus
+  UserPlus,
+  Flame,
+  Truck
 } from 'lucide-react';
 
 export const navigationItems = [
@@ -134,6 +136,29 @@ export const navigationItems = [
         icon: Calendar,
         description: 'View and manage theater bookings',
         clients: ['theater', 'movie']
+      }
+    ]
+  },
+  {
+    title: 'Gas',
+    path: '/dashboard/gas',
+    icon: Flame,
+    description: 'Gas delivery management',
+    clients: ['gas'],
+    subcategories: [
+      {
+        title: 'Gas Config',
+        path: '/dashboard/gas/config',
+        icon: Settings,
+        description: 'Manage gas types and configurations',
+        clients: ['gas']
+      },
+      {
+        title: 'Deliveries',
+        path: '/dashboard/gas/deliveries',
+        icon: Truck,
+        description: 'Create and manage gas delivery orders',
+        clients: ['gas']
       }
     ]
   },

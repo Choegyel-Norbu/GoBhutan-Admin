@@ -5,23 +5,24 @@ import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
 import { Select } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';
-import { Settings, Building2, Wifi, Car, Coffee, Shield, Utensils, Save, RefreshCw, MapPin, Loader2, ArrowLeft, Phone, Clock, Trash2 } from 'lucide-react';
+import { Settings, Building2, Wifi, Car, Coffee, Shield, Utensils, Save, RefreshCw, MapPin, ArrowLeft, Phone, Clock, Trash2, Mail } from 'lucide-react';
 import { apiClient, api } from '@/lib/apiService';
 import authAPI from '@/lib/authAPI';
 import { getHotelPrimaryImage } from '@/lib/utils';
 import AuthenticatedImage from '@/components/AuthenticatedImage';
+import PageWrapper from '@/components/PageWrapper';
 import Swal from 'sweetalert2';
 
 const HotelSettingsPage = () => {
   // View states: 'hotels' | 'settings'
   const [currentView, setCurrentView] = useState('hotels');
   const [selectedHotel, setSelectedHotel] = useState(null);
-  
+
   // Data states
   const [hotels, setHotels] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
-  
+
   // Form states
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitMessage, setSubmitMessage] = useState({ type: '', message: '' });
@@ -30,23 +31,23 @@ const HotelSettingsPage = () => {
     hotelName: '',
     description: '',
     starRating: 0,
-    
+
     // Location Information
     address: '',
     city: '',
     state: '',
     country: '',
     postalCode: '',
-    
+
     // Contact Information
     phone: '',
     email: '',
     website: '',
-    
+
     // Hotel Details
     checkInTime: '',
     checkOutTime: '',
-    
+
     // Amenities (boolean object for form handling)
     amenities: {
       wifi: false,
@@ -71,16 +72,22 @@ const HotelSettingsPage = () => {
     fetchHotels();
   }, []);
 
+  // Scroll main content area to top on every view change
+  useEffect(() => {
+    const main = document.querySelector('main');
+    if (main) main.scrollTop = 0;
+  }, [currentView]);
+
   const fetchHotels = async () => {
     try {
       setIsLoading(true);
       setError(null);
-      
+
       const token = authAPI.getStoredToken();
       if (token) {
         apiClient.setAuthToken(token);
       }
-      
+
       const response = await api.hotel.getHotels();
       const hotelsData = response.data || response;
       setHotels(Array.isArray(hotelsData) ? hotelsData : []);
@@ -94,7 +101,7 @@ const HotelSettingsPage = () => {
 
   const handleHotelClick = (hotel) => {
     setSelectedHotel(hotel);
-    
+
     // Convert amenities array to boolean object for form handling
     const convertAmenitiesFromAPI = (amenitiesArray) => {
       const amenitiesObj = {
@@ -114,7 +121,7 @@ const HotelSettingsPage = () => {
         petFriendly: false,
         smokingAllowed: false
       };
-      
+
       if (Array.isArray(amenitiesArray)) {
         amenitiesArray.forEach(amenity => {
           const amenityName = amenity.name?.toLowerCase().replace(/\s+/g, '');
@@ -167,33 +174,33 @@ const HotelSettingsPage = () => {
           }
         });
       }
-      
+
       return amenitiesObj;
     };
-    
+
     // Populate settings with hotel data (only fields present in AddHotelPage)
     setSettings({
       // Basic Information
       hotelName: hotel.name || '',
       description: hotel.description || '',
       starRating: hotel.starRating || 0,
-      
+
       // Location Information
       address: hotel.address || '',
       city: hotel.city || '',
       state: hotel.state || '',
       country: hotel.country || 'Bhutan',
       postalCode: hotel.postalCode || '',
-      
+
       // Contact Information
       phone: hotel.phoneNumber || '',
       email: hotel.email || '',
       website: hotel.website || '',
-      
+
       // Hotel Details
       checkInTime: hotel.checkInTime || '',
       checkOutTime: hotel.checkOutTime || '',
-      
+
       // Amenities - Convert from API format to form format
       amenities: convertAmenitiesFromAPI(hotel.amenities)
     });
@@ -207,7 +214,7 @@ const HotelSettingsPage = () => {
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
-    
+
     if (name.startsWith('amenities.')) {
       const amenityKey = name.split('.')[1];
       setSettings(prev => ({
@@ -286,7 +293,7 @@ const HotelSettingsPage = () => {
 
     setIsSubmitting(true);
     setSubmitMessage({ type: '', message: '' });
-    
+
     try {
       const token = authAPI.getStoredToken();
       if (token) {
@@ -295,7 +302,7 @@ const HotelSettingsPage = () => {
 
       // Create FormData with flat fields (same format as AddHotelPage)
       const formData = new FormData();
-      
+
       // Add basic hotel information as flat form-data fields
       formData.append('name', settings.hotelName);
       formData.append('description', settings.description || '');
@@ -310,14 +317,14 @@ const HotelSettingsPage = () => {
       formData.append('starRating', (parseInt(settings.starRating) || 0).toString());
       formData.append('checkInTime', settings.checkInTime || '');
       formData.append('checkOutTime', settings.checkOutTime || '');
-      
+
       // Add amenities as indexed array entries
       const selectedAmenities = convertAmenitiesToAPIFormat(settings.amenities);
       selectedAmenities.forEach((amenity, index) => {
         formData.append(`amenities[${index}].name`, amenity.name);
         formData.append(`amenities[${index}].description`, amenity.description);
-        const iconClass = amenity.iconClass.startsWith('fa-') 
-          ? amenity.iconClass 
+        const iconClass = amenity.iconClass.startsWith('fa-')
+          ? amenity.iconClass
           : `fa-${amenity.iconClass}`;
         formData.append(`amenities[${index}].iconClass`, iconClass);
         formData.append(`amenities[${index}].category`, amenity.category);
@@ -343,7 +350,7 @@ const HotelSettingsPage = () => {
 
       // Call API with FormData - no deleteImageIds for now
       const response = await api.hotel.updateHotel(selectedHotel.id, formData, []);
-      
+
       // Show success alert
       await Swal.fire({
         icon: 'success',
@@ -352,27 +359,27 @@ const HotelSettingsPage = () => {
         confirmButtonText: 'OK',
         confirmButtonColor: '#10b981'
       });
-      
+
       setSubmitMessage({
         type: 'success',
         message: 'Hotel settings updated successfully!'
       });
-      
+
       // Refresh hotels list to get updated data
       await fetchHotels();
-      
+
     } catch (error) {
       console.error('Error updating hotel:', error);
-      
+
       // Show error alert
       let errorMessage = 'Failed to update hotel settings. Please try again.';
-      
+
       if (error.response?.data?.message) {
         errorMessage = error.response.data.message;
       } else if (error.message) {
         errorMessage = error.message;
       }
-      
+
       await Swal.fire({
         icon: 'error',
         title: 'Update Failed',
@@ -380,7 +387,7 @@ const HotelSettingsPage = () => {
         confirmButtonText: 'OK',
         confirmButtonColor: '#ef4444'
       });
-      
+
       setSubmitMessage({
         type: 'error',
         message: errorMessage
@@ -418,7 +425,7 @@ const HotelSettingsPage = () => {
 
     setIsSubmitting(true);
     setSubmitMessage({ type: '', message: '' });
-    
+
     try {
       const token = authAPI.getStoredToken();
       if (token) {
@@ -438,7 +445,7 @@ const HotelSettingsPage = () => {
       });
 
       await api.hotel.deleteHotel(selectedHotel.id);
-      
+
       // Show success alert
       await Swal.fire({
         icon: 'success',
@@ -447,24 +454,24 @@ const HotelSettingsPage = () => {
         confirmButtonText: 'OK',
         confirmButtonColor: '#10b981'
       });
-      
+
       // Go back to hotels list and refresh
       setCurrentView('hotels');
       setSelectedHotel(null);
       await fetchHotels();
-      
+
     } catch (error) {
       console.error('Error deleting hotel:', error);
-      
+
       // Show error alert
       let errorMessage = 'Failed to delete hotel. Please try again.';
-      
+
       if (error.response?.data?.message) {
         errorMessage = error.response.data.message;
       } else if (error.message) {
         errorMessage = error.message;
       }
-      
+
       await Swal.fire({
         icon: 'error',
         title: 'Delete Failed',
@@ -472,7 +479,7 @@ const HotelSettingsPage = () => {
         confirmButtonText: 'OK',
         confirmButtonColor: '#ef4444'
       });
-      
+
       setSubmitMessage({
         type: 'error',
         message: errorMessage
@@ -505,20 +512,16 @@ const HotelSettingsPage = () => {
 
   // Hotels List View
   const renderHotelsView = () => (
-    <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <Settings className="h-8 w-8 text-primary" />
-        <div>
-          <h1 className="text-3xl font-bold">Hotel Settings</h1>
-          <p className="form-field-hint md:text-sm">Select a hotel to configure its settings</p>
-        </div>
-      </div>
-
+    <PageWrapper
+      title="Hotel Settings"
+      description="Select a hotel to configure its settings"
+      icon={Settings}
+    >
       {isLoading && (
         <Card>
           <CardContent className="flex items-center justify-center py-8">
-            <div className="flex items-center gap-2">
-              <Loader2 className="h-4 w-4 animate-spin" />
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <RefreshCw className="h-4 w-4 animate-spin" />
               <span>Loading hotels...</span>
             </div>
           </CardContent>
@@ -528,8 +531,8 @@ const HotelSettingsPage = () => {
       {error && (
         <Card>
           <CardContent className="py-8">
-            <div className="text-center text-red-600">
-              <p className="font-medium">Error loading hotels</p>
+            <div className="text-center text-muted-foreground">
+              <p className="font-medium text-destructive">Error loading hotels</p>
               <p className="text-sm mt-1">{error}</p>
               <Button onClick={fetchHotels} className="mt-4">
                 Try Again
@@ -556,9 +559,9 @@ const HotelSettingsPage = () => {
           {hotels.map((hotel) => {
             const hotelImageUrl = getHotelPrimaryImage(hotel.images);
             return (
-              <Card 
-                key={hotel.id} 
-                className="cursor-pointer hover:shadow-lg transition-shadow overflow-hidden"
+              <Card
+                key={hotel.id}
+                className="hover:border-primary/30 transition-colors overflow-hidden cursor-pointer"
                 onClick={() => handleHotelClick(hotel)}
               >
                 {/* Hotel Image */}
@@ -580,52 +583,54 @@ const HotelSettingsPage = () => {
                       }}
                     />
                   ) : null}
-                  <div 
+                  <div
                     className="w-full h-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center"
                     style={{ display: hotelImageUrl ? 'none' : 'flex' }}
                   >
                     <Building2 className="h-12 w-12 text-primary/40" />
                   </div>
                 </div>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-md">
-                    <Building2 className="h-5 w-5" />
-                    {hotel.name}
-                  </CardTitle>
-                  <CardDescription>
-                    <div className="flex items-center gap-1 mb-2">
-                      <MapPin className="h-4 w-4" />
-                      {hotel.address || 'Address not available'}
+
+                <CardHeader className="pb-2">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
+                      <Building2 className="h-4 w-4 text-primary" />
                     </div>
-                    {hotel.description && (
-                      <p className="text-sm line-clamp-2">{hotel.description}</p>
-                    )}
-                  </CardDescription>
+                    <CardTitle className="text-base">{hotel.name}</CardTitle>
+                  </div>
+                  {(hotel.address || hotel.description) && (
+                    <CardDescription className="mt-2 space-y-1">
+                      {hotel.address && (
+                        <span className="flex items-center gap-1">
+                          <MapPin className="h-3.5 w-3.5 shrink-0" />
+                          {hotel.address}
+                        </span>
+                      )}
+                      {hotel.description && (
+                        <p className="line-clamp-2">{hotel.description}</p>
+                      )}
+                    </CardDescription>
+                  )}
                 </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
+
+                <CardContent className="pt-0">
+                  <div className="space-y-1.5">
                     {hotel.phoneNumber && (
-                      <div className="flex items-center gap-1">
-                        <span className="text-sm font-medium">Phone:</span>
-                        <span className="text-sm">{hotel.phoneNumber}</span>
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Phone className="h-3.5 w-3.5 shrink-0" />
+                        <span>{hotel.phoneNumber}</span>
                       </div>
                     )}
                     {hotel.email && (
-                      <div className="flex items-center gap-1">
-                        <span className="text-sm font-medium">Email:</span>
-                        <span className="text-sm">{hotel.email}</span>
-                      </div>
-                    )}
-                    {hotel.category && (
-                      <div className="flex items-center gap-1">
-                        <span className="text-sm font-medium">Category:</span>
-                        <span className="text-sm">{hotel.category}</span>
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Mail className="h-3.5 w-3.5 shrink-0" />
+                        <span className="truncate">{hotel.email}</span>
                       </div>
                     )}
                     {hotel.starRating && (
-                      <div className="flex items-center gap-1">
-                        <span className="text-sm font-medium">Rating:</span>
-                        <span className="text-sm">{hotel.starRating} Star{hotel.starRating !== 1 ? 's' : ''}</span>
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <span className="font-medium text-foreground">{hotel.starRating} Star{hotel.starRating !== 1 ? 's' : ''}</span>
+                        {hotel.category && <span className="text-muted-foreground">· {hotel.category}</span>}
                       </div>
                     )}
                   </div>
@@ -635,46 +640,44 @@ const HotelSettingsPage = () => {
           })}
         </div>
       )}
-    </div>
+    </PageWrapper>
   );
 
   // Settings Form View
   const renderSettingsView = () => (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Settings className="h-8 w-8 text-primary" />
-          <div>
-            <h1 className="text-3xl font-bold">Hotel Settings</h1>
-            <p className="form-field-hint md:text-sm">Configure settings for {selectedHotel?.name}</p>
-          </div>
-        </div>
-        <Button 
-          variant="outline" 
+    <PageWrapper
+      title={selectedHotel?.name ?? 'Hotel Settings'}
+      description="Configure hotel information and amenities"
+      icon={Settings}
+      actions={
+        <Button
+          variant="outline"
           onClick={handleBackToHotels}
           className="flex items-center gap-2"
         >
           <ArrowLeft className="h-4 w-4" />
           Back to Hotels
         </Button>
-      </div>
-
+      }
+    >
       <form onSubmit={(e) => { e.preventDefault(); handleSave(); }} className="space-y-6">
         {/* Basic Information */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Building2 className="h-5 w-5" />
-              Basic Information
-            </CardTitle>
-            <CardDescription>
-              Basic hotel information
-            </CardDescription>
+            <div className="flex items-center gap-3">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
+                <Building2 className="h-4 w-4 text-primary" />
+              </div>
+              <div>
+                <CardTitle className="text-sm font-semibold">Basic Information</CardTitle>
+                <CardDescription>Basic hotel information</CardDescription>
+              </div>
+            </div>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="hotelName">Hotel Name *</Label>
+                <Label htmlFor="hotelName" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Hotel Name *</Label>
                 <Input
                   id="hotelName"
                   name="hotelName"
@@ -685,7 +688,7 @@ const HotelSettingsPage = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="starRating">Star Rating</Label>
+                <Label htmlFor="starRating" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Star Rating</Label>
                 <Select
                   name="starRating"
                   value={settings.starRating}
@@ -700,9 +703,9 @@ const HotelSettingsPage = () => {
                 </Select>
               </div>
             </div>
-            
+
             <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
+              <Label htmlFor="description" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Description</Label>
               <Textarea
                 id="description"
                 name="description"
@@ -718,17 +721,19 @@ const HotelSettingsPage = () => {
         {/* Location Information */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <MapPin className="h-5 w-5" />
-              Location Information
-            </CardTitle>
-            <CardDescription>
-              Hotel location details
-            </CardDescription>
+            <div className="flex items-center gap-3">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
+                <MapPin className="h-4 w-4 text-primary" />
+              </div>
+              <div>
+                <CardTitle className="text-sm font-semibold">Location Information</CardTitle>
+                <CardDescription>Hotel location details</CardDescription>
+              </div>
+            </div>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="address">Address *</Label>
+              <Label htmlFor="address" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Address *</Label>
               <Input
                 id="address"
                 name="address"
@@ -740,7 +745,7 @@ const HotelSettingsPage = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="city">City *</Label>
+                <Label htmlFor="city" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">City *</Label>
                 <Input
                   id="city"
                   name="city"
@@ -751,7 +756,7 @@ const HotelSettingsPage = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="state">State/Province</Label>
+                <Label htmlFor="state" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">State/Province</Label>
                 <Input
                   id="state"
                   name="state"
@@ -762,7 +767,7 @@ const HotelSettingsPage = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="country">Country *</Label>
+                <Label htmlFor="country" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Country *</Label>
                 <Input
                   id="country"
                   name="country"
@@ -773,7 +778,7 @@ const HotelSettingsPage = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="postalCode">Postal Code</Label>
+                <Label htmlFor="postalCode" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Postal Code</Label>
                 <Input
                   id="postalCode"
                   name="postalCode"
@@ -789,18 +794,20 @@ const HotelSettingsPage = () => {
         {/* Contact Information */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Phone className="h-5 w-5" />
-              Contact Information
-            </CardTitle>
-            <CardDescription>
-              Hotel contact details
-            </CardDescription>
+            <div className="flex items-center gap-3">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
+                <Phone className="h-4 w-4 text-primary" />
+              </div>
+              <div>
+                <CardTitle className="text-sm font-semibold">Contact Information</CardTitle>
+                <CardDescription>Hotel contact details</CardDescription>
+              </div>
+            </div>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="phone">Phone Number *</Label>
+                <Label htmlFor="phone" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Phone Number *</Label>
                 <Input
                   id="phone"
                   name="phone"
@@ -812,7 +819,7 @@ const HotelSettingsPage = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="email">Email Address *</Label>
+                <Label htmlFor="email" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Email Address *</Label>
                 <Input
                   id="email"
                   name="email"
@@ -823,9 +830,9 @@ const HotelSettingsPage = () => {
                 />
               </div>
             </div>
-            
+
             <div className="space-y-2">
-              <Label htmlFor="website">Website</Label>
+              <Label htmlFor="website" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Website</Label>
               <Input
                 id="website"
                 name="website"
@@ -841,18 +848,20 @@ const HotelSettingsPage = () => {
         {/* Hotel Details */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Clock className="h-5 w-5" />
-              Hotel Details
-            </CardTitle>
-            <CardDescription>
-              Additional hotel information
-            </CardDescription>
+            <div className="flex items-center gap-3">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
+                <Clock className="h-4 w-4 text-primary" />
+              </div>
+              <div>
+                <CardTitle className="text-sm font-semibold">Hotel Details</CardTitle>
+                <CardDescription>Additional hotel information</CardDescription>
+              </div>
+            </div>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="checkInTime">Check-in Time</Label>
+                <Label htmlFor="checkInTime" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Check-in Time</Label>
                 <Input
                   id="checkInTime"
                   name="checkInTime"
@@ -863,7 +872,7 @@ const HotelSettingsPage = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="checkOutTime">Check-out Time</Label>
+                <Label htmlFor="checkOutTime" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Check-out Time</Label>
                 <Input
                   id="checkOutTime"
                   name="checkOutTime"
@@ -879,16 +888,18 @@ const HotelSettingsPage = () => {
         {/* Amenities */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Wifi className="h-5 w-5" />
-              Amenities & Services
-            </CardTitle>
-            <CardDescription>
-              Select the amenities and services available at the hotel
-            </CardDescription>
+            <div className="flex items-center gap-3">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
+                <Wifi className="h-4 w-4 text-primary" />
+              </div>
+              <div>
+                <CardTitle className="text-sm font-semibold">Amenities &amp; Services</CardTitle>
+                <CardDescription>Select the amenities and services available at the hotel</CardDescription>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
               {Object.entries(settings.amenities).map(([amenity, enabled]) => {
                 const amenityNames = {
                   wifi: 'Free WiFi',
@@ -906,21 +917,25 @@ const HotelSettingsPage = () => {
                   petFriendly: 'Pet Friendly',
                   smokingAllowed: 'Smoking Allowed'
                 };
-                
+
                 return (
-                  <div key={amenity} className="flex items-center space-x-2">
+                  <label
+                    key={amenity}
+                    className={`flex items-center gap-2 px-3 py-2.5 rounded-lg border cursor-pointer transition-colors select-none ${
+                      enabled
+                        ? 'border-primary/50 bg-primary/[0.06] text-foreground'
+                        : 'border-border hover:bg-muted/40 text-muted-foreground'
+                    }`}
+                  >
                     <input
                       type="checkbox"
-                      id={amenity}
                       name={`amenities.${amenity}`}
                       checked={enabled}
                       onChange={handleInputChange}
-                      className="rounded border-gray-300"
+                      className="sr-only"
                     />
-                    <Label htmlFor={amenity} className="text-sm">
-                      {amenityNames[amenity] || amenity}
-                    </Label>
-                  </div>
+                    <span className="text-xs font-medium">{amenityNames[amenity] || amenity}</span>
+                  </label>
                 );
               })}
             </div>
@@ -928,10 +943,10 @@ const HotelSettingsPage = () => {
         </Card>
 
         {/* Action Buttons */}
-        <div className="flex justify-between">
-          <Button 
-            type="button" 
-            variant="destructive" 
+        <div className="border-t border-border pt-6 flex justify-between">
+          <Button
+            type="button"
+            variant="destructive"
             onClick={handleDelete}
             disabled={isSubmitting}
             className="flex items-center gap-2"
@@ -939,7 +954,7 @@ const HotelSettingsPage = () => {
             <Trash2 className="h-4 w-4" />
             {isSubmitting ? 'Deleting...' : 'Delete Hotel'}
           </Button>
-          
+
           <div className="flex gap-4">
             <Button type="button" variant="outline" onClick={handleBackToHotels}>
               Cancel
@@ -953,25 +968,24 @@ const HotelSettingsPage = () => {
 
         {/* Submit Message */}
         {submitMessage.message && (
-          <div className={`p-4 rounded-lg ${
-            submitMessage.type === 'success' 
-              ? 'bg-green-50 text-green-800 border border-green-200' 
-              : 'bg-red-50 text-red-800 border border-red-200'
+          <div className={`p-4 rounded-lg border text-sm ${
+            submitMessage.type === 'success'
+              ? 'bg-primary/5 text-foreground border-primary/20'
+              : 'bg-destructive/10 text-destructive border-destructive/20'
           }`}>
             {submitMessage.message}
           </div>
         )}
       </form>
-    </div>
+    </PageWrapper>
   );
 
   return (
-    <div className="container mx-auto p-0 md:p-6">
+    <>
       {currentView === 'hotels' && renderHotelsView()}
       {currentView === 'settings' && renderSettingsView()}
-    </div>
+    </>
   );
 };
 
 export default HotelSettingsPage;
-

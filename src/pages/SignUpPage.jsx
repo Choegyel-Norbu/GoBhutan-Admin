@@ -359,8 +359,8 @@ const SignUpPage = () => {
   const handleClientsChange = (e) => {
     const { value, checked } = e.target;
     
-    // Define all available services (removed flight)
-    const allServices = ['bus', 'hotel', 'theater'];
+    // Define all available services
+    const allServices = ['bus', 'hotel', 'theater', 'gas'];
     
     if (value === 'all') {
       // If "All Services Client" is checked, select all services
@@ -726,8 +726,8 @@ const SignUpPage = () => {
                     Services <span className="text-primary">*</span>
                   </label>
                   <div className="space-y-3">
-                    {/* First Row: Bus, Hotel, Theater */}
-                    <div className="flex items-center space-x-6">
+                    {/* Row 1: Bus, Hotel, Theater, Gas */}
+                    <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
                       <div className="flex items-center">
                         <input
                           id="bus-client"
@@ -774,6 +774,22 @@ const SignUpPage = () => {
                         />
                         <label htmlFor="theater-client" className="ml-2 block text-sm text-foreground">
                           Theater
+                        </label>
+                      </div>
+                      <div className="flex items-center">
+                        <input
+                          id="gas-client"
+                          name="clients"
+                          type="checkbox"
+                          value="gas"
+                          checked={formData.clients.includes('gas')}
+                          onChange={handleClientsChange}
+                          onBlur={handleInputBlur}
+                          className="h-4 w-4 text-primary focus:ring-primary border-border rounded disabled:opacity-50"
+                          disabled={isLoading}
+                        />
+                        <label htmlFor="gas-client" className="ml-2 block text-sm text-foreground">
+                          Gas
                         </label>
                       </div>
                     </div>

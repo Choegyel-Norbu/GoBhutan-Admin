@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import {
   Clapperboard, Film, Building, X,
   DoorOpen, Users, MapPin, ChevronRight, RefreshCw,
-  AlertCircle, Link as LinkIcon, Plus
+  AlertCircle, Link as LinkIcon, Plus, Upload,
+  Image as ImageIcon, Trash2
 } from 'lucide-react';
 import PageWrapper from '@/components/PageWrapper';
 import { Button } from '@/components/ui/Button';
@@ -10,6 +11,7 @@ import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
 import { apiClient } from '@/lib/apiService';
 import authAPI from '@/lib/authAPI';
+import { buildScreeningFormData } from '@/lib/screening';
 import { useAuth } from '@/contexts/AuthContext';
 import Swal from 'sweetalert2';
 
@@ -69,6 +71,7 @@ function TheaterPage() {
     hallId: '',
     hallName: '',
     isActive: true,
+    images: [],
   });
 
   const [screeningErrors, setScreeningErrors] = useState({});
@@ -261,6 +264,28 @@ function TheaterPage() {
     }
   };
 
+  const handleScreeningImageUpload = (e) => {
+    const files = Array.from(e.target.files ?? []);
+    const imageFiles = files.map((file) => ({
+      id: Date.now() + Math.random(),
+      file,
+      name: file.name,
+      url: URL.createObjectURL(file),
+    }));
+    setScreeningFormData((prev) => ({
+      ...prev,
+      images: [...prev.images, ...imageFiles],
+    }));
+    e.target.value = '';
+  };
+
+  const removeScreeningImage = (imageId) => {
+    setScreeningFormData((prev) => ({
+      ...prev,
+      images: prev.images.filter((img) => img.id !== imageId),
+    }));
+  };
+
   const handleTimeChange = (value) => {
     setScreeningFormData(prev => ({ ...prev, startTime: value }));
     if (screeningErrors.startTime) {
@@ -337,7 +362,8 @@ function TheaterPage() {
     try {
       const token = authAPI.getStoredToken();
       if (token) apiClient.setAuthToken(token);
-      const payload = {
+
+      const dto = {
         movieName: screeningFormData.movieName.trim(),
         screeningDate: screeningFormData.screeningDate,
         startTime: convertTo24HourFormat(screeningFormData.startTime),
@@ -346,7 +372,10 @@ function TheaterPage() {
         hallName: screeningFormData.hallName,
         isActive: screeningFormData.isActive,
       };
-      await apiClient.post('/api/screenings', payload);
+      const posterFiles = screeningFormData.images.map((img) => img.file);
+      const formDataToSend = buildScreeningFormData(dto, posterFiles);
+
+      await apiClient.postFormData('/api/screenings', formDataToSend);
       await Swal.fire({ icon: 'success', title: 'Success!', text: 'Movie screening created successfully.', confirmButtonText: 'OK', confirmButtonColor: '#10b981' });
       const createdHallId = screeningFormData.hallId;
       handleScreeningReset();
@@ -362,7 +391,11 @@ function TheaterPage() {
   };
 
   const handleScreeningReset = () => {
-    setScreeningFormData({ movieName: '', screeningDate: '', startTime: '', trailerLink: '', theaterId: '', theaterName: '', hallId: '', hallName: '', isActive: true });
+    setScreeningFormData({
+      movieName: '', screeningDate: '', startTime: '', trailerLink: '',
+      theaterId: '', theaterName: '', hallId: '', hallName: '',
+      isActive: true, images: [],
+    });
     setScreeningErrors({});
   };
 
@@ -380,14 +413,14 @@ function TheaterPage() {
       <div className="flex flex-col md:flex-row rounded-xl border border-border overflow-hidden bg-card" style={{ minHeight: '560px' }}>
 
         {/* ── LEFT SIDEBAR ─────────────────────────────────────────────────── */}
-        <aside className="md:w-52 shrink-0 border-b md:border-b-0 md:border-r border-border bg-muted/20 flex flex-col">
+        <aside className="md:w-56 shrink-0 border-b md:border-b-0 md:border-r border-border bg-muted/20 flex flex-col">
 
           {/* Locations */}
           <div className="p-3 flex-shrink-0">
             <div className="flex items-center gap-1.5 px-2 mb-2">
-              <MapPin className="h-3 w-3 text-muted-foreground" />
-              <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Locations</span>
-              {loading && <RefreshCw className="h-2.5 w-2.5 animate-spin text-muted-foreground ml-auto" />}
+              <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Locations</span>
+              {loading && <RefreshCw className="h-3 w-3 animate-spin text-muted-foreground ml-auto" />}
             </div>
 
             {error ? (
@@ -403,10 +436,10 @@ function TheaterPage() {
               </div>
             ) : loading ? (
               <div className="space-y-1">
-                {[1, 2, 3].map(i => <Skeleton key={i} className="h-9 w-full" />)}
+                {[1, 2, 3].map(i => <Skeleton key={i} className="h-14 w-full" />)}
               </div>
             ) : locations.length === 0 ? (
-              <p className="px-2 py-1 text-xs text-muted-foreground">No locations found.</p>
+              <p className="px-2 py-1 text-sm text-muted-foreground">No locations found.</p>
             ) : (
               <nav className="space-y-px">
                 {locations.map(loc => (
@@ -414,16 +447,16 @@ function TheaterPage() {
                     key={loc.id}
                     type="button"
                     onClick={() => handleLocationSelect(loc.id)}
-                    className={`w-full flex items-center gap-2 rounded-lg px-2.5 py-2 text-left transition-colors cursor-pointer ${
+                    className={`w-full flex items-center gap-2 rounded-lg px-3 py-2.5 text-left transition-colors cursor-pointer ${
                       selectedLocationId === loc.id
                         ? 'bg-primary text-primary-foreground'
                         : 'text-foreground hover:bg-muted'
                     }`}
                   >
                     <div className="min-w-0 flex-1">
-                      <p className="text-xs font-medium truncate leading-tight">{loc.dzongkhag}</p>
+                      <p className="text-sm font-semibold truncate leading-tight">{loc.dzongkhag}</p>
                       {loc.thromdoe && (
-                        <p className={`text-[10px] truncate leading-tight ${
+                        <p className={`text-xs truncate leading-tight ${
                           selectedLocationId === loc.id ? 'text-primary-foreground/70' : 'text-muted-foreground'
                         }`}>
                           {loc.thromdoe}
@@ -431,7 +464,7 @@ function TheaterPage() {
                       )}
                     </div>
                     {selectedLocationId === loc.id && (
-                      <ChevronRight className="h-3 w-3 shrink-0 opacity-80" />
+                      <ChevronRight className="h-3.5 w-3.5 shrink-0 opacity-80" />
                     )}
                   </button>
                 ))}
@@ -443,10 +476,10 @@ function TheaterPage() {
           {selectedLocationId && (
             <div className="border-t border-border/50 p-3 flex-1 min-h-0 overflow-y-auto">
               <div className="flex items-center gap-1.5 px-2 mb-2">
-                <Building className="h-3 w-3 text-muted-foreground" />
-                <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Theaters</span>
+                <Building className="h-3.5 w-3.5 text-muted-foreground" />
+                <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Theaters</span>
                 {loadingTheaters[selectedLocationId]
-                  ? <RefreshCw className="h-2.5 w-2.5 animate-spin text-muted-foreground ml-auto" />
+                  ? <RefreshCw className="h-3 w-3 animate-spin text-muted-foreground ml-auto" />
                   : (
                     <button
                       type="button"
@@ -464,10 +497,10 @@ function TheaterPage() {
                 <p className="px-2 py-1 text-xs text-destructive">{theatersError[selectedLocationId]}</p>
               ) : loadingTheaters[selectedLocationId] ? (
                 <div className="space-y-1">
-                  {[1, 2].map(i => <Skeleton key={i} className="h-8 w-full" />)}
+                  {[1, 2].map(i => <Skeleton key={i} className="h-12 w-full" />)}
                 </div>
               ) : currentTheaters.length === 0 ? (
-                <p className="px-2 py-1 text-xs text-muted-foreground">No theaters.</p>
+                <p className="px-2 py-1 text-sm text-muted-foreground">No theaters.</p>
               ) : (
                 <nav className="space-y-px">
                   {currentTheaters.map(theater => (
@@ -475,7 +508,7 @@ function TheaterPage() {
                       key={theater.id}
                       type="button"
                       onClick={() => handleTheaterSelect(theater.id)}
-                      className={`w-full flex items-center gap-2 rounded-lg px-2.5 py-2 text-left transition-colors cursor-pointer ${
+                      className={`w-full flex items-center gap-2 rounded-lg px-3 py-2.5 text-left transition-colors cursor-pointer ${
                         selectedTheaterId === theater.id
                           ? 'bg-primary/10 text-primary'
                           : 'text-foreground hover:bg-muted'
@@ -484,9 +517,9 @@ function TheaterPage() {
                       <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${
                         theater.isActive ? 'bg-green-500' : 'bg-muted-foreground/40'
                       }`} />
-                      <span className="text-xs font-medium truncate flex-1">{theater.name}</span>
+                      <span className="text-sm font-medium truncate flex-1">{theater.name}</span>
                       {selectedTheaterId === theater.id && (
-                        <ChevronRight className="h-3 w-3 shrink-0 opacity-60" />
+                        <ChevronRight className="h-3.5 w-3.5 shrink-0 opacity-60" />
                       )}
                     </button>
                   ))}
@@ -937,6 +970,62 @@ function TheaterPage() {
                     autoComplete="off"
                   />
                   <FieldError message={screeningErrors.trailerLink} />
+                </div>
+
+                {/* Poster / screening images */}
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-1.5">
+                    <ImageIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                    Movie Poster
+                    <span className="text-xs text-muted-foreground font-normal">(optional)</span>
+                  </Label>
+                  <div
+                    className="border-2 border-dashed border-border/60 rounded-xl p-5 text-center hover:border-primary/40 hover:bg-muted/20 transition-colors cursor-pointer"
+                    onClick={() => document.getElementById('screening-images')?.click()}
+                  >
+                    <Upload className="h-6 w-6 text-muted-foreground/40 mx-auto mb-2" />
+                    <p className="text-xs font-medium text-muted-foreground mb-1">Click to upload poster images</p>
+                    <p className="text-[10px] text-muted-foreground/60 mb-3">PNG, JPG, WebP</p>
+                    <input
+                      id="screening-images"
+                      type="file"
+                      multiple
+                      accept="image/*"
+                      onChange={handleScreeningImageUpload}
+                      className="hidden"
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={(e) => { e.stopPropagation(); document.getElementById('screening-images')?.click(); }}
+                    >
+                      <Upload className="h-3.5 w-3.5 mr-1.5" />
+                      Choose Images
+                    </Button>
+                  </div>
+                  {screeningFormData.images.length > 0 && (
+                    <div className="grid grid-cols-4 gap-2">
+                      {screeningFormData.images.map((image) => (
+                        <div key={image.id} className="relative group aspect-square">
+                          <img
+                            src={image.url}
+                            alt={image.name}
+                            className="w-full h-full object-cover rounded-lg border border-border/60"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removeScreeningImage(image.id)}
+                            aria-label="Remove image"
+                            className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center"
+                          >
+                            <Trash2 className="h-4 w-4 text-white" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 {/* Active toggle */}

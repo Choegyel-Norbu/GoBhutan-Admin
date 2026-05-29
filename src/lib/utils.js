@@ -147,3 +147,102 @@ export function getRoomPrimaryImage(images) {
 
   return null;
 }
+
+/**
+ * Full URL for a screening poster (same /uploads/ nginx path as hotel images).
+ * @param {string} imagePath
+ * @returns {string|null}
+ */
+export function getScreeningImageUrl(imagePath) {
+  return getHotelImageUrl(imagePath);
+}
+
+/**
+ * Extract a storage path or URL from a poster image API item.
+ * @param {string|object} item
+ * @returns {string|null}
+ */
+function getPosterPathFromItem(item) {
+  if (!item) return null;
+  if (typeof item === 'string') return item.trim() || null;
+  if (typeof item !== 'object') return null;
+  const path =
+    item.url ??
+    item.filePath ??
+    item.path ??
+    item.imagePath ??
+    item.imageUrl ??
+    item.fileName ??
+    item.posterUrl ??
+    null;
+  return path && String(path).trim() ? String(path).trim() : null;
+}
+
+/**
+ * Normalize poster images from a screening API record (supports several field shapes).
+ * @param {object} screening
+ * @returns {Array<{ id?: number|string, url: string, isPrimary?: boolean, title?: string }>}
+ */
+export function getScreeningPosterImages(screening) {
+  if (!screening || typeof screening !== 'object') return [];
+
+  // Backend hall/list/detail DTO uses singular posterImage (object, string, or null)
+  if (screening.posterImage != null && screening.posterImage !== '') {
+    if (typeof screening.posterImage === 'object') {
+      const url = getPosterPathFromItem(screening.posterImage);
+      if (url) {
+        return [{
+          ...screening.posterImage,
+          id: screening.posterImage.id ?? 'poster-0',
+          url,
+        }];
+      }
+    }
+    if (typeof screening.posterImage === 'string') {
+      const url = getPosterPathFromItem(screening.posterImage);
+      if (url) return [{ id: 'poster-0', url }];
+    }
+  }
+
+  const candidates = [
+    screening.posterImages,
+    screening.posterImageList,
+    screening.posterImageEntities,
+    screening.screeningImages,
+    screening.images,
+    screening.posters,
+  ];
+
+  let raw = candidates.find((c) => c != null && c !== '');
+  if (raw == null) {
+    const singular =
+      screening.posterImageUrl ??
+      screening.posterUrl ??
+      screening.imageUrl ??
+      screening.posterPath;
+    if (singular) raw = [singular];
+  }
+
+  if (typeof raw === 'string') {
+    const path = getPosterPathFromItem(raw);
+    return path ? [{ id: 'poster-0', url: path }] : [];
+  }
+
+  if (!Array.isArray(raw)) return [];
+
+  return raw
+    .map((item, index) => {
+      const url = getPosterPathFromItem(item);
+      if (!url) return null;
+      if (typeof item === 'object' && item !== null) {
+        return {
+          id: item.id ?? `poster-${index}`,
+          url,
+          isPrimary: item.isPrimary,
+          title: item.title ?? item.name,
+        };
+      }
+      return { id: `poster-${index}`, url };
+    })
+    .filter(Boolean);
+}

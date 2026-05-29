@@ -1,19 +1,138 @@
-import { useState, useEffect, useCallback } from 'react';
-import { Clapperboard, RefreshCw, Ticket, User, Mail, Phone, Building, MapPin, CreditCard, Clock, XCircle } from 'lucide-react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import {
+  Clapperboard,
+  RefreshCw,
+  Ticket,
+  User,
+  Building,
+  MapPin,
+  CreditCard,
+  Clock,
+  XCircle,
+  Search,
+  Calendar,
+} from 'lucide-react';
 import PageWrapper from '@/components/PageWrapper';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
 import { Select } from '@/components/ui/Select';
 import { apiClient } from '@/lib/apiService';
 import authAPI from '@/lib/authAPI';
 import Swal from 'sweetalert2';
 
+function getMovieNameFromBooking(item) {
+  if (!item || typeof item !== 'object') return '';
+  const screening = item.screening;
+  const name = item.movieName ?? screening?.movieName ?? item.movie ?? screening?.movie ?? '';
+  return typeof name === 'string' ? name.trim() : '';
+}
+
+function formatBookedAt(isoString) {
+  if (!isoString) return '—';
+  try {
+    return new Date(isoString).toLocaleString(undefined, {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    });
+  } catch {
+    return isoString;
+  }
+}
+
+function formatScreeningTime(startTime) {
+  if (!startTime) return '';
+  if (typeof startTime === 'object') {
+    return `${String(startTime.hour ?? 0).padStart(2, '0')}:${String(startTime.minute ?? 0).padStart(2, '0')}`;
+  }
+  return String(startTime);
+}
+
+/** Flatten flat tickets and legacy nested bookings into table rows. */
+function normalizeTheaterBookings(list) {
+  const rows = [];
+  list.forEach((item, index) => {
+    if (!item || typeof item !== 'object') return;
+
+    if (item.ticketNumber != null || (item.seatIdentifier != null && item.customerName != null)) {
+      rows.push({
+        rowKey: item.ticketNumber ?? `ticket-${index}`,
+        ticketNumber: item.ticketNumber,
+        bookingRef: item.bookingRef ?? item.bookingReference,
+        movieName: getMovieNameFromBooking(item),
+        customerName: item.customerName,
+        cidOrPassport: item.cidOrPassport,
+        phoneNumber: item.phoneNumber,
+        email: item.email,
+        seatIdentifier: item.seatIdentifier ?? item.seatId,
+        seatClass: item.seatClass,
+        bookedAt: item.bookedAt,
+        showTime: item.screeningDate
+          ? `${item.screeningDate}${item.startTime ? ` ${formatScreeningTime(item.startTime)}` : ''}`
+          : '',
+        hallName: item.hallName,
+      });
+      return;
+    }
+
+    const tickets = item.tickets ?? item.bookingTickets ?? [];
+    const screening = item.screening ?? item;
+    const movieName = getMovieNameFromBooking(item) || getMovieNameFromBooking(screening);
+    const bookingRef = item.bookingRef ?? item.bookingReference ?? item.reference;
+    const showTime = screening?.screeningDate
+      ? `${screening.screeningDate}${screening.startTime ? ` ${formatScreeningTime(screening.startTime)}` : ''}`
+      : '';
+    const hallName = screening?.hallName ?? item.hallName;
+
+    if (tickets.length > 0) {
+      tickets.forEach((t, i) => {
+        rows.push({
+          rowKey: t.ticketNumber ?? `${bookingRef ?? 'booking'}-${i}`,
+          ticketNumber: t.ticketNumber,
+          bookingRef,
+          movieName,
+          customerName: t.customerName,
+          cidOrPassport: t.cidOrPassport ?? t.cid,
+          phoneNumber: t.phoneNumber,
+          email: t.email,
+          seatIdentifier: t.seatIdentifier ?? t.seatId,
+          seatClass: t.seatClass,
+          bookedAt: t.bookedAt ?? item.bookedAt,
+          showTime,
+          hallName,
+        });
+      });
+    } else {
+      rows.push({
+        rowKey: bookingRef ?? item.id ?? `booking-${index}`,
+        ticketNumber: null,
+        bookingRef,
+        movieName,
+        customerName: item.customerName,
+        cidOrPassport: item.cidOrPassport,
+        phoneNumber: item.phoneNumber,
+        email: item.email,
+        seatIdentifier: null,
+        seatClass: null,
+        bookedAt: item.bookedAt,
+        showTime,
+        hallName,
+      });
+    }
+  });
+  return rows;
+}
+
+const TABLE_GRID = 'lg:grid lg:grid-cols-[minmax(118px,1.1fr)_minmax(110px,1fr)_minmax(140px,1.35fr)_56px_72px_minmax(130px,1.1fr)_minmax(108px,1fr)_minmax(120px,auto)] lg:items-center lg:gap-3';
+
 function TheaterBookingManagementPage() {
   const [locations, setLocations] = useState([]);
   const [theaters, setTheaters] = useState([]);
   const [selectedLocationId, setSelectedLocationId] = useState('');
   const [selectedTheaterId, setSelectedTheaterId] = useState('');
+  const [bookingSearch, setBookingSearch] = useState('');
+  const [selectedMovieName, setSelectedMovieName] = useState('');
   const [data, setData] = useState(null);
   const [loadingLocations, setLoadingLocations] = useState(true);
   const [loadingTheaters, setLoadingTheaters] = useState(false);
@@ -110,7 +229,46 @@ function TheaterBookingManagementPage() {
   useEffect(() => {
     if (selectedTheaterId) fetchBookings();
     else setData(null);
+    setBookingSearch('');
+    setSelectedMovieName('');
   }, [selectedTheaterId]);
+
+  const rawList = useMemo(() => {
+    const isArray = Array.isArray(data);
+    return isArray ? data : (data && Array.isArray(data?.data) ? data.data : data ? [data] : []);
+  }, [data]);
+
+  const tableRows = useMemo(() => normalizeTheaterBookings(rawList), [rawList]);
+
+  const movieNames = useMemo(() => {
+    const names = new Set();
+    tableRows.forEach((row) => {
+      if (row.movieName) names.add(row.movieName);
+    });
+    return Array.from(names).sort((a, b) => a.localeCompare(b));
+  }, [tableRows]);
+
+  const filteredRows = useMemo(() => {
+    let result = tableRows;
+    const query = bookingSearch.trim().toLowerCase();
+    if (query) {
+      result = result.filter((row) =>
+        row.ticketNumber?.toLowerCase().includes(query)
+        || row.bookingRef?.toLowerCase().includes(query)
+        || row.customerName?.toLowerCase().includes(query)
+        || row.movieName?.toLowerCase().includes(query)
+        || String(row.seatIdentifier ?? '').toLowerCase().includes(query)
+        || row.email?.toLowerCase().includes(query)
+        || row.phoneNumber?.includes(query),
+      );
+    }
+    if (selectedMovieName) {
+      result = result.filter((row) => row.movieName === selectedMovieName);
+    }
+    return result;
+  }, [tableRows, bookingSearch, selectedMovieName]);
+
+  const selectedTheater = theaters.find((t) => String(t.id) === String(selectedTheaterId));
 
   const handleCancelTicket = useCallback(async (ticketNumber) => {
     const result = await Swal.fire({
@@ -156,256 +314,272 @@ function TheaterBookingManagementPage() {
     }
   }, [selectedTheaterId]);
 
-  const isArray = Array.isArray(data);
-  const list = isArray ? data : (data && Array.isArray(data?.data) ? data.data : data ? [data] : []);
-
   return (
     <PageWrapper
       title="Booking Management"
       description="View movie screening bookings by theater"
     >
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-wrap items-end gap-4 mb-6">
-            <div className="space-y-1 min-w-[180px]">
-              <Label className="text-sm flex items-center gap-1">
-                <MapPin className="h-3 w-3" /> Location
-              </Label>
-              <Select
-                value={selectedLocationId}
-                onChange={(e) => setSelectedLocationId(e.target.value)}
-                disabled={loadingLocations}
-              >
-                <option value="">Select location</option>
-                {locations.map((loc) => (
-                  <option key={loc.id} value={loc.id}>{loc.dzongkhag || loc.name || `Location ${loc.id}`}</option>
-                ))}
-              </Select>
-            </div>
-            <div className="space-y-1 min-w-[180px]">
-              <Label className="text-sm flex items-center gap-1">
-                <Building className="h-3 w-3" /> Theater
-              </Label>
-              <Select
-                value={selectedTheaterId}
-                onChange={(e) => setSelectedTheaterId(e.target.value)}
-                disabled={loadingTheaters || !selectedLocationId}
-              >
-                <option value="">Select theater</option>
-                {theaters.map((t) => (
-                  <option key={t.id} value={t.id}>{t.name}</option>
-                ))}
-              </Select>
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={fetchBookings}
-              disabled={loading || !selectedTheaterId}
-            >
-              {loading ? <RefreshCw className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-              <span className="ml-2">Refresh</span>
-            </Button>
-          </div>
-
-          {loading && (
-            <div className="flex items-center justify-center py-12 text-muted-foreground">
-              <RefreshCw className="h-8 w-8 animate-spin mr-2" />
-              Loading bookings…
-            </div>
-          )}
-
-          {error && (
-            <div className="rounded-lg border border-destructive/50 bg-destructive/10 text-destructive px-4 py-3 text-sm">
-              {error}
-            </div>
-          )}
-
-          {!selectedTheaterId && !loading && (
-            <div className="text-center py-12 text-muted-foreground">
-              Select a location and theater to view bookings.
-            </div>
-          )}
-
-          {!loading && !error && selectedTheaterId && (
-            <>
-              {isArray || (list && list.length > 0) ? (
-                <div className="space-y-4">
-                  {list.map((item, index) => (
-                    <BookingCard key={item?.id ?? index} item={item} onCancelTicket={handleCancelTicket} onCancelBooking={handleCancelBooking} />
+      <div className="space-y-4">
+        <Card>
+          <CardContent className="pt-4 pb-4">
+            <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end">
+              <div className="space-y-1.5 min-w-[160px] flex-1">
+                <Label htmlFor="theater-location" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
+                  <MapPin className="h-3 w-3" /> Location
+                </Label>
+                <Select
+                  id="theater-location"
+                  value={selectedLocationId}
+                  onChange={(e) => setSelectedLocationId(e.target.value)}
+                  disabled={loadingLocations}
+                >
+                  <option value="">Select location</option>
+                  {locations.map((loc) => (
+                    <option key={loc.id} value={loc.id}>{loc.dzongkhag || loc.name || `Location ${loc.id}`}</option>
                   ))}
-                </div>
-              ) : (
-                <div className="text-center py-12 text-muted-foreground">
-                  No bookings for this theater.
-                  {data != null && typeof data === 'object' && (
-                    <pre className="mt-4 p-4 bg-muted/50 rounded-lg text-left overflow-auto text-xs">
-                      {JSON.stringify(data, null, 2)}
-                    </pre>
-                  )}
-                </div>
-              )}
-            </>
-          )}
-        </CardContent>
-      </Card>
-    </PageWrapper>
-  );
-}
-
-function formatBookedAt(isoString) {
-  if (!isoString) return '—';
-  try {
-    const d = new Date(isoString);
-    return d.toLocaleString(undefined, {
-      dateStyle: 'medium',
-      timeStyle: 'short'
-    });
-  } catch {
-    return isoString;
-  }
-}
-
-function BookingCard({ item, onCancelTicket, onCancelBooking }) {
-  if (!item || typeof item !== 'object') {
-    return (
-      <div className="p-4 border rounded-lg bg-muted/30">
-        <pre className="text-xs overflow-auto">{JSON.stringify(item, null, 2)}</pre>
-      </div>
-    );
-  }
-
-  // New API format: flat ticket with ticketNumber, seatIdentifier, seatClass, customerName, etc.
-  if (item.ticketNumber != null || (item.seatIdentifier != null && item.customerName != null)) {
-    return (
-      <div className="p-4 border rounded-lg bg-background border-border/60 shadow-sm hover:shadow-md transition-shadow">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10">
-              <Ticket className="h-4 w-4 text-primary" />
-            </div>
-            <div>
-              <p className="font-mono font-semibold text-sm text-foreground">
-                {item.ticketNumber ?? '—'}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                Seat {item.seatIdentifier ?? item.seatId ?? '—'}
-                {item.seatClass && (
-                  <span className="ml-2 inline-flex items-center rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-medium">
-                    {item.seatClass}
-                  </span>
-                )}
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="text-right text-xs text-muted-foreground flex items-center gap-1">
-              <Clock className="h-3 w-3" />
-              {formatBookedAt(item.bookedAt)}
-            </div>
-            {item.ticketNumber && onCancelTicket && (
-              <Button
-                size="sm" variant="outline"
-                className="h-7 text-xs text-destructive border-destructive/40 hover:bg-destructive/10 hover:text-destructive"
-                onClick={() => onCancelTicket(item.ticketNumber)}
-              >
-                <XCircle className="h-3 w-3 mr-1" /> Cancel Ticket
-              </Button>
-            )}
-            {item.bookingRef && onCancelBooking && (
-              <Button
-                size="sm" variant="outline"
-                className="h-7 text-xs text-destructive border-destructive/40 hover:bg-destructive/10 hover:text-destructive"
-                onClick={() => onCancelBooking(item.bookingRef)}
-              >
-                <XCircle className="h-3 w-3 mr-1" /> Cancel Booking
-              </Button>
-            )}
-          </div>
-        </div>
-        <div className="mt-4 pt-4 border-t border-border/60 grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-          <div className="flex items-center gap-2 text-foreground">
-            <User className="h-4 w-4 text-muted-foreground shrink-0" />
-            <span>{item.customerName ?? '—'}</span>
-          </div>
-          <div className="flex items-center gap-2 text-foreground">
-            <CreditCard className="h-4 w-4 text-muted-foreground shrink-0" />
-            <span>{item.cidOrPassport ?? '—'}</span>
-          </div>
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <Phone className="h-4 w-4 shrink-0" />
-            <a href={`tel:${item.phoneNumber}`} className="hover:text-primary truncate">
-              {item.phoneNumber ?? '—'}
-            </a>
-          </div>
-          <div className="flex items-center gap-2 text-muted-foreground sm:col-span-2">
-            <Mail className="h-4 w-4 shrink-0" />
-            <a href={`mailto:${item.email}`} className="hover:text-primary truncate">
-              {item.email ?? '—'}
-            </a>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Legacy format: nested screening + tickets
-  const tickets = item.tickets ?? item.bookingTickets ?? [];
-  const screening = item.screening ?? item;
-  const movieName = screening?.movieName ?? item.movieName ?? screening?.movie ?? '—';
-  const screeningDate = screening?.screeningDate ?? item.screeningDate ?? item.date ?? '—';
-  const startTime = screening?.startTime ?? item.startTime;
-  const timeStr = startTime && typeof startTime === 'object'
-    ? `${String(startTime.hour ?? 0).padStart(2, '0')}:${String(startTime.minute ?? 0).padStart(2, '0')}`
-    : (startTime ?? '—');
-  const hallName = screening?.hallName ?? item.hallName ?? '—';
-  const theaterName = screening?.theaterName ?? item.theaterName ?? '—';
-  const bookingRef = item.bookingRef ?? item.bookingReference ?? item.reference;
-
-  return (
-    <div className="p-4 border rounded-lg bg-muted/20 space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="font-semibold">{movieName}</span>
-          <span className="text-muted-foreground">{screeningDate} {timeStr}</span>
-          <span className="text-muted-foreground">{theaterName} · {hallName}</span>
-        </div>
-        {bookingRef && onCancelBooking && (
-          <Button
-            size="sm" variant="outline"
-            className="h-7 text-xs text-destructive border-destructive/40 hover:bg-destructive/10 hover:text-destructive"
-            onClick={() => onCancelBooking(bookingRef)}
-          >
-            <XCircle className="h-3 w-3 mr-1" /> Cancel Booking
-          </Button>
-        )}
-      </div>
-      {tickets.length > 0 && (
-        <div className="space-y-2 pl-2 border-l-2 border-primary/30">
-          {tickets.map((t, i) => (
-            <div key={t.seatId ?? i} className="text-xs flex items-start justify-between gap-2">
-              <div className="space-y-0.5">
-                <span className="font-medium">Seat {t.seatIdentifier ?? t.seatId ?? i + 1}</span>
-                <div className="flex flex-wrap gap-x-4 gap-y-0 text-muted-foreground">
-                  {t.customerName && <span><User className="h-3 w-3 inline" /> {t.customerName}</span>}
-                  {t.email && <span><Mail className="h-3 w-3 inline" /> {t.email}</span>}
-                  {t.phoneNumber && <span><Phone className="h-3 w-3 inline" /> {t.phoneNumber}</span>}
+                </Select>
+              </div>
+              <div className="space-y-1.5 min-w-[160px] flex-1">
+                <Label htmlFor="theater-select" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
+                  <Building className="h-3 w-3" /> Theater
+                </Label>
+                <Select
+                  id="theater-select"
+                  value={selectedTheaterId}
+                  onChange={(e) => setSelectedTheaterId(e.target.value)}
+                  disabled={loadingTheaters || !selectedLocationId}
+                >
+                  <option value="">Select theater</option>
+                  {theaters.map((t) => (
+                    <option key={t.id} value={t.id}>{t.name}</option>
+                  ))}
+                </Select>
+              </div>
+              <div className="space-y-1.5 min-w-[160px] flex-1">
+                <Label htmlFor="theater-movie-filter" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
+                  <Clapperboard className="h-3 w-3" /> Movie
+                </Label>
+                <Select
+                  id="theater-movie-filter"
+                  value={selectedMovieName}
+                  onChange={(e) => setSelectedMovieName(e.target.value)}
+                  disabled={!selectedTheaterId || loading || movieNames.length === 0}
+                >
+                  <option value="">All movies</option>
+                  {movieNames.map((name) => (
+                    <option key={name} value={name}>{name}</option>
+                  ))}
+                </Select>
+              </div>
+              <div className="space-y-1.5 min-w-[200px] flex-1">
+                <Label htmlFor="theater-booking-search" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Search
+                </Label>
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none" aria-hidden />
+                  <Input
+                    id="theater-booking-search"
+                    value={bookingSearch}
+                    onChange={(e) => setBookingSearch(e.target.value)}
+                    placeholder="Ticket, guest, seat…"
+                    className="h-9 pl-9"
+                    disabled={!selectedTheaterId}
+                  />
                 </div>
               </div>
-              {t.ticketNumber && onCancelTicket && (
-                <Button
-                  size="sm" variant="ghost"
-                  className="h-6 text-[10px] px-2 text-destructive hover:text-destructive hover:bg-destructive/10 shrink-0"
-                  onClick={() => onCancelTicket(t.ticketNumber)}
-                >
-                  <XCircle className="h-3 w-3 mr-1" /> Cancel
-                </Button>
-              )}
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-9 gap-1.5"
+                onClick={fetchBookings}
+                disabled={loading || !selectedTheaterId}
+              >
+                <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
+                Refresh
+              </Button>
             </div>
-          ))}
-        </div>
-      )}
-    </div>
+          </CardContent>
+        </Card>
+
+        {error && (
+          <div className="rounded-lg border border-destructive/40 bg-destructive/10 text-destructive px-4 py-3 text-sm flex flex-wrap items-center gap-2">
+            <span>{error}</span>
+            <Button variant="ghost" size="sm" onClick={fetchBookings} disabled={!selectedTheaterId} className="h-7 text-xs">
+              Retry
+            </Button>
+          </div>
+        )}
+
+        {!selectedTheaterId && !loading && (
+          <div className="flex flex-col items-center justify-center py-16 text-muted-foreground rounded-xl border border-dashed border-border">
+            <Building className="h-10 w-10 mb-3 opacity-30" aria-hidden />
+            <p className="text-sm font-medium">Select a location and theater</p>
+            <p className="text-xs mt-1">Choose filters above to view ticket bookings.</p>
+          </div>
+        )}
+
+        {selectedTheaterId && (
+          <div className="rounded-xl border border-border overflow-hidden bg-card">
+            <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-b border-border bg-muted/20">
+              <p className="text-sm font-semibold text-foreground">
+                {selectedTheater?.name ?? 'Theater'}
+                <span className="ml-2 font-normal text-muted-foreground">
+                  ({filteredRows.length}{(bookingSearch || selectedMovieName) && tableRows.length !== filteredRows.length ? ` of ${tableRows.length}` : ''} tickets)
+                </span>
+              </p>
+            </div>
+
+            {loading ? (
+              <div className="p-4 space-y-2" aria-busy="true" aria-label="Loading bookings">
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <div key={i} className="h-12 rounded-lg bg-muted/40 animate-pulse" />
+                ))}
+              </div>
+            ) : tableRows.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 text-center text-muted-foreground">
+                <Ticket className="h-10 w-10 mb-3 opacity-30" aria-hidden />
+                <p className="text-sm font-medium">No bookings yet</p>
+                <p className="text-xs mt-1 max-w-xs">No tickets recorded for this theater.</p>
+              </div>
+            ) : filteredRows.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 text-center text-muted-foreground">
+                <Search className="h-10 w-10 mb-3 opacity-30" aria-hidden />
+                <p className="text-sm font-medium">No matching bookings</p>
+                <p className="text-xs mt-1">Try adjusting your search or movie filter.</p>
+                <Button
+                  variant="link"
+                  size="sm"
+                  className="mt-2"
+                  onClick={() => { setBookingSearch(''); setSelectedMovieName(''); }}
+                >
+                  Clear filters
+                </Button>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <div
+                  className={`hidden ${TABLE_GRID} px-4 py-2.5 bg-muted/40 border-b border-border min-w-[920px]`}
+                  role="row"
+                >
+                  <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Ticket</span>
+                  <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Movie</span>
+                  <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Customer</span>
+                  <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Seat</span>
+                  <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Class</span>
+                  <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Booked</span>
+                  <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Booking Ref</span>
+                  <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground text-right">Actions</span>
+                </div>
+
+                <div className="divide-y divide-border min-w-0 lg:min-w-[920px]">
+                  {filteredRows.map((row) => (
+                    <div
+                      key={row.rowKey}
+                      className={`flex flex-col gap-3 px-4 py-3.5 hover:bg-muted/20 transition-colors duration-150 ${TABLE_GRID}`}
+                    >
+                      <div className="min-w-0">
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground lg:hidden">Ticket</p>
+                        <p className="font-mono text-xs font-semibold text-foreground truncate">{row.ticketNumber ?? '—'}</p>
+                        {row.showTime && (
+                          <p className="text-[10px] text-muted-foreground mt-0.5 flex items-center gap-1">
+                            <Calendar className="h-3 w-3 shrink-0" aria-hidden />
+                            {row.showTime}
+                            {row.hallName ? ` · ${row.hallName}` : ''}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="min-w-0">
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground lg:hidden">Movie</p>
+                        <p className="text-sm font-medium text-foreground truncate">{row.movieName || '—'}</p>
+                      </div>
+
+                      <div className="min-w-0 flex items-start gap-2">
+                        <div className="hidden sm:flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                          <User className="h-4 w-4 text-primary" aria-hidden />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground lg:hidden">Customer</p>
+                          <p className="text-sm font-medium text-foreground truncate">{row.customerName || '—'}</p>
+                          <p className="text-xs text-muted-foreground truncate flex items-center gap-1 mt-0.5">
+                            <CreditCard className="h-3 w-3 shrink-0" aria-hidden />
+                            {row.cidOrPassport || 'No ID'}
+                          </p>
+                          {(row.phoneNumber || row.email) && (
+                            <p className="text-[10px] text-muted-foreground truncate mt-0.5">
+                              {row.phoneNumber && <span>{row.phoneNumber}</span>}
+                              {row.phoneNumber && row.email && ' · '}
+                              {row.email && <span>{row.email}</span>}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      <div>
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground lg:hidden">Seat</p>
+                        <span className="text-sm font-medium text-foreground tabular-nums">
+                          {row.seatIdentifier ?? '—'}
+                        </span>
+                      </div>
+
+                      <div>
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground lg:hidden">Class</p>
+                        {row.seatClass ? (
+                          <span className="inline-flex items-center rounded-md bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                            {row.seatClass}
+                          </span>
+                        ) : (
+                          <span className="text-sm text-muted-foreground">—</span>
+                        )}
+                      </div>
+
+                      <div className="text-xs text-muted-foreground min-w-0">
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground lg:hidden mb-1">Booked</p>
+                        <span className="inline-flex items-center gap-1">
+                          <Clock className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                          {formatBookedAt(row.bookedAt)}
+                        </span>
+                      </div>
+
+                      <div className="min-w-0">
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground lg:hidden">Booking Ref</p>
+                        <p className="font-mono text-xs text-foreground truncate">{row.bookingRef ?? '—'}</p>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-1.5 lg:justify-end">
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground w-full lg:hidden mb-0.5">Actions</p>
+                        {row.ticketNumber && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 text-[10px] px-2 text-destructive border-destructive/40 hover:bg-destructive/10 hover:text-destructive whitespace-nowrap"
+                            onClick={() => handleCancelTicket(row.ticketNumber)}
+                          >
+                            <XCircle className="h-3 w-3 mr-1" aria-hidden />
+                            Cancel Ticket
+                          </Button>
+                        )}
+                        {row.bookingRef && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 text-[10px] px-2 text-destructive border-destructive/40 hover:bg-destructive/10 hover:text-destructive whitespace-nowrap"
+                            onClick={() => handleCancelBooking(row.bookingRef)}
+                          >
+                            <XCircle className="h-3 w-3 mr-1" aria-hidden />
+                            Cancel Booking
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </PageWrapper>
   );
 }
 

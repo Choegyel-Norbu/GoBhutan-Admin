@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
 import { Textarea } from '@/components/ui/Textarea';
 import { Select } from '@/components/ui/Select';
-import { Building, MapPin, Phone, Mail, Star, Wifi, Car, Dumbbell, Coffee, Shield, Utensils, Upload, Image as ImageIcon, Trash2, Wallet } from 'lucide-react';
+import { Building, MapPin, Phone, Mail, Wifi, Car, Dumbbell, Coffee, Shield, Utensils, Upload, Image as ImageIcon, Trash2, Globe } from 'lucide-react';
 import PageWrapper from '@/components/PageWrapper';
 import { apiClient } from '@/lib/apiService';
 import { API_CONFIG } from '@/lib/api';
@@ -827,39 +827,46 @@ const AddHotel = ({ hotelId = null }) => {
       title="Add New Hotel"
       description="Complete the form below to add a new hotel to the system"
     >
-      <form onSubmit={handleSubmit} className="space-y-8">
+      <form onSubmit={handleSubmit} className="space-y-6">
         {/* Basic Information */}
         <Card>
-          <CardHeader>
-            <CardTitle className="text-md">Basic Information</CardTitle>
-            <CardDescription>
-              Enter the fundamental details about the hotel
-            </CardDescription>
+          <CardHeader className="pb-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
+                <Building className="h-4 w-4 text-primary" />
+              </div>
+              <div>
+                <CardTitle className="text-sm font-semibold">Basic Information</CardTitle>
+                <CardDescription>Fundamental details about the hotel</CardDescription>
+              </div>
+            </div>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Hotel Name *</Label>
+          <CardContent className="space-y-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div className="space-y-1.5">
+                <Label htmlFor="name" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Hotel Name <span className="text-destructive normal-case tracking-normal font-normal">*</span>
+                </Label>
                 <Input
                   id="name"
                   name="name"
                   value={formData.name}
                   onChange={handleInputChange}
                   placeholder="Enter hotel name"
-                  className={errors.name ? 'border-red-500' : ''}
+                  className={errors.name ? 'border-destructive' : ''}
                 />
-                {errors.name && (
-                  <p className="text-sm text-red-500">{errors.name}</p>
-                )}
+                {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="starRating">Category</Label>
+              <div className="space-y-1.5">
+                <Label htmlFor="starRating" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Category
+                </Label>
                 <Select
                   id="starRating"
                   name="starRating"
                   value={formData.starRating}
                   onChange={handleInputChange}
-                  className={errors.starRating ? 'border-red-500' : ''}
+                  className={errors.starRating ? 'border-destructive' : ''}
                 >
                   <option value={0}>Select category</option>
                   <option value={1}>Farm House</option>
@@ -870,111 +877,111 @@ const AddHotel = ({ hotelId = null }) => {
                   <option value={8}>4 Star</option>
                   <option value={9}>5 Star</option>
                 </Select>
-                {errors.starRating && (
-                  <p className="text-sm text-red-500">{errors.starRating}</p>
-                )}
+                {errors.starRating && <p className="text-xs text-destructive">{errors.starRating}</p>}
               </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
+            <div className="space-y-1.5">
+              <Label htmlFor="description" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Description
+              </Label>
               <Textarea
                 id="description"
                 name="description"
                 value={formData.description}
                 onChange={handleInputChange}
-                placeholder="Describe the hotel, its unique Bhutanese features, traditional architecture, and what makes it special in the Land of the Thunder Dragon..."
+                placeholder="Describe the hotel, its unique Bhutanese features, traditional architecture, and what makes it special…"
                 rows={4}
-                className={errors.description ? 'border-red-500' : ''}
+                className={errors.description ? 'border-destructive' : ''}
               />
-              {errors.description && (
-                <p className="text-sm text-red-500">{errors.description}</p>
-              )}
+              {errors.description && <p className="text-xs text-destructive">{errors.description}</p>}
             </div>
           </CardContent>
         </Card>
 
         {/* Location Information */}
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-md">
-              <MapPin className="h-5 w-5" />
-              Location Information
-            </CardTitle>
-            <CardDescription>
-              Provide the hotel's location details
-            </CardDescription>
+          <CardHeader className="pb-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
+                <MapPin className="h-4 w-4 text-primary" />
+              </div>
+              <div>
+                <CardTitle className="text-sm font-semibold">Location</CardTitle>
+                <CardDescription>Hotel address and location details</CardDescription>
+              </div>
+            </div>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="address">Address *</Label>
+          <CardContent className="space-y-5">
+            <div className="space-y-1.5">
+              <Label htmlFor="address" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Address <span className="text-destructive normal-case tracking-normal font-normal">*</span>
+              </Label>
               <Input
                 id="address"
                 name="address"
                 value={formData.address}
                 onChange={handleInputChange}
                 placeholder="Street address"
-                className={errors.address ? 'border-red-500' : ''}
+                className={errors.address ? 'border-destructive' : ''}
               />
-              {errors.address && (
-                <p className="text-sm text-red-500">{errors.address}</p>
-              )}
+              {errors.address && <p className="text-xs text-destructive">{errors.address}</p>}
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="city">City *</Label>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div className="space-y-1.5">
+                <Label htmlFor="city" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  City <span className="text-destructive normal-case tracking-normal font-normal">*</span>
+                </Label>
                 <Input
                   id="city"
                   name="city"
                   value={formData.city}
                   onChange={handleInputChange}
                   placeholder="City name"
-                  className={errors.city ? 'border-red-500' : ''}
+                  className={errors.city ? 'border-destructive' : ''}
                 />
-                {errors.city && (
-                  <p className="text-sm text-red-500">{errors.city}</p>
-                )}
+                {errors.city && <p className="text-xs text-destructive">{errors.city}</p>}
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="state">State/Province</Label>
+              <div className="space-y-1.5">
+                <Label htmlFor="state" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  State / Province
+                </Label>
                 <Input
                   id="state"
                   name="state"
                   value={formData.state}
                   onChange={handleInputChange}
                   placeholder="State or province"
-                  className={errors.state ? 'border-red-500' : ''}
+                  className={errors.state ? 'border-destructive' : ''}
                 />
-                {errors.state && (
-                  <p className="text-sm text-red-500">{errors.state}</p>
-                )}
+                {errors.state && <p className="text-xs text-destructive">{errors.state}</p>}
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="country">Country *</Label>
+              <div className="space-y-1.5">
+                <Label htmlFor="country" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Country <span className="text-destructive normal-case tracking-normal font-normal">*</span>
+                </Label>
                 <Input
                   id="country"
                   name="country"
                   value={formData.country}
                   onChange={handleInputChange}
                   placeholder="Country name"
-                  className={errors.country ? 'border-red-500' : ''}
+                  className={errors.country ? 'border-destructive' : ''}
                 />
-                {errors.country && (
-                  <p className="text-sm text-red-500">{errors.country}</p>
-                )}
+                {errors.country && <p className="text-xs text-destructive">{errors.country}</p>}
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="postalCode">Postal Code</Label>
+              <div className="space-y-1.5">
+                <Label htmlFor="postalCode" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Postal Code
+                </Label>
                 <Input
                   id="postalCode"
                   name="postalCode"
                   value={formData.postalCode}
                   onChange={handleInputChange}
-                  placeholder="Postal/ZIP code"
-                  className={errors.postalCode ? 'border-red-500' : ''}
+                  placeholder="Postal / ZIP code"
+                  className={errors.postalCode ? 'border-destructive' : ''}
                 />
-                {errors.postalCode && (
-                  <p className="text-sm text-red-500">{errors.postalCode}</p>
-                )}
+                {errors.postalCode && <p className="text-xs text-destructive">{errors.postalCode}</p>}
               </div>
             </div>
           </CardContent>
@@ -982,19 +989,23 @@ const AddHotel = ({ hotelId = null }) => {
 
         {/* Contact Information */}
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-md">
-              <Phone className="h-5 w-5" />
-              Contact Information
-            </CardTitle>
-            <CardDescription>
-              Hotel contact details
-            </CardDescription>
+          <CardHeader className="pb-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
+                <Phone className="h-4 w-4 text-primary" />
+              </div>
+              <div>
+                <CardTitle className="text-sm font-semibold">Contact Information</CardTitle>
+                <CardDescription>How guests can reach the hotel</CardDescription>
+              </div>
+            </div>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="phoneNumber">Phone Number *</Label>
+          <CardContent className="space-y-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div className="space-y-1.5">
+                <Label htmlFor="phoneNumber" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Phone Number <span className="text-destructive normal-case tracking-normal font-normal">*</span>
+                </Label>
                 <Input
                   id="phoneNumber"
                   name="phoneNumber"
@@ -1002,14 +1013,14 @@ const AddHotel = ({ hotelId = null }) => {
                   value={formData.phoneNumber}
                   onChange={handleInputChange}
                   placeholder="+975 2 123456"
-                  className={errors.phoneNumber ? 'border-red-500' : ''}
+                  className={errors.phoneNumber ? 'border-destructive' : ''}
                 />
-                {errors.phoneNumber && (
-                  <p className="text-sm text-red-500">{errors.phoneNumber}</p>
-                )}
+                {errors.phoneNumber && <p className="text-xs text-destructive">{errors.phoneNumber}</p>}
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="email">Email Address *</Label>
+              <div className="space-y-1.5">
+                <Label htmlFor="email" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Email Address <span className="text-destructive normal-case tracking-normal font-normal">*</span>
+                </Label>
                 <Input
                   id="email"
                   name="email"
@@ -1017,91 +1028,94 @@ const AddHotel = ({ hotelId = null }) => {
                   value={formData.email}
                   onChange={handleInputChange}
                   placeholder="hotel@bhutan.com"
-                  className={errors.email ? 'border-red-500' : ''}
+                  className={errors.email ? 'border-destructive' : ''}
                 />
-                {errors.email && (
-                  <p className="text-sm text-red-500">{errors.email}</p>
-                )}
+                {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
               </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="website">Website</Label>
-              <Input
-                id="website"
-                name="website"
-                type="url"
-                value={formData.website}
-                onChange={handleInputChange}
-                placeholder="https://www.hotelbhutan.com"
-                className={errors.website ? 'border-red-500' : ''}
-              />
-              {errors.website && (
-                <p className="text-sm text-red-500">{errors.website}</p>
-              )}
+            <div className="space-y-1.5">
+              <Label htmlFor="website" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Website
+              </Label>
+              <div className="relative">
+                <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <Input
+                  id="website"
+                  name="website"
+                  type="url"
+                  value={formData.website}
+                  onChange={handleInputChange}
+                  placeholder="https://www.hotelbhutan.com"
+                  className={`pl-9 ${errors.website ? 'border-destructive' : ''}`}
+                />
+              </div>
+              {errors.website && <p className="text-xs text-destructive">{errors.website}</p>}
             </div>
           </CardContent>
         </Card>
 
         {/* Hotel Images */}
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-md">
-              <ImageIcon className="h-5 w-5" />
-              Hotel Images
-            </CardTitle>
-            <CardDescription>
-              Upload images of the hotel to showcase its features and rooms
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="images">Upload Images</Label>
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-sm text-gray-600 mb-2">
-                  Drag and drop images here, or click to select files
-                </p>
-                <input
-                  id="images"
-                  type="file"
-                  multiple
-                  accept="image/*"
-                  onChange={handleImageUpload}
-                  className="hidden"
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => document.getElementById('images').click()}
-                >
-                  <Upload className="h-4 w-4 mr-2" />
-                  Choose Images
-                </Button>
+          <CardHeader className="pb-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
+                <ImageIcon className="h-4 w-4 text-primary" />
+              </div>
+              <div>
+                <CardTitle className="text-sm font-semibold">Hotel Images</CardTitle>
+                <CardDescription>Upload photos to showcase the hotel</CardDescription>
               </div>
             </div>
-            
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div
+              className="border-2 border-dashed border-border/60 rounded-xl p-8 text-center hover:border-primary/40 hover:bg-muted/20 transition-colors cursor-pointer"
+              onClick={() => document.getElementById('images').click()}
+            >
+              <Upload className="h-8 w-8 text-muted-foreground/40 mx-auto mb-3" />
+              <p className="text-sm font-medium text-muted-foreground mb-1">Click to upload or drag & drop</p>
+              <p className="text-xs text-muted-foreground/60 mb-4">PNG, JPG, WebP</p>
+              <input
+                id="images"
+                type="file"
+                multiple
+                accept="image/*"
+                onChange={handleImageUpload}
+                className="hidden"
+                onClick={(e) => e.stopPropagation()}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={(e) => { e.stopPropagation(); document.getElementById('images').click(); }}
+              >
+                <Upload className="h-3.5 w-3.5 mr-1.5" />
+                Choose Images
+              </Button>
+            </div>
+
             {formData.images.length > 0 && (
               <div className="space-y-2">
-                <Label>Selected Images ({formData.images.length})</Label>
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Selected ({formData.images.length})
+                </p>
+                <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-3">
                   {formData.images.map((image) => (
-                    <div key={image.id} className="relative group">
+                    <div key={image.id} className="relative group aspect-square">
                       <img
                         src={image.url}
                         alt={image.name}
-                        className="w-full h-24 object-cover rounded-lg border"
+                        className="w-full h-full object-cover rounded-lg border border-border/60"
                       />
-                      <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
-                        <Button
-                          type="button"
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => removeImage(image.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                      <p className="text-xs text-gray-500 mt-1 truncate">{image.name}</p>
+                      <button
+                        type="button"
+                        onClick={() => removeImage(image.id)}
+                        aria-label="Remove image"
+                        className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center"
+                      >
+                        <Trash2 className="h-4 w-4 text-white" />
+                      </button>
                     </div>
                   ))}
                 </div>
@@ -1110,89 +1124,55 @@ const AddHotel = ({ hotelId = null }) => {
           </CardContent>
         </Card>
 
-        {/* Hotel Details */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-md">Hotel Details</CardTitle>
-            <CardDescription>
-              Additional hotel information
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {/* Check-in and Check-out fields commented out temporarily */}
-            {/* <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="checkInTime">Check-in Time</Label>
-                <Input
-                  id="checkInTime"
-                  name="checkInTime"
-                  type="time"
-                  value={formData.checkInTime}
-                  onChange={handleInputChange}
-                  className={errors.checkInTime ? 'border-red-500' : ''}
-                />
-                {errors.checkInTime && (
-                  <p className="text-sm text-red-500">{errors.checkInTime}</p>
-                )}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="checkOutTime">Check-out Time</Label>
-                <Input
-                  id="checkOutTime"
-                  name="checkOutTime"
-                  type="time"
-                  value={formData.checkOutTime}
-                  onChange={handleInputChange}
-                  className={errors.checkOutTime ? 'border-red-500' : ''}
-                />
-                {errors.checkOutTime && (
-                  <p className="text-sm text-red-500">{errors.checkOutTime}</p>
-                )}
-              </div>
-            </div> */}
-          </CardContent>
-        </Card>
-
         {/* Amenities */}
         <Card>
-          <CardHeader>
-            <CardTitle className="text-md">Amenities & Services</CardTitle>
-            <CardDescription>
-              Select the amenities and services available at the hotel
-            </CardDescription>
+          <CardHeader className="pb-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
+                <Wifi className="h-4 w-4 text-primary" />
+              </div>
+              <div>
+                <CardTitle className="text-sm font-semibold">Amenities & Services</CardTitle>
+                <CardDescription>Select all that apply to this hotel</CardDescription>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
               {formData.amenities.map((amenity) => {
                 const IconComponent = amenity.icon;
                 return (
-                  <div key={amenity.key} className="flex items-center space-x-2">
+                  <label
+                    key={amenity.key}
+                    className={`flex items-center gap-2 px-3 py-2.5 rounded-lg border cursor-pointer transition-colors select-none ${
+                      amenity.selected
+                        ? 'border-primary/50 bg-primary/[0.06] text-foreground'
+                        : 'border-border hover:bg-muted/40 text-muted-foreground'
+                    }`}
+                  >
                     <input
                       type="checkbox"
-                      id={amenity.key}
                       name={`amenities.${amenity.key}`}
                       checked={amenity.selected}
                       onChange={handleInputChange}
-                      className="rounded border-gray-300"
+                      className="sr-only"
                     />
-                    <Label htmlFor={amenity.key} className="flex items-center gap-2 text-sm">
-                      <IconComponent className="h-4 w-4" />
-                      {amenity.name}
-                    </Label>
-                  </div>
+                    <IconComponent className={`h-3.5 w-3.5 shrink-0 ${amenity.selected ? 'text-primary' : ''}`} />
+                    <span className="text-xs font-medium">{amenity.name}</span>
+                  </label>
                 );
               })}
             </div>
           </CardContent>
         </Card>
 
-        {/* Submit Button */}
-        <div className="flex justify-end space-x-4">
-          <Button type="button" variant="outline" disabled={isSubmitting}>
+        {/* Submit */}
+        <div className="flex items-center justify-end gap-3 pt-2 border-t border-border">
+          <Button type="button" variant="outline" size="sm" disabled={isSubmitting}>
             Cancel
           </Button>
-          <Button type="submit" className="min-w-[120px]" disabled={isSubmitting}>
-            {isSubmitting ? 'Adding Hotel...' : 'Add Hotel'}
+          <Button type="submit" size="sm" className="min-w-[120px]" disabled={isSubmitting}>
+            {isSubmitting ? 'Adding Hotel…' : 'Add Hotel'}
           </Button>
         </div>
       </form>

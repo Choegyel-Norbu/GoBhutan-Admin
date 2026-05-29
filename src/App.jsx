@@ -18,6 +18,8 @@ import BusBookingPage from './pages/BusBookingPage';
 import TheaterPage from './pages/TheaterPage';
 import AddMoviePage from './pages/AddMoviePage';
 import TheaterBookingManagementPage from './pages/TheaterBookingManagementPage';
+import GasConfigPage from './pages/GasConfigPage';
+import GasDeliveryPage from './pages/GasDeliveryPage';
 import WalletPage from './pages/WalletPage';
 import UserSettingsPage from './pages/UserSettingsPage';
 import SignInPage from './pages/SignInPage';
@@ -54,6 +56,8 @@ function App() {
             <Route path="theater" element={<TheaterPage />} />
             <Route path="theater/movie" element={<AddMoviePage />} />
             <Route path="theater/bookings" element={<TheaterBookingManagementPage />} />
+            <Route path="gas/config" element={<GasConfigPage />} />
+            <Route path="gas/deliveries" element={<GasDeliveryPage />} />
             <Route path="wallet" element={<WalletPage />} />
             <Route path="settings" element={<UserSettingsPage />} />
           </Route>

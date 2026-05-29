@@ -200,7 +200,7 @@ const UserSettingsPage = () => {
     }
   };
 
-  const availableClients = ['hotel', 'bus', 'taxi', 'theater'];
+  const availableClients = ['hotel', 'bus', 'taxi', 'theater', 'gas'];
 
   return (
     <PageWrapper

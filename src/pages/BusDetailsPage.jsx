@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { Bus, Plus, Edit, Trash2, Eye, MapPin, Calendar, ArrowLeft, Ticket, Sparkles, RefreshCw } from 'lucide-react';
+import { Bus, Plus, Edit, Trash2, Eye, MapPin, Calendar, ArrowLeft, Ticket, Sparkles, RefreshCw, ArrowRight, Hash, Tag, Users, LayoutGrid } from 'lucide-react';
 import PageWrapper from '@/components/PageWrapper';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -10,7 +10,7 @@ import { Select } from '@/components/ui/Select';
 import { Badge } from '@/components/ui/Badge';
 import { api, apiClient } from '@/lib/apiService';
 import authAPI from '@/lib/authAPI';
-import { buildBusLockBookingPayload } from '@/lib/busBooking';
+import { buildBusLockBookingPayload, syncApplicantArraysForSeats } from '@/lib/busBooking';
 import Swal from 'sweetalert2';
 
 function BusDetailsPage() {
@@ -54,8 +54,9 @@ function BusDetailsPage() {
     scheduleId: '',
     seatNumbers: [],
     seatLabels: [],
-    applicantCid: '',
-    applicantMobile: '',
+    applicantCids: [],
+    applicantNames: [],
+    applicantMobiles: [],
     applicantEmail: '',
     status: 'PENDING'
   });
@@ -342,8 +343,9 @@ function BusDetailsPage() {
         scheduleId: schedule.id.toString(),
         seatNumbers: [],
         seatLabels: [],
-        applicantCid: '',
-        applicantMobile: '',
+        applicantCids: [],
+        applicantNames: [],
+        applicantMobiles: [],
         applicantEmail: '',
         status: 'PENDING'
       });
@@ -369,21 +371,34 @@ function BusDetailsPage() {
       if (isSelected) {
         // Remove seat
         const newSeats = prev.filter(s => s.id !== seat.id);
-        // Auto-update seatNumbers and seatLabels
-        setBookingFormData(prevData => ({
+        const seatNumbers = newSeats.map(s => s.startNo || s.seatNumber || s.id);
+        const seatLabels = newSeats.map(s => s.seatLabel || s.label || `Seat ${s.id}`);
+        setBookingFormData((prevData) => ({
           ...prevData,
-          seatNumbers: newSeats.map(s => s.startNo || s.seatNumber || s.id),
-          seatLabels: newSeats.map(s => s.seatLabel || s.label || `Seat ${s.id}`)
+          ...syncApplicantArraysForSeats(
+            seatNumbers,
+            seatLabels,
+            prevData.applicantCids,
+            prevData.applicantNames,
+            prevData.seatNumbers,
+            prevData.applicantMobiles
+          ),
         }));
         return newSeats;
       } else {
-        // Add seat
         const newSeats = [...prev, seat];
-        // Auto-update seatNumbers and seatLabels
-        setBookingFormData(prevData => ({
+        const seatNumbers = newSeats.map(s => s.startNo || s.seatNumber || s.id);
+        const seatLabels = newSeats.map(s => s.seatLabel || s.label || `Seat ${s.id}`);
+        setBookingFormData((prevData) => ({
           ...prevData,
-          seatNumbers: newSeats.map(s => s.startNo || s.seatNumber || s.id),
-          seatLabels: newSeats.map(s => s.seatLabel || s.label || `Seat ${s.id}`)
+          ...syncApplicantArraysForSeats(
+            seatNumbers,
+            seatLabels,
+            prevData.applicantCids,
+            prevData.applicantNames,
+            prevData.seatNumbers,
+            prevData.applicantMobiles
+          ),
         }));
         return newSeats;
       }
@@ -397,6 +412,17 @@ function BusDetailsPage() {
     }));
   };
 
+  const handlePassengerFieldChange = (seatIndex, field, value) => {
+    const arrayKey =
+      field === 'cid' ? 'applicantCids' : field === 'name' ? 'applicantNames' : 'applicantMobiles';
+    setBookingFormData((prev) => {
+      const next = [...(prev[arrayKey] || [])];
+      while (next.length < prev.seatNumbers.length) next.push('');
+      next[seatIndex] = value;
+      return { ...prev, [arrayKey]: next };
+    });
+  };
+
   const validateBookingForm = () => {
     if (selectedSeats.length === 0) {
       Swal.fire({
@@ -407,29 +433,32 @@ function BusDetailsPage() {
       });
       return false;
     }
-    if (!bookingFormData.applicantCid.trim()) {
+    const missingCid = (bookingFormData.applicantCids || []).some((c) => !String(c || '').trim());
+    const missingName = (bookingFormData.applicantNames || []).some((n) => !String(n || '').trim());
+    if (missingCid || bookingFormData.applicantCids.length !== selectedSeats.length) {
       Swal.fire({
         icon: 'error',
         title: 'Validation Error',
-        text: 'CID is required.',
+        text: 'Please enter a CID for each selected seat.',
         confirmButtonText: 'OK'
       });
       return false;
     }
-    if (!bookingFormData.applicantMobile.trim()) {
+    if (missingName || bookingFormData.applicantNames.length !== selectedSeats.length) {
       Swal.fire({
         icon: 'error',
         title: 'Validation Error',
-        text: 'Mobile number is required.',
+        text: 'Please enter a name for each selected seat.',
         confirmButtonText: 'OK'
       });
       return false;
     }
-    if (!bookingFormData.applicantEmail.trim()) {
+    const missingMobile = (bookingFormData.applicantMobiles || []).some((m) => !String(m || '').trim());
+    if (missingMobile || bookingFormData.applicantMobiles.length !== selectedSeats.length) {
       Swal.fire({
         icon: 'error',
         title: 'Validation Error',
-        text: 'Email is required.',
+        text: 'Please enter a mobile number for each selected seat.',
         confirmButtonText: 'OK'
       });
       return false;
@@ -464,8 +493,9 @@ function BusDetailsPage() {
         scheduleId: parseInt(bookingFormData.scheduleId, 10) || selectedScheduleForBooking?.id,
         seatNumbers: seatNumbersRaw,
         seatLabels: seatLabelsRaw,
-        applicantCid: bookingFormData.applicantCid,
-        applicantMobile: bookingFormData.applicantMobile,
+        applicantCids: bookingFormData.applicantCids,
+        applicantNames: bookingFormData.applicantNames,
+        applicantMobiles: bookingFormData.applicantMobiles,
         applicantEmail: bookingFormData.applicantEmail,
         status: bookingFormData.status || 'PENDING',
       });
@@ -489,8 +519,9 @@ function BusDetailsPage() {
         scheduleId: '',
         seatNumbers: [],
         seatLabels: [],
-        applicantCid: '',
-        applicantMobile: '',
+        applicantCids: [],
+        applicantNames: [],
+        applicantMobiles: [],
         applicantEmail: '',
         status: 'PENDING'
       });
@@ -770,7 +801,7 @@ function BusDetailsPage() {
 
   return (
     <PageWrapper 
-      title={`${bus.busNumber || `Bus ${bus.id}`}`}
+      title={bus.busName || bus.busNumber || `Bus ${bus.id}`}
       description="Manage routes and schedules for this bus."
     >
       <div className="max-w-7xl mx-auto space-y-6">
@@ -783,78 +814,103 @@ function BusDetailsPage() {
         </div>
 
         {/* Bus Info Card */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="flex items-center gap-2 text-xl">
-                  Bus Information
-                </CardTitle>
-                <CardDescription>
-                  Details and specifications for this bus.
-                </CardDescription>
+        <Card className="overflow-hidden">
+          <CardContent className="p-0">
+            {/* Identity header */}
+            <div className="flex flex-wrap items-center gap-4 px-6 pt-6 pb-5 border-b border-border">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+                <Bus className="h-6 w-6 text-primary" />
               </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Bus Number</p>
-                <p className="text-lg font-semibold">{bus.busNumber || 'N/A'}</p>
-              </div>
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Bus Type</p>
-                <p className="text-lg font-semibold">{bus.busType || 'N/A'}</p>
-              </div>
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Total Seats</p>
-                <p className="text-lg font-semibold">{bus.totalSeats || seats.length || 0}</p>
-              </div>
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Layout Type</p>
-                <p className="text-lg font-semibold">{bus.layoutType || 'N/A'}</p>
-              </div>
-            </div>
-            {bus.description && (
-              <div className="mt-4">
-                <p className="text-sm font-medium text-muted-foreground">Description</p>
-                <p className="text-sm">{bus.description}</p>
-              </div>
-            )}
-            {bus.amenities && (
-              <div className="mt-4">
-                <p className="text-sm font-medium text-muted-foreground">Amenities</p>
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {typeof bus.amenities === 'string' 
-                    ? bus.amenities.split(',').map((amenity, index) => (
-                        <Badge key={index} variant="outline" className="text-xs">
-                          {amenity.trim()}
-                        </Badge>
-                      ))
-                    : <Badge variant="outline" className="text-xs">{bus.amenities}</Badge>
-                  }
+              <div className="flex-1 min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h2 className="text-xl font-bold leading-tight text-foreground">
+                    {bus.busName || bus.busNumber || `Bus ${bus.id}`}
+                  </h2>
+                  {bus.busName && bus.busNumber && (
+                    <span className="inline-flex items-center rounded-md bg-muted px-2 py-0.5 text-xs font-mono font-medium text-muted-foreground">
+                      {bus.busNumber}
+                    </span>
+                  )}
                 </div>
+                <p className="text-sm text-muted-foreground mt-0.5">
+                  {[bus.busType, bus.layoutType && `${bus.layoutType} layout`, (bus.totalSeats || seats.length) && `${bus.totalSeats || seats.length} seats`].filter(Boolean).join(' · ')}
+                </p>
+              </div>
+            </div>
+
+            {/* Stats row */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-px bg-border border-b border-border">
+              {[
+                { Icon: Hash,       label: 'Bus Number',  value: bus.busNumber || 'N/A' },
+                { Icon: Tag,        label: 'Bus Type',    value: bus.busType   || 'N/A' },
+                { Icon: Users,      label: 'Total Seats', value: bus.totalSeats || seats.length || 0 },
+                { Icon: LayoutGrid, label: 'Layout',      value: bus.layoutType || 'N/A' },
+              ].map(({ Icon, label, value }) => (
+                <div key={label} className="flex items-center gap-3 bg-card px-5 py-4">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-muted">
+                    <Icon className="h-3.5 w-3.5 text-muted-foreground" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[11px] text-muted-foreground">{label}</p>
+                    <p className="text-sm font-semibold text-foreground truncate">{value}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Description + Amenities */}
+            {(bus.description || bus.amenities) && (
+              <div className="flex flex-col sm:flex-row divide-y sm:divide-y-0 sm:divide-x divide-border">
+                {bus.description && (
+                  <div className="flex-1 px-6 py-4">
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">Description</p>
+                    <p className="text-sm text-foreground leading-relaxed">{bus.description}</p>
+                  </div>
+                )}
+                {bus.amenities && (
+                  <div className="flex-1 px-6 py-4">
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">Amenities</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {typeof bus.amenities === 'string'
+                        ? bus.amenities.split(',').map((a, i) => (
+                            <span key={i} className="inline-flex items-center rounded-full border border-border bg-muted/50 px-2.5 py-0.5 text-xs font-medium text-foreground">
+                              {a.trim()}
+                            </span>
+                          ))
+                        : (
+                            <span className="inline-flex items-center rounded-full border border-border bg-muted/50 px-2.5 py-0.5 text-xs font-medium text-foreground">
+                              {bus.amenities}
+                            </span>
+                          )
+                      }
+                    </div>
+                  </div>
+                )}
               </div>
             )}
+
+            {/* Seats */}
             {seats.length > 0 && (
-              <div className="mt-6">
-                <p className="text-sm font-medium text-muted-foreground mb-3">Seats ({seats.length} seats)</p>
-                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2 max-h-96 overflow-y-auto p-3 bg-muted/30 rounded-lg">
-                  {seats.map((seat) => (
-                    <div 
-                      key={seat.id} 
-                      className="p-2 border rounded text-center text-xs bg-background hover:bg-muted transition-colors"
-                      title={`Seat ${seat.seatLabel} - ${seat.seatType}`}
-                    >
-                      <div className="font-semibold">{seat.seatNumber || seat.startNo || seat.id} <span className="text-muted-foreground">({seat.seatLabel})</span></div>
-                      <div className="text-md mt-1">
-                        
+              <div className="px-6 pb-6 pt-0 border-t border-border">
+                <div className="mt-4 rounded-lg border border-border overflow-hidden">
+                  <div className="flex items-center gap-2 px-4 py-2.5 bg-muted/40 border-b border-border">
+                    <Users className="h-3.5 w-3.5 text-muted-foreground" />
+                    <span className="text-xs font-semibold text-foreground">Seats</span>
+                    <span className="text-xs text-muted-foreground">({seats.length} total)</span>
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2 max-h-64 overflow-y-auto p-3">
+                    {seats.map((seat) => (
+                      <div
+                        key={seat.id}
+                        className="flex flex-col items-center gap-0.5 p-2 rounded-lg border border-border bg-background hover:bg-muted transition-colors text-center"
+                        title={`Seat ${seat.seatLabel} - ${seat.seatType}`}
+                      >
+                        <span className="text-sm font-semibold">{seat.seatNumber || seat.startNo || seat.id}</span>
+                        <span className="text-xs text-muted-foreground">{seat.seatLabel}</span>
+                        <span className="text-[10px] text-muted-foreground/70 capitalize">{seat.seatType.replace('_', ' ')}</span>
                       </div>
-                      <div className="text-muted-foreground text-[10px] mt-1">
-                        {seat.seatType.replace('_', ' ')}
-                      </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               </div>
             )}
@@ -888,7 +944,7 @@ function BusDetailsPage() {
           <CardContent>
             <div className="space-y-4">
                 <div className="flex justify-between items-center">
-                  <Button onClick={() => {
+                  <Button variant="outline" onClick={() => {
                     setShowAddRouteForm(true);
                     scrollToRouteForm();
                   }}>
@@ -916,222 +972,132 @@ function BusDetailsPage() {
                     </Button>
                   </div>
                 ) : (
-                  <div className="space-y-4">
+                  <div className="space-y-3">
                     {routes.map((route) => (
-                      <div key={route.id} className="space-y-4">
-                        <Card className="border">
-                          <CardContent className="p-6">
-                            <div className="flex justify-between items-start">
-                              <div className="space-y-3 flex-1">
-                                <div className="flex items-center gap-3">
-                                  <h4 className="text-lg font-semibold">
-                                    {route.source} → {route.destination}
-                                  </h4>
-                                </div>
-                                
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                                  <div>
-                                    <p className="text-muted-foreground">Distance</p>
-                                    <p className="font-medium">{route.distance} km</p>
-                                  </div>
-                                  <div>
-                                    <p className="text-muted-foreground">Base Fare</p>
-                                    <p className="font-medium">BTN {route.baseFare}</p>
-                                  </div>
-                                  <div>
-                                    <p className="text-muted-foreground">Duration</p>
-                                    <p className="font-medium">{route.estimatedDurationMinutes} min</p>
-                                  </div>
-                                  <div className="flex items-end">
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => loadSchedulesForRoute(route.id)}
-                                      disabled={loadingRouteSchedules[route.id]}
-                                      className="w-full"
-                                    >
-                                      {loadingRouteSchedules[route.id] ? (
-                                        <>
-                                          <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-current mr-2"></div>
-                                          Loading...
-                                        </>
-                                      ) : viewingRouteSchedules === route.id ? (
-                                        <>
-                                          <Eye className="h-4 w-4 mr-2" />
-                                          Hide Schedules
-                                        </>
-                                      ) : (
-                                        <>
-                                          <Calendar className="h-4 w-4 mr-2" />
-                                          View Schedules
-                                        </>
-                                      )}
-                                    </Button>
-                                  </div>
-                                </div>
-                                
-                                {/* Additional Route Information */}
-                                <div className="mt-4 p-3 bg-muted/50 rounded-lg">
-                                  <div className="flex items-center gap-2 text-sm">
-                                    <MapPin className="h-4 w-4 text-muted-foreground" />
-                                    <span className="text-muted-foreground">Route Details:</span>
-                                  </div>
-                                  <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
-                                    <div>
-                                      <span className="text-muted-foreground">From:</span>
-                                      <span className="ml-2 font-medium">{route.source}</span>
-                                    </div>
-                                    <div>
-                                      <span className="text-muted-foreground">To:</span>
-                                      <span className="ml-2 font-medium">{route.destination}</span>
-                                    </div>
-                                    <div>
-                                      <span className="text-muted-foreground">Total Distance:</span>
-                                      <span className="ml-2 font-medium">{route.distance} kilometers</span>
-                                    </div>
-                                    <div>
-                                      <span className="text-muted-foreground">Travel Time:</span>
-                                      <span className="ml-2 font-medium">{route.estimatedDurationMinutes} min</span>
-                                    </div>
-                                  </div>
-                                </div>
+                      <div key={route.id} className="space-y-3">
+                        <div className={`rounded-xl border transition-colors ${viewingRouteSchedules === route.id ? 'border-primary/30 bg-primary/[0.02]' : 'border-border bg-card'}`}>
+                          <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
+                            {/* Route identity */}
+                            <div className="flex items-center gap-3 min-w-0">
+                              <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-colors ${viewingRouteSchedules === route.id ? 'bg-primary/15' : 'bg-muted'}`}>
+                                <MapPin className={`h-4 w-4 transition-colors ${viewingRouteSchedules === route.id ? 'text-primary' : 'text-muted-foreground'}`} />
                               </div>
-                              
-                              <div className="flex gap-2 ml-4">
-                                <div className="relative group">
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => handleEditRoute(route)}
-                                  >
-                                    <Edit className="h-4 w-4" />
-                                  </Button>
-                                  <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-900 rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50 w-max max-w-xs">
-                                    Edit Route
-                                    <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
-                                  </div>
-                                </div>
-                                <div className="relative group">
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => handleDeleteRoute(route)}
-                                    className="text-red-600 hover:text-red-700"
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                  <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-900 rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50 w-max max-w-xs">
-                                    Delete Route
-                                    <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
-                                  </div>
+                              <div className="min-w-0">
+                                <h4 className="text-base font-semibold text-foreground">
+                                  {route.source} <span className="mx-0.5 font-normal text-muted-foreground">→</span> {route.destination}
+                                </h4>
+                                <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5">
+                                  <span className="text-xs text-muted-foreground">{route.distance} km</span>
+                                  <span className="text-xs text-muted-foreground/40">·</span>
+                                  <span className="text-xs text-muted-foreground">BTN {route.baseFare}</span>
+                                  <span className="text-xs text-muted-foreground/40">·</span>
+                                  <span className="text-xs text-muted-foreground">{route.estimatedDurationMinutes} min</span>
                                 </div>
                               </div>
                             </div>
-                          </CardContent>
-                        </Card>
-                        
+
+                            {/* Actions */}
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <Button
+                                variant={viewingRouteSchedules === route.id ? 'default' : 'outline'}
+                                size="sm"
+                                onClick={() => loadSchedulesForRoute(route.id)}
+                                disabled={loadingRouteSchedules[route.id]}
+                                className="h-8 text-xs px-3"
+                              >
+                                {loadingRouteSchedules[route.id] ? (
+                                  <RefreshCw className="h-3.5 w-3.5 animate-spin mr-1.5" />
+                                ) : viewingRouteSchedules === route.id ? (
+                                  <Eye className="h-3.5 w-3.5 mr-1.5" />
+                                ) : (
+                                  <Calendar className="h-3.5 w-3.5 mr-1.5" />
+                                )}
+                                {loadingRouteSchedules[route.id] ? 'Loading…' : viewingRouteSchedules === route.id ? 'Hide Schedules' : 'View Schedules'}
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleEditRoute(route)}
+                                aria-label="Edit route"
+                                className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground hover:bg-muted"
+                              >
+                                <Edit className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDeleteRoute(route)}
+                                aria-label="Delete route"
+                                className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+
                         {/* Route Schedules Display */}
                         {viewingRouteSchedules === route.id && (
-                          <Card 
-                            ref={(el) => {
-                              if (el) {
-                                schedulesSectionRefs.current[route.id] = el;
-                              }
-                            }}
-                            className="border-l-4 border-l-primary mt-4"
+                          <div
+                            ref={(el) => { if (el) schedulesSectionRefs.current[route.id] = el; }}
+                            className="mt-3 rounded-xl border border-border shadow-sm overflow-hidden"
                           >
-                            <CardContent className="p-6">
-                              <div className="flex items-center justify-between mb-4">
-                                <h5 className="text-md font-semibold flex items-center gap-2">
-                                  <Calendar className="h-4 w-4" />
-                                  Schedules for {route.source} → {route.destination}
-                                </h5>
+                            {/* Section header */}
+                            <div className="flex items-center justify-between px-4 py-3 bg-muted/40 border-b border-border">
+                              <div className="flex items-center gap-2.5">
+                                <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary/10">
+                                  <Calendar className="h-3.5 w-3.5 text-primary" />
+                                </div>
+                                <div>
+                                  <p className="text-sm font-semibold text-foreground">
+                                    {route.source} → {route.destination}
+                                  </p>
+                                  {routeSchedules[route.id] && (
+                                    <p className="text-xs text-muted-foreground">
+                                      {routeSchedules[route.id].filter(s => getScheduleStatus(s.departureTime).status !== 'departed').length} upcoming
+                                      {' · '}
+                                      {routeSchedules[route.id].length} total
+                                    </p>
+                                  )}
+                                </div>
                               </div>
-                              
-                              {loadingRouteSchedules[route.id] ? (
-                                <div className="text-center py-8">
-                                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-                                  <p className="text-muted-foreground">Loading schedules...</p>
+                            </div>
+
+                            {loadingRouteSchedules[route.id] ? (
+                              <div className="flex items-center justify-center gap-2 py-10 text-muted-foreground">
+                                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary" />
+                                <span className="text-sm">Loading schedules…</span>
+                              </div>
+                            ) : routeSchedules[route.id]?.length > 0 ? (
+                              <div className="divide-y divide-border">
+                                {routeSchedules[route.id].map((schedule) => {
+                                  const status = getScheduleStatus(schedule.departureTime);
+                                  return (
+                                    <ScheduleRow
+                                      key={schedule.id}
+                                      schedule={schedule}
+                                      status={status}
+                                      isDeparted={status.status === 'departed'}
+                                      toggling={!!togglingSchedule[schedule.id]}
+                                      onToggle={() => handleToggleSchedule(schedule, route.id)}
+                                      onDelete={() => handleDeleteSchedule(schedule, route.id)}
+                                      onBook={() => handleBookSchedule(schedule)}
+                                    />
+                                  );
+                                })}
+                              </div>
+                            ) : (
+                              <div className="flex flex-col items-center py-12 text-center px-6">
+                                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted mb-3">
+                                  <Calendar className="h-5 w-5 text-muted-foreground" />
                                 </div>
-                              ) : routeSchedules[route.id] && routeSchedules[route.id].length > 0 ? (
-                                <div className="space-y-3">
-                                  {routeSchedules[route.id].map((schedule) => {
-                                    const status = getScheduleStatus(schedule.departureTime);
-                                    return (
-                                      <Card key={schedule.id} className="border">
-                                        <CardContent className="p-4">
-                                          <div className="flex justify-between items-start">
-                                            <div className="space-y-2 flex-1">
-                                              <div className="flex items-center gap-3">
-                                                <Badge variant={status.variant}>{status.status}</Badge>
-                                              </div>
-                                              
-                                              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                                                <div>
-                                                  <p className="text-muted-foreground">Departure</p>
-                                                  <p className="font-medium">{formatTime(schedule.departureTime)}</p>
-                                                </div>
-                                                <div>
-                                                  <p className="text-muted-foreground">Arrival</p>
-                                                  <p className="font-medium">{formatTime(schedule.arrivalTime)}</p>
-                                                </div>
-                                                <div>
-                                                  <p className="text-muted-foreground">Price</p>
-                                                  <p className="font-medium">BTN {schedule.finalFare ?? schedule.baseFare ?? '—'}</p>
-                                                </div>
-                                                <div>
-                                                  <p className="text-muted-foreground">Available Seats</p>
-                                                  <p className="font-medium">{schedule.availableSeats || 'N/A'}</p>
-                                                </div>
-                                              </div>
-                                            </div>
-                                            
-                                            <div className="flex gap-2 ml-4">
-                                              <div className="relative group">
-                                                <Button
-                                                  variant="outline"
-                                                  size="sm"
-                                                  onClick={() => handleToggleSchedule(schedule, route.id)}
-                                                  disabled={!!togglingSchedule[schedule.id]}
-                                                >
-                                                  <RefreshCw className={`h-4 w-4 ${togglingSchedule[schedule.id] ? 'animate-spin' : ''}`} />
-                                                </Button>
-                                                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-900 rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50 w-max max-w-xs">
-                                                  {schedule.active ? 'Deactivate' : 'Activate'}
-                                                  <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
-                                                </div>
-                                              </div>
-                                              <div className="relative group">
-                                                <Button
-                                                  variant="outline"
-                                                  size="sm"
-                                                  onClick={() => handleDeleteSchedule(schedule, route.id)}
-                                                  className="text-red-600 hover:text-red-700"
-                                                >
-                                                  <Trash2 className="h-4 w-4" />
-                                                </Button>
-                                                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-900 rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50 w-max max-w-xs">
-                                                  Delete Schedule
-                                                  <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
-                                                </div>
-                                              </div>
-                                            </div>
-                                          </div>
-                                        </CardContent>
-                                      </Card>
-                                    );
-                                  })}
-                                </div>
-                              ) : (
-                                <div className="text-center py-8">
-                                  <Calendar className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-                                  <h3 className="text-lg font-semibold mb-2">No schedules found</h3>
-                                  <p className="text-muted-foreground">No schedules have been generated for this route yet.</p>
-                                  <p className="text-muted-foreground text-sm mt-1">Use the <strong>Generate Schedules</strong> button above to create schedules in bulk.</p>
-                                </div>
-                              )}
-                            </CardContent>
-                          </Card>
+                                <p className="text-sm font-medium mb-1">No schedules found</p>
+                                <p className="text-xs text-muted-foreground max-w-xs">
+                                  No schedules have been generated for this route yet. Use <strong>Generate Schedules</strong> above to create them in bulk.
+                                </p>
+                              </div>
+                            )}
+                          </div>
                         )}
                       </div>
                     ))}
@@ -1498,37 +1464,68 @@ function BusDetailsPage() {
                   </div>
 
                   {/* Passenger Details */}
+                  {selectedSeats.length > 0 && (
+                    <div className="space-y-3">
+                      <h4 className="text-sm font-semibold text-foreground">Passenger per seat</h4>
+                      <div className="space-y-3">
+                        {selectedSeats.map((seat, index) => {
+                          const seatLabel =
+                            seat.seatLabel || seat.label || bookingFormData.seatLabels[index] || `Seat ${index + 1}`;
+                          return (
+                            <div
+                              key={seat.id ?? `${seatLabel}-${index}`}
+                              className="grid gap-3 rounded-lg border border-border/60 bg-muted/20 p-4 md:grid-cols-3"
+                            >
+                              <div className="flex items-center text-sm font-semibold text-foreground md:col-span-3">
+                                {seatLabel}
+                              </div>
+                              <div className="space-y-2">
+                                <Label htmlFor={`applicantCid-${index}`}>CID *</Label>
+                                <Input
+                                  id={`applicantCid-${index}`}
+                                  value={bookingFormData.applicantCids[index] || ''}
+                                  onChange={(e) => handlePassengerFieldChange(index, 'cid', e.target.value)}
+                                  placeholder="e.g., 11501001234"
+                                  required
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label htmlFor={`applicantName-${index}`}>Name *</Label>
+                                <Input
+                                  id={`applicantName-${index}`}
+                                  value={bookingFormData.applicantNames[index] || ''}
+                                  onChange={(e) => handlePassengerFieldChange(index, 'name', e.target.value)}
+                                  placeholder="Passenger full name"
+                                  required
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label htmlFor={`applicantMobile-${index}`}>Mobile *</Label>
+                                <Input
+                                  id={`applicantMobile-${index}`}
+                                  type="tel"
+                                  value={bookingFormData.applicantMobiles[index] || ''}
+                                  onChange={(e) => handlePassengerFieldChange(index, 'mobile', e.target.value)}
+                                  placeholder="e.g., 17123456"
+                                  required
+                                />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
                   <div className="grid gap-4 md:grid-cols-2">
                     <div className="space-y-2">
-                      <Label htmlFor="applicantCid">CID *</Label>
-                      <Input
-                        id="applicantCid"
-                        value={bookingFormData.applicantCid}
-                        onChange={(e) => handleBookingInputChange('applicantCid', e.target.value)}
-                        placeholder="e.g., 11501001234"
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="applicantMobile">Mobile Number *</Label>
-                      <Input
-                        id="applicantMobile"
-                        type="tel"
-                        value={bookingFormData.applicantMobile}
-                        onChange={(e) => handleBookingInputChange('applicantMobile', e.target.value)}
-                        placeholder="e.g., 17123456"
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="applicantEmail">Email *</Label>
+                      <Label htmlFor="applicantEmail">Contact Email</Label>
                       <Input
                         id="applicantEmail"
                         type="email"
                         value={bookingFormData.applicantEmail}
                         onChange={(e) => handleBookingInputChange('applicantEmail', e.target.value)}
-                        placeholder="e.g., passenger@example.com"
-                        required
+                        placeholder="Optional"
                       />
                     </div>
                     <div className="space-y-2">
@@ -1569,8 +1566,9 @@ function BusDetailsPage() {
                           scheduleId: '',
                           seatNumbers: [],
                           seatLabels: [],
-                          applicantCid: '',
-                          applicantMobile: '',
+                          applicantCids: [],
+                          applicantNames: [],
+                          applicantMobiles: [],
                           applicantEmail: '',
                           status: 'PENDING'
                         });
@@ -1587,6 +1585,120 @@ function BusDetailsPage() {
         )}
       </div>
     </PageWrapper>
+  );
+}
+
+function formatTimeOnly(dateString) {
+  if (!dateString) return '—';
+  return new Date(dateString).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+}
+
+function formatDayDate(dateString) {
+  if (!dateString) return '';
+  return new Date(dateString).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+}
+
+function ScheduleRow({ schedule, status, isDeparted, toggling, onToggle, onDelete, onBook }) {
+  const statusConfig = {
+    departed: {
+      dot: 'bg-muted-foreground',
+      badge: 'bg-muted text-muted-foreground',
+      border: 'border-l-border/40',
+    },
+    boarding: {
+      dot: 'bg-amber-500',
+      badge: 'bg-amber-50 text-amber-700',
+      border: 'border-l-amber-500',
+    },
+    today: {
+      dot: 'bg-green-500',
+      badge: 'bg-green-50 text-green-700',
+      border: 'border-l-green-500',
+    },
+    upcoming: {
+      dot: 'bg-primary',
+      badge: 'bg-primary/10 text-primary',
+      border: 'border-l-primary/40',
+    },
+  };
+  const cfg = statusConfig[status.status] ?? statusConfig.upcoming;
+
+  return (
+    <div
+      className={`flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 border-l-[3px] transition-colors hover:bg-muted/30 ${cfg.border} ${isDeparted ? 'opacity-60' : ''}`}
+    >
+      {/* Status badge */}
+      <div className="flex items-center gap-1.5 w-24 shrink-0">
+        <div className={`h-2 w-2 rounded-full shrink-0 ${cfg.dot}`} />
+        <span className={`text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded ${cfg.badge}`}>
+          {status.status}
+        </span>
+      </div>
+
+      {/* Departure → Arrival */}
+      <div className="flex items-center gap-2 flex-1 min-w-0">
+        <div className="text-sm min-w-0">
+          <p className="font-semibold tabular-nums leading-tight">{formatTimeOnly(schedule.departureTime)}</p>
+          <p className="text-[11px] text-muted-foreground leading-tight">{formatDayDate(schedule.departureTime)}</p>
+        </div>
+        <div className="flex items-center gap-0.5 text-muted-foreground shrink-0">
+          <div className="h-px w-3 bg-border" />
+          <ArrowRight className="h-3 w-3" />
+          <div className="h-px w-3 bg-border" />
+        </div>
+        <div className="text-sm min-w-0">
+          <p className="font-semibold tabular-nums leading-tight">{formatTimeOnly(schedule.arrivalTime)}</p>
+          <p className="text-[11px] text-muted-foreground leading-tight">{formatDayDate(schedule.arrivalTime)}</p>
+        </div>
+      </div>
+
+      {/* Price */}
+      <div className="text-sm text-right shrink-0">
+        <p className="font-semibold tabular-nums">BTN {schedule.finalFare ?? schedule.baseFare ?? '—'}</p>
+        <p className="text-[11px] text-muted-foreground">fare</p>
+      </div>
+
+      {/* Seats */}
+      <div className="text-sm text-right shrink-0 w-12">
+        <p className="font-semibold tabular-nums">{schedule.availableSeats ?? '—'}</p>
+        <p className="text-[11px] text-muted-foreground">seats</p>
+      </div>
+
+      {/* Actions */}
+      <div className="flex items-center gap-1 shrink-0">
+        {!isDeparted && (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={onBook}
+            className="h-7 text-xs px-2"
+            aria-label="Book this schedule"
+          >
+            <Ticket className="h-3 w-3 mr-1" />
+            Book
+          </Button>
+        )}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onToggle}
+          disabled={toggling}
+          aria-label={schedule.active ? 'Deactivate schedule' : 'Activate schedule'}
+          className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground hover:bg-muted"
+        >
+          <RefreshCw className={`h-3.5 w-3.5 ${toggling ? 'animate-spin' : ''}`} />
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onDelete}
+          aria-label="Delete schedule"
+          className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </Button>
+      </div>
+    </div>
   );
 }
 

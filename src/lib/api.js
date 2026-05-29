@@ -60,6 +60,13 @@ export const API_CONFIG = {
       TICKETS: '/movie/tickets',
     },
     
+    GAS: {
+      CONFIG: '/api/gas-config/',
+      CONFIG_BY_ID: '/api/gas-config',
+      DELIVERY: '/api/gas-delivery/',
+      DELIVERY_STATUS: '/api/gas-delivery',
+    },
+
     BUS: {
       ROUTES: '/api/bus-routes',
       SCHEDULES: '/api/schedules',

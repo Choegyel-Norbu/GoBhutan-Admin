@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
 import { Textarea } from '@/components/ui/Textarea';
-import { Edit, Trash2, Plus } from 'lucide-react';
+import { Edit, Trash2, Plus, Layers, RefreshCw } from 'lucide-react';
 import PageWrapper from '@/components/PageWrapper';
 import { apiClient } from '@/lib/apiService';
 import { API_CONFIG } from '@/lib/api';
@@ -369,107 +369,95 @@ const AddRoomTypePage = () => {
 
   return (
     <PageWrapper
-      title="Room Types Management"
+      title="Room Types"
       description="Manage room types for your hotels"
     >
-
-      {/* Room Types Table */}
+      {/* Room Types List */}
       <Card className="mb-6">
-        <CardHeader>
-          <div className="flex justify-between items-center">
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="text-md">Room Types</CardTitle>
-              <CardDescription>
-                View and manage all room types
-              </CardDescription>
+              <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                <Layers className="h-4 w-4 text-primary" />
+                Room Types
+                {!loading && roomTypes.length > 0 && (
+                  <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                    {roomTypes.length}
+                  </span>
+                )}
+              </CardTitle>
+              <CardDescription className="mt-0.5">View and manage all room types</CardDescription>
             </div>
             <div className="flex gap-2">
-              <Button 
-                onClick={fetchRoomTypes}
-                variant="outline"
-                className="flex items-center gap-2"
-              >
+              <Button onClick={fetchRoomTypes} variant="outline" size="sm" className="h-8 gap-1.5 text-xs">
+                <RefreshCw className="h-3 w-3" />
                 Refresh
               </Button>
-              <Button 
+              <Button
                 onClick={() => {
                   setShowForm(true);
                   clearForm();
-                  
-                  // Scroll to form after a short delay to ensure it's rendered
                   setTimeout(() => {
-                    const formElement = document.getElementById('room-type-form');
-                    if (formElement) {
-                      formElement.scrollIntoView({
-                        behavior: 'smooth',
-                        block: 'start'
-                      });
-                    }
+                    document.getElementById('room-type-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
                   }, 100);
                 }}
-                className="flex items-center gap-2"
+                size="sm"
+                className="h-8 gap-1.5 text-xs"
               >
-                <Plus className="h-4 w-4" />
-                Add New Room Type
+                <Plus className="h-3.5 w-3.5" />
+                Add Room Type
               </Button>
             </div>
           </div>
         </CardHeader>
-        <CardContent>
-          
+        <CardContent className="p-0">
           {loading ? (
-            <div className="flex justify-center items-center py-8">
-              <div className="text-muted-foreground">Loading room types...</div>
+            <div className="flex items-center justify-center py-10 text-muted-foreground text-sm">
+              <RefreshCw className="h-4 w-4 animate-spin mr-2" />
+              Loading room types…
             </div>
           ) : roomTypes.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              No room types found. Click "Add New Room Type" to create one.
+            <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
+              <Layers className="h-8 w-8 mb-3 opacity-30" />
+              <p className="text-sm font-medium">No room types yet</p>
+              <p className="text-xs mt-1">Click "Add Room Type" to create one.</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left p-3 font-medium">ID</th>
-                    <th className="text-left p-3 font-medium">Name</th>
-                    <th className="text-left p-3 font-medium">Description</th>
-                    <th className="text-left p-3 font-medium">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {roomTypes.map((roomType) => (
-                    <tr key={roomType.id} className="border-b hover:bg-gray-50">
-                      <td className="p-3 text-sm">{roomType.id}</td>
-                      <td className="p-3 font-medium">{roomType.name}</td>
-                      <td className="p-3 text-sm text-muted-foreground">
-                        {roomType.description || 'No description'}
-                      </td>
-                      <td className="p-3">
-                        <div className="flex gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleEdit(roomType)}
-                            className="flex items-center gap-1"
-                          >
-                            <Edit className="h-3 w-3" />
-                            Edit
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleDelete(roomType)}
-                            className="flex items-center gap-1 text-red-600 hover:text-red-700 hover:bg-red-50"
-                          >
-                            <Trash2 className="h-3 w-3" />
-                            Delete
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="divide-y divide-border">
+              {roomTypes.map((roomType) => (
+                <div key={roomType.id} className="flex items-center gap-3 px-4 py-3 hover:bg-muted/30 transition-colors group">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                    <Layers className="h-3.5 w-3.5 text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-foreground leading-snug">{roomType.name}</p>
+                    <p className="text-xs text-muted-foreground truncate mt-0.5">
+                      {roomType.description || <span className="italic">No description</span>}
+                    </p>
+                  </div>
+                  <span className="text-[10px] font-mono text-muted-foreground/40 hidden sm:block">#{roomType.id}</span>
+                  <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleEdit(roomType)}
+                      aria-label="Edit room type"
+                      className="h-7 w-7 p-0"
+                    >
+                      <Edit className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDelete(roomType)}
+                      aria-label="Delete room type"
+                      className="h-7 w-7 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </CardContent>
@@ -478,55 +466,65 @@ const AddRoomTypePage = () => {
       {/* Add/Edit Form */}
       {showForm && (
         <Card id="room-type-form">
-          <CardHeader>
-            <CardTitle className="text-md">
-              {editingRoomType ? 'Edit Room Type' : 'Add New Room Type'}
-            </CardTitle>
-            <CardDescription>
-              {editingRoomType ? 'Update the room type details' : 'Enter the details for the new room type'}
-            </CardDescription>
+          <CardHeader className="pb-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
+                {editingRoomType ? <Edit className="h-4 w-4 text-primary" /> : <Plus className="h-4 w-4 text-primary" />}
+              </div>
+              <div>
+                <CardTitle className="text-sm font-semibold">
+                  {editingRoomType ? 'Edit Room Type' : 'Add New Room Type'}
+                </CardTitle>
+                <CardDescription>
+                  {editingRoomType ? 'Update the room type details' : 'Enter the details for the new room type'}
+                </CardDescription>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Room Type Name *</Label>
+            <form onSubmit={handleSubmit} className="space-y-5">
+              <div className="space-y-1.5">
+                <Label htmlFor="name" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Room Type Name <span className="text-destructive normal-case tracking-normal font-normal">*</span>
+                </Label>
                 <Input
                   id="name"
                   name="name"
                   value={formData.name}
                   onChange={handleInputChange}
                   placeholder="e.g., Deluxe Suite, Standard Room"
-                  className={errors.name ? 'border-red-500' : ''}
+                  className={errors.name ? 'border-destructive' : ''}
                 />
                 {errors.name && (
-                  <p className="text-sm text-red-500">{errors.name}</p>
+                  <p className="text-xs text-destructive">{errors.name}</p>
                 )}
               </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="description" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Description
+                </Label>
                 <Textarea
                   id="description"
                   name="description"
                   value={formData.description}
                   onChange={handleInputChange}
-                  placeholder="Describe the room type, its features, and what makes it special..."
+                  placeholder="Describe the room type, its features, and what makes it special…"
                   rows={4}
-                  className={errors.description ? 'border-red-500' : ''}
+                  className={errors.description ? 'border-destructive' : ''}
                 />
                 {errors.description && (
-                  <p className="text-sm text-red-500">{errors.description}</p>
+                  <p className="text-xs text-destructive">{errors.description}</p>
                 )}
               </div>
 
-              {/* Submit Buttons */}
-              <div className="flex justify-end space-x-4 pt-4">
-                <Button type="button" variant="outline" onClick={handleCancel} disabled={isSubmitting}>
+              <div className="flex items-center justify-end gap-3 pt-2 border-t border-border">
+                <Button type="button" variant="outline" size="sm" onClick={handleCancel} disabled={isSubmitting}>
                   Cancel
                 </Button>
-                <Button type="submit" className="min-w-[120px]" disabled={isSubmitting}>
-                  {isSubmitting 
-                    ? (editingRoomType ? 'Updating...' : 'Adding...') 
+                <Button type="submit" size="sm" disabled={isSubmitting} className="min-w-[120px]">
+                  {isSubmitting
+                    ? (editingRoomType ? 'Updating…' : 'Adding…')
                     : (editingRoomType ? 'Update Room Type' : 'Add Room Type')
                   }
                 </Button>

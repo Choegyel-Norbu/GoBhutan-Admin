@@ -4,6 +4,7 @@ import { LogOut, Bell } from 'lucide-react';
 import { Button } from './ui/Button';
 import { Badge } from './ui/Badge';
 import { useAuth } from '../contexts/AuthContext';
+import Swal from 'sweetalert2';
 
 function Navbar() {
   const navigate = useNavigate();
@@ -24,14 +25,27 @@ function Navbar() {
   }, []);
 
   const handleSignOut = async () => {
+    setIsProfileOpen(false);
+
+    const result = await Swal.fire({
+      icon: 'warning',
+      title: 'Sign out?',
+      text: 'You will need to sign in again to access the admin panel.',
+      showCancelButton: true,
+      confirmButtonText: 'Sign out',
+      cancelButtonText: 'Stay signed in',
+      confirmButtonColor: '#ef4444',
+      reverseButtons: true,
+    });
+
+    if (!result.isConfirmed) return;
+
     setIsSigningOut(true);
     try {
       await signOut();
-      // Redirect to sign in page
       navigate('/signin');
     } catch (error) {
       console.error('Sign out error:', error);
-      // Even if sign out fails, redirect to sign in
       navigate('/signin');
     } finally {
       setIsSigningOut(false);
@@ -77,12 +91,13 @@ function Navbar() {
           {isProfileOpen && (
             <div className="fixed left-3 right-3 top-16 w-auto bg-popover border border-border rounded-lg shadow-lg z-50 sm:absolute sm:left-auto sm:right-0 sm:top-auto sm:mt-2 sm:w-48">
               <div className="p-1">
-                <button 
+                <button
+                  type="button"
                   onClick={handleSignOut}
                   disabled={isSigningOut}
-                  className="flex items-center gap-2 w-full px-3 py-2.5 text-sm text-left hover:bg-muted hover:text-foreground rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex items-center gap-2 w-full px-3 py-2.5 text-sm text-left text-destructive hover:bg-destructive/10 hover:text-destructive rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <LogOut className="h-3 w-3 md:h-4 md:w-4" />
+                  <LogOut className="h-3 w-3 md:h-4 md:w-4 shrink-0" aria-hidden />
                   {isSigningOut ? 'Signing out...' : 'Sign out'}
                 </button>
               </div>

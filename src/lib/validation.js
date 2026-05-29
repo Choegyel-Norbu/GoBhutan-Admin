@@ -184,7 +184,7 @@ export const validateClients = (clients) => {
   }
 
   // Valid client options
-  const validClients = ['bus', 'hotel', 'theater', 'all'];
+  const validClients = ['bus', 'hotel', 'theater', 'gas', 'all'];
   
   // Check if all selected clients are valid
   const invalidClients = clients.filter(clientType => !validClients.includes(clientType));
@@ -349,7 +349,7 @@ export const sanitizeFormData = (formData) => {
  */
 export const sanitizeSignUpFormData = (formData) => {
   // Define all available services
-  const allServices = ['bus', 'hotel', 'theater'];
+  const allServices = ['bus', 'hotel', 'theater', 'gas'];
   
   // Process clients array: if "all" is selected, replace with individual services
   let clients = formData.clients || [];

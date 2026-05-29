@@ -1,4 +1,4 @@
-import { Calendar, Building2, Bus, Bed, RefreshCw, Clapperboard, Car, ChevronRight, Zap } from 'lucide-react';
+import { Calendar, Building2, Bus, Bed, RefreshCw, Clapperboard, Car, ChevronRight, Zap, Flame } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import DashboardCard from '@/components/DashboardCard';
 import PageWrapper from '@/components/PageWrapper';
@@ -6,6 +6,12 @@ import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { useAuth } from '@/contexts/AuthContext';
 import { useDashboard } from '@/hooks/useDashboard';
+
+/** Match user.clients to a service (same idea as sidebar: exact client id). */
+function hasClientAccess(userClients, clientKeys) {
+  const normalized = (userClients || []).map((c) => String(c).toLowerCase());
+  return clientKeys.some((key) => normalized.includes(key.toLowerCase()));
+}
 
 // Service registry — single source of truth for dashboard service rows
 const SERVICE_CONFIGS = [
@@ -52,6 +58,20 @@ const SERVICE_CONFIGS = [
     getMetric: () => null,
   },
   {
+    id: 'gas',
+    clientKeys: ['gas'],
+    title: 'Gas Delivery',
+    subtitle: 'Gas types, config & deliveries',
+    path: '/dashboard/gas/config',
+    Icon: Flame,
+    iconBg: 'bg-orange-50 dark:bg-orange-900/20',
+    iconColor: 'text-orange-600 dark:text-orange-400',
+    dot: 'bg-orange-500',
+    badgeBg: 'bg-orange-50 dark:bg-orange-900/20',
+    badgeText: 'text-orange-700 dark:text-orange-400',
+    getMetric: () => null,
+  },
+  {
     id: 'taxi',
     clientKeys: ['taxi'],
     title: 'Taxi Service',
@@ -91,11 +111,7 @@ function DashboardPage() {
 
   const visibleServices = isSuperAdmin
     ? SERVICE_CONFIGS
-    : SERVICE_CONFIGS.filter(svc =>
-        userClients.some(c =>
-          svc.clientKeys.some(k => c.toLowerCase().includes(k))
-        )
-      );
+    : SERVICE_CONFIGS.filter((svc) => hasClientAccess(userClients, svc.clientKeys));
 
   const dashboardStats = [
     {

@@ -4,9 +4,7 @@ function PageWrapper({ children, className, title, description, titleClassName, 
   return (
     <div className={cn("space-y-6", className)}>
       {(title || description) && (
-        <div className="relative overflow-hidden rounded-xl border border-border bg-card px-6 py-5 shadow-sm">
-          {/* Top accent gradient bar */}
-          <div className="absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-primary via-primary/50 to-transparent" />
+        <div className="rounded-xl border border-border bg-card px-6 py-5 shadow-sm">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-4 min-w-0">
               {Icon && (

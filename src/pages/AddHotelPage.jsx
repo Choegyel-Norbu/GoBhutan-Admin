@@ -1,5 +1,4 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -11,66 +10,12 @@ import PageWrapper from '@/components/PageWrapper';
 import { apiClient } from '@/lib/apiService';
 import { API_CONFIG } from '@/lib/api';
 import authAPI from '@/lib/authAPI';
-import { useWallet } from '@/contexts/WalletContext';
 import Swal from 'sweetalert2';
 
 const AddHotel = ({ hotelId = null }) => {
-  const navigate = useNavigate();
-  const { walletBalance, isWalletLoading, refreshWalletBalance } = useWallet();
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [hasWalletLoaded, setHasWalletLoaded] = useState(false);
 
-  useEffect(() => {
-    const loadWalletBalance = async () => {
-      await refreshWalletBalance();
-      setHasWalletLoaded(true);
-    };
-
-    loadWalletBalance();
-  }, [refreshWalletBalance]);
-
-  // Check wallet balance on component mount
-  useEffect(() => {
-    if (isWalletLoading || !hasWalletLoaded) {
-      return;
-    }
-
-    if (walletBalance < 1000) {
-      const formatCurrency = (amount) => {
-        return new Intl.NumberFormat('en-BT', {
-          style: 'currency',
-          currency: 'BTN',
-          minimumFractionDigits: 2
-        }).format(amount);
-      };
-
-      Swal.fire({
-        icon: 'warning',
-        title: 'Insufficient Funds',
-        html: `
-          <div style="text-align: center;">
-            <p style="margin-bottom: 16px; font-size: 16px;">
-              Your wallet balance is <strong>${formatCurrency(walletBalance)}</strong>, which is below the minimum required amount of <strong>${formatCurrency(1000)}</strong>.
-            </p>
-            <p style="margin-bottom: 20px; color: #6b7280;">
-              Please refill your wallet to register a new hotel.
-            </p>
-          </div>
-        `,
-        showCancelButton: false,
-        confirmButtonText: 'Go to Wallet',
-        confirmButtonColor: '#10b981',
-        reverseButtons: false,
-        allowOutsideClick: false,
-        allowEscapeKey: false
-      }).then((result) => {
-        if (result.isConfirmed) {
-          navigate('/dashboard/wallet');
-        }
-      });
-    }
-  }, [walletBalance, isWalletLoading, hasWalletLoaded, navigate]);
 
   // Function to clear all form fields
   const clearForm = () => {

@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
-import { UserPlus, User, Mail, Lock, Phone, Eye, EyeOff, Building2, Bus, Check, RefreshCw } from 'lucide-react';
+import { UserPlus, User, Mail, Lock, Phone, Eye, EyeOff, Building2, Bus, Check, RefreshCw, Clapperboard } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
 import { Select } from '@/components/ui/Select';
 import PageWrapper from '@/components/PageWrapper';
-import { api } from '@/lib/apiService';
+import { api, apiClient } from '@/lib/apiService';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   validateEmail,
@@ -29,11 +29,13 @@ function extractErrorMessage(error) {
   return 'Could not register staff. Please try again.';
 }
 
-const SUPPORTED_CLIENTS = ['hotel', 'bus'];
+const SUPPORTED_CLIENTS = ['hotel', 'bus', 'theater', 'movie'];
 
 const CLIENT_META = {
   hotel: { label: 'Hotel', icon: Building2, entityLabel: 'Select Hotel', entityType: 'hotel' },
   bus: { label: 'Bus', icon: Bus, entityLabel: 'Select Bus', entityType: 'bus' },
+  theater: { label: 'Theater', icon: Clapperboard, entityLabel: 'Select Theater', entityType: 'theater' },
+  movie: { label: 'Theater', icon: Clapperboard, entityLabel: 'Select Theater', entityType: 'theater' },
 };
 
 const EMPTY_FORM = {
@@ -113,6 +115,10 @@ function AddStaffPage() {
           const r = await api.bus.getBuses();
           const d = Array.isArray(r) ? r : r?.data ?? r?.buses ?? [];
           setEntities(Array.isArray(d) ? d : []);
+        } else if (selectedClient === 'theater' || selectedClient === 'movie') {
+          const r = await apiClient.get('/api/theaters/getAllTheatersByUserId');
+          const d = r?.data ?? r;
+          setEntities(Array.isArray(d) ? d : []);
         }
       } catch (err) {
         console.error('Failed to load entities:', err);
@@ -130,6 +136,8 @@ function AddStaffPage() {
       return entity.busName
         ? `${entity.busName}${entity.busNumber ? ` (${entity.busNumber})` : ''}`
         : `Bus ${entity.id}`;
+    if (selectedClient === 'theater' || selectedClient === 'movie')
+      return entity.name || `Theater ${entity.id}`;
     return entity.name || String(entity.id);
   };
 

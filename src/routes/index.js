@@ -167,7 +167,7 @@ export const navigationItems = [
     path: '/dashboard/staff',
     icon: UserPlus,
     description: 'Register staff for your services',
-    clients: ['hotel', 'bus']
+    clients: ['hotel', 'bus', 'theater', 'movie']
   },
   {
     title: 'Wallet',

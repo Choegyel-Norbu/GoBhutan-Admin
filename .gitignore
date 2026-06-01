@@ -32,3 +32,6 @@ dist-ssr
 .env.development.local
 .env.test.local
 .env.production.local
+
+# Playwright MCP output
+.playwright-mcp/

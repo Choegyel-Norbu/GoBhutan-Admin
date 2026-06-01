@@ -203,7 +203,7 @@ function AddMoviePage() {
   const [screeningFormTheaterIdFromContext, setScreeningFormTheaterIdFromContext] = useState(null);
 
   // New explorer UI state
-  const [activeHallTab, setActiveHallTab] = useState('screenings');
+  const [activeHallTab, setActiveHallTab] = useState('seats');
   const [showAddTheaterModal, setShowAddTheaterModal] = useState(false);
   const [showAddHallModal, setShowAddHallModal] = useState(false);
 
@@ -781,6 +781,7 @@ function AddMoviePage() {
     setBookingTickets([]);
     setBookingError(null);
     if (screening?.hallId && !seats[screening.hallId]) fetchSeats(screening.hallId);
+    if (expandedTheaterId && !bookings[expandedTheaterId]) fetchBookings(expandedTheaterId);
   };
 
   const closeBooking = () => {
@@ -1127,7 +1128,7 @@ function AddMoviePage() {
     }
   };
 
-  const validateSeatConfig = (hallId) => {
+  const validateSeatConfig = (hallId, maxSeats) => {
     const rows = seatConfigRows[hallId] || [];
     const newErrors = {};
     if (rows.length === 0) return { isValid: false, errors: { general: 'At least one row is required' } };
@@ -1143,14 +1144,16 @@ function AddMoviePage() {
       if (Object.keys(rowErrors).length > 0) newErrors[index] = rowErrors;
     });
     const totalConfigured = rows.reduce((sum, row) => sum + (parseInt(row.seatCount, 10) || 0), 0);
-    if (totalConfigured > MAX_SEATS_PER_HALL) newErrors.general = `Seat total (${totalConfigured}) exceeds maximum allowed (${MAX_SEATS_PER_HALL}) for this hall.`;
+    if (totalConfigured > maxSeats) newErrors.general = `Seat total (${totalConfigured}) exceeds this hall's capacity of ${maxSeats} seats.`;
     setSeatConfigErrors(prev => ({ ...prev, [hallId]: newErrors }));
     return { isValid: Object.keys(newErrors).length === 0, errors: newErrors };
   };
 
   const handleSeatConfigSubmit = async (e, hallId) => {
     e.preventDefault();
-    const validation = validateSeatConfig(hallId);
+    const hall = (halls[expandedTheaterId] ?? []).find(h => h.id === hallId);
+    const maxSeats = hall?.totalSeats ?? MAX_SEATS_PER_HALL;
+    const validation = validateSeatConfig(hallId, maxSeats);
     if (!validation.isValid) {
       const firstErrorRow = Object.keys(validation.errors)[0];
       if (firstErrorRow !== 'general') {
@@ -1335,7 +1338,7 @@ function AddMoviePage() {
     setExpandedHallId(hallId);
     if (!seats[hallId]) fetchSeats(hallId);
     if (!screeningsByHall[hallId]) fetchScreenings(hallId);
-    setActiveHallTab('screenings');
+    setActiveHallTab('seats');
   };
 
   const openScreeningFormForHall = () => {
@@ -1695,10 +1698,16 @@ function AddMoviePage() {
                         <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
                       </div>
                     ) : seats[bookingScreening.hallId]?.length > 0 ? (
-                      <div className="inline-block min-w-full px-4 sm:px-8 pb-12 pt-4">
+                      <div className="table mx-auto px-4 sm:px-8 pb-12 pt-4">
                         {(() => {
                           const seatsList = seats[bookingScreening.hallId] || [];
                           if (seatsList.length === 0) return null;
+
+                          const bookedSeatIds = new Set(
+                            (bookings[expandedTheaterId] ?? [])
+                              .filter(b => b.screeningId === bookingScreening.id)
+                              .map(b => b.seatId)
+                          );
 
                           const byRow = seatsList.reduce((acc, seat) => {
                             const r = seat.rowName ?? '';
@@ -1706,7 +1715,7 @@ function AddMoviePage() {
                             acc[r].push(seat);
                             return acc;
                           }, {});
-                          
+
                           const rowNames = Object.keys(byRow).sort((a, b) => {
                             const na = parseInt(a, 10); const nb = parseInt(b, 10);
                             if (!isNaN(na) && !isNaN(nb)) return na - nb;
@@ -1722,7 +1731,7 @@ function AddMoviePage() {
                           });
 
                           return (
-                            <div className="flex flex-col items-center space-y-8 w-max mx-auto">
+                            <div className="flex flex-col space-y-8">
                               {rowNames.map((rowName) => {
                                 const rowSeats = byRow[rowName].sort((a, b) => {
                                   const na = parseInt(a.seatNumber, 10);
@@ -1732,17 +1741,18 @@ function AddMoviePage() {
                                 });
 
                                 return (
-                                  <div key={rowName} className="flex items-center justify-center gap-4 sm:gap-6">
+                                  <div key={rowName} className="flex items-center gap-4 sm:gap-6">
                                     {/* Left Row Label */}
                                     <div className="flex items-center justify-center h-7 w-7 rounded-full bg-muted/50 border border-border/50 shadow-sm shrink-0">
                                       <span className="text-[11px] font-bold text-muted-foreground">{rowName}</span>
                                     </div>
 
                                     {/* Seats */}
-                                    <div className="flex justify-center gap-2 sm:gap-3">
+                                    <div className="flex gap-2 sm:gap-3">
                                       {rowSeats.map((seat, index) => {
                                         const selected = bookingTickets.some(t => t.seatId === seat.id);
-                                        const disabled = seat.isBlocked;
+                                        const booked = bookedSeatIds.has(seat.id);
+                                        const disabled = seat.isBlocked || booked;
                                         
                                         // Calculate curve offset based on position relative to the center
                                         // We use maxRowLength so the curve is consistent across all rows
@@ -1762,21 +1772,23 @@ function AddMoviePage() {
                                               type="button"
                                               onClick={() => !disabled && toggleSeatForBooking(seat)}
                                               disabled={disabled}
-                                              title={`${seat.seatClassName} - BTN ${seat.basePrice}`}
+                                              title={booked ? `Seat ${seat.seatIdentifier ?? seat.seatNumber} — Already Booked` : `${seat.seatClassName} - BTN ${seat.basePrice}`}
                                               className={cn(
                                                 'relative group flex flex-col items-center justify-center p-1.5 w-10 sm:w-11 transition-all rounded-lg border',
                                                 selected
                                                   ? 'bg-primary border-primary text-primary-foreground transform -translate-y-1.5 shadow-lg shadow-primary/30 ring-2 ring-primary/20 ring-offset-1 ring-offset-background'
-                                                  : disabled
-                                                    ? 'border-transparent text-muted-foreground cursor-not-allowed opacity-40'
-                                                    : 'border-transparent text-muted-foreground hover:text-primary hover:bg-primary/5 hover:border-primary/20'
+                                                  : booked
+                                                    ? 'border-muted bg-muted/50 text-muted-foreground cursor-not-allowed opacity-50'
+                                                    : disabled
+                                                      ? 'border-transparent text-muted-foreground cursor-not-allowed opacity-40'
+                                                      : 'border-transparent text-muted-foreground hover:text-primary hover:bg-primary/5 hover:border-primary/20'
                                               )}
                                             >
                                               <Armchair
                                                 strokeWidth={1.5}
                                                 className={cn(
                                                   "h-8 w-8 sm:h-9 sm:w-9 transition-colors",
-                                                  selected ? "fill-primary-foreground/20" : disabled ? "fill-muted" : "group-hover:fill-primary/10"
+                                                  selected ? "fill-primary-foreground/20" : booked ? "fill-muted-foreground/30" : disabled ? "fill-muted" : "group-hover:fill-primary/10"
                                                 )}
                                               />
                                               <span className={cn(
@@ -2395,23 +2407,6 @@ function AddMoviePage() {
                 <div className="flex border-b border-border -mb-px">
                   <button
                     type="button"
-                    onClick={() => setActiveHallTab('screenings')}
-                    className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors cursor-pointer ${
-                      activeHallTab === 'screenings'
-                        ? 'border-b-2 border-primary text-primary'
-                        : 'text-muted-foreground hover:text-foreground'
-                    }`}
-                  >
-                    <Monitor className="h-4 w-4" />
-                    Screenings
-                    {screeningsByHall[expandedHallId] !== undefined && (
-                      <span className="ml-1 text-[10px] bg-muted px-1.5 py-0.5 rounded-full font-medium text-muted-foreground">
-                        {currentScreenings.length}
-                      </span>
-                    )}
-                  </button>
-                  <button
-                    type="button"
                     onClick={() => setActiveHallTab('seats')}
                     className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors cursor-pointer ${
                       activeHallTab === 'seats'
@@ -2424,6 +2419,23 @@ function AddMoviePage() {
                     {seats[expandedHallId] !== undefined && (
                       <span className="ml-1 text-[10px] bg-muted px-1.5 py-0.5 rounded-full font-medium text-muted-foreground">
                         {currentSeats.length}
+                      </span>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveHallTab('screenings')}
+                    className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors cursor-pointer ${
+                      activeHallTab === 'screenings'
+                        ? 'border-b-2 border-primary text-primary'
+                        : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    <Monitor className="h-4 w-4" />
+                    Screenings
+                    {screeningsByHall[expandedHallId] !== undefined && (
+                      <span className="ml-1 text-[10px] bg-muted px-1.5 py-0.5 rounded-full font-medium text-muted-foreground">
+                        {currentScreenings.length}
                       </span>
                     )}
                   </button>
@@ -2740,23 +2752,33 @@ function AddMoviePage() {
                       </div>
                     ) : (
                       <div className="rounded-lg border border-border overflow-hidden">
-                        <div className="hidden sm:grid sm:grid-cols-[100px_80px_1fr_110px_auto] items-center gap-3 px-4 py-2 bg-muted/40 border-b border-border">
+                        {(() => {
+                          const seatById = Object.fromEntries(
+                            Object.values(seats).flat().map(s => [s.id, s])
+                          );
+                          return (
+                        <>
+                        <div className="hidden sm:grid sm:grid-cols-[100px_80px_120px_1fr_110px_auto] items-center gap-3 px-4 py-2 bg-muted/40 border-b border-border">
                           <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Ticket</span>
                           <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Seat</span>
+                          <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Screening</span>
                           <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Customer</span>
                           <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Booked At</span>
                           <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Actions</span>
                         </div>
                         <div className="divide-y divide-border">
-                          {bookings[expandedTheaterId].map((b, i) => (
-                            <div key={b.ticketNumber ?? i} className="flex flex-col sm:grid sm:grid-cols-[100px_80px_1fr_110px_auto] items-start sm:items-center gap-2 sm:gap-3 px-4 py-3 hover:bg-muted/20 transition-colors">
+                          {bookings[expandedTheaterId].map((b, i) => {
+                            const seatNum = b.seatId ? (seatById[b.seatId]?.seatNumber ?? b.seatIdentifier) : (b.seatIdentifier ?? '—');
+                            return (
+                            <div key={b.ticketNumber ?? i} className="flex flex-col sm:grid sm:grid-cols-[100px_80px_120px_1fr_110px_auto] items-start sm:items-center gap-2 sm:gap-3 px-4 py-3 hover:bg-muted/20 transition-colors">
                               <span className="font-mono text-xs font-semibold text-foreground truncate">{b.ticketNumber ?? '—'}</span>
                               <div className="text-xs">
-                                <span className="font-medium text-foreground">{b.seatIdentifier ?? '—'}</span>
+                                <span className="font-medium text-foreground">{seatNum}</span>
                                 {b.seatClass && (
                                   <span className="ml-1.5 text-[10px] bg-muted text-muted-foreground px-1 py-0.5 rounded">{b.seatClass}</span>
                                 )}
                               </div>
+                              <span className="text-xs text-foreground truncate">{b.screeningName ?? '—'}</span>
                               <div className="min-w-0">
                                 <p className="text-xs font-medium text-foreground truncate">{b.customerName ?? '—'}</p>
                                 <p className="text-[10px] text-muted-foreground truncate">{b.email ?? ''}{b.phoneNumber ? ` · ${b.phoneNumber}` : ''}</p>
@@ -2787,8 +2809,12 @@ function AddMoviePage() {
                                 )}
                               </div>
                             </div>
-                          ))}
+                          );
+                          })}
                         </div>
+                        </>
+                          );
+                        })()}
                       </div>
                     )}
                   </div>
@@ -2822,10 +2848,10 @@ function AddMoviePage() {
                         <div className="text-xs text-muted-foreground">
                           Current seats (from API): <strong>{currentSeats.length}</strong>
                           {' · '}
-                          New config total: <strong>{(seatConfigRows[expandedHallId] || []).reduce((sum, row) => sum + (parseInt(row.seatCount, 10) || 0), 0)}</strong> / {MAX_SEATS_PER_HALL} max
+                          New config total: <strong>{(seatConfigRows[expandedHallId] || []).reduce((sum, row) => sum + (parseInt(row.seatCount, 10) || 0), 0)}</strong> / {selectedHall?.totalSeats ?? MAX_SEATS_PER_HALL} max
                         </div>
-                        {(seatConfigRows[expandedHallId] || []).reduce((sum, row) => sum + (parseInt(row.seatCount, 10) || 0), 0) > MAX_SEATS_PER_HALL && (
-                          <p className="text-xs text-destructive font-medium">New layout exceeds {MAX_SEATS_PER_HALL} seats.</p>
+                        {(seatConfigRows[expandedHallId] || []).reduce((sum, row) => sum + (parseInt(row.seatCount, 10) || 0), 0) > (selectedHall?.totalSeats ?? MAX_SEATS_PER_HALL) && (
+                          <p className="text-xs text-destructive font-medium">New layout exceeds this hall's capacity of {selectedHall?.totalSeats ?? MAX_SEATS_PER_HALL} seats.</p>
                         )}
                         {seatConfigErrors[expandedHallId]?.general && (
                           <p className="text-xs text-destructive" role="alert">{seatConfigErrors[expandedHallId].general}</p>
@@ -2898,7 +2924,7 @@ function AddMoviePage() {
                             <p className="text-xs text-muted-foreground text-center py-6">No seats configured. Use "Configure Seats" to set up the layout.</p>
                           ) : (
                             <div className="overflow-x-auto pb-4 w-full">
-                              <div className="inline-block min-w-full px-4 sm:px-8 pb-12 pt-4">
+                              <div className="table mx-auto px-4 sm:px-8 pb-12 pt-4">
                                 {(() => {
                                   const byRow = currentSeats.reduce((acc, seat) => {
                                     const r = seat.rowName ?? '';
@@ -2921,7 +2947,7 @@ function AddMoviePage() {
                                   });
 
                                   return (
-                                    <div className="flex flex-col items-center space-y-8 w-max mx-auto">
+                                    <div className="flex flex-col space-y-8">
                                       {rowNames.map((rowName) => {
                                         const rowSeats = byRow[rowName].sort((a, b) => {
                                           const na = parseInt(a.seatNumber, 10);
@@ -2931,14 +2957,14 @@ function AddMoviePage() {
                                         });
 
                                         return (
-                                          <div key={rowName} className="flex items-center justify-center gap-4 sm:gap-6">
+                                          <div key={rowName} className="flex items-center gap-4 sm:gap-6">
                                             {/* Left Row Label */}
                                             <div className="w-6 text-right">
                                               <span className="text-sm font-bold text-muted-foreground">{rowName}</span>
                                             </div>
 
                                             {/* Seats */}
-                                            <div className="flex justify-center gap-2 sm:gap-3">
+                                            <div className="flex gap-2 sm:gap-3">
                                               {rowSeats.map((seat, index) => {
                                                 // Calculate curve offset based on position relative to the center
                                                 const middleIndex = (rowSeats.length - 1) / 2;
@@ -2960,9 +2986,9 @@ function AddMoviePage() {
                                                           ? 'border-red-300 bg-red-50 dark:bg-red-950/20 text-red-700 dark:text-red-400'
                                                           : 'border-green-300 bg-green-50 dark:bg-green-950/20 text-green-800 dark:text-green-400'
                                                       )}
-                                                      title={seat.seatIdentifier || `${seat.rowName}${seat.seatNumber}`}
+                                                      title={`Row ${seat.rowName} Seat ${seat.seatNumber}`}
                                                     >
-                                                      <div className="font-semibold truncate w-full">{seat.seatIdentifier ?? `${seat.rowName}${seat.seatNumber}`}</div>
+                                                      <div className="font-semibold truncate w-full">{seat.seatNumber}</div>
                                                       <div className="text-muted-foreground truncate w-full">{seat.seatClassName ?? '—'}</div>
                                                       <div className="font-medium w-full">BTN {seat.basePrice != null ? Number(seat.basePrice) : '—'}</div>
                                                       <div className="text-[8px] opacity-80 w-full">{seat.isBlocked ? 'Blocked' : 'Available'}</div>

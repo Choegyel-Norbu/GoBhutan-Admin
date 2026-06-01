@@ -2134,9 +2134,9 @@ function AddMoviePage() {
                         className="flex-1 flex items-center gap-2 min-w-0 px-2.5 py-2 text-left cursor-pointer"
                       >
                         <div className="min-w-0 flex-1">
-                          <p className="text-xs font-medium truncate leading-tight">{loc.dzongkhag}</p>
+                          <p className="text-sm font-semibold truncate leading-tight">{loc.dzongkhag}</p>
                           {loc.thromdoe && (
-                            <p className={`text-[10px] truncate leading-tight ${isSelected ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>
+                            <p className={`text-xs truncate leading-tight ${isSelected ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>
                               {loc.thromdoe}
                             </p>
                           )}
@@ -2216,7 +2216,7 @@ function AddMoviePage() {
                           className="flex-1 flex items-center gap-2 min-w-0 px-2.5 py-2 text-left cursor-pointer"
                         >
                           <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${theater.isActive ? 'bg-green-500' : 'bg-muted-foreground/40'}`} />
-                          <span className="text-xs font-medium truncate flex-1">{theater.name}</span>
+                          <span className="text-sm font-semibold truncate flex-1">{theater.name}</span>
                           {isSelected && <ChevronRight className="h-3 w-3 shrink-0 opacity-60" />}
                         </button>
                         <button
@@ -2292,8 +2292,8 @@ function AddMoviePage() {
                             {hall.name.substring(0, 2).toUpperCase()}
                           </div>
                           <div className="min-w-0 flex-1">
-                            <p className="text-xs font-medium truncate leading-tight">{hall.name}</p>
-                            <p className={`text-[10px] truncate leading-tight ${isSelected ? 'text-primary/70' : 'text-muted-foreground'}`}>
+                            <p className="text-sm font-semibold truncate leading-tight">{hall.name}</p>
+                            <p className={`text-xs truncate leading-tight ${isSelected ? 'text-primary/70' : 'text-muted-foreground'}`}>
                               {hall.totalSeats} seats
                             </p>
                           </div>
